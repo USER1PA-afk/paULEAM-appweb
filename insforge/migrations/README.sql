@@ -1,0 +1,22 @@
+-- ============================================
+-- PAuleam ERP — Migraciones SQL para Insforge
+-- ============================================
+--
+-- Este directorio contiene las migraciones SQL que se ejecutan
+-- en la base de datos PostgreSQL de Insforge.
+--
+-- Las migraciones se aplican con:
+--   npx @insforge/cli db push
+--
+-- Convención de nombres:
+--   001_create_products.sql
+--   002_create_inventory_ledger.sql
+--   003_create_recipes.sql
+--   004_create_production_orders.sql
+--   005_create_orders.sql
+--   006_create_stock_reservations.sql
+--   007_rls_policies.sql
+--   008_production_trigger.sql
+--
+-- REGLA: inventory_ledger es inmutable. NUNCA usar UPDATE para stock.
+-- Todo movimiento es un INSERT con tipo INGRESO o EGRESO.
