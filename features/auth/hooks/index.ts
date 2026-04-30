@@ -91,14 +91,21 @@ export function useAuth() {
         });
         if (error) throw error;
 
-        // Auto-login inmediato después del registro (sin verificación de email)
+        // Forzar login inmediato para obtener el token real del SDK
+        const loginRes = await insforge.auth.signInWithPassword({
+          email,
+          password,
+        });
+        
+        if (loginRes.error) throw loginRes.error;
+
         // El trigger handle_new_user() crea el perfil con rol 'cliente' por defecto
         setState({
-          user: data?.user as unknown as AuthUser ?? null,
+          user: loginRes.data?.user as unknown as AuthUser ?? null,
           loading: false,
           error: null,
         });
-        return { data, error: null };
+        return { data: loginRes.data, error: null };
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : "Error al registrarse";
@@ -110,12 +117,32 @@ export function useAuth() {
   );
 
   const signOut = useCallback(async () => {
-    await insforge.auth.signOut();
-    setState({ user: null, loading: false, error: null });
-    // Limpiar cookie de rol para que el proxy no asuma que hay sesión
-    document.cookie = 'pauleam-role=; path=/; max-age=0; SameSite=Lax';
-    // Redirigir al index principal tras cerrar sesión
-    router.push("/");
+    try {
+      await insforge.auth.signOut();
+    } catch (err) {
+      console.warn("Logout warning:", err);
+    } finally {
+      setState({ user: null, loading: false, error: null });
+      // Limpiar cookie de rol y posibles cookies del SDK
+      document.cookie = 'pauleam-role=; path=/; max-age=0; SameSite=Lax';
+      document.cookie.split(";").forEach((c) => {
+        const name = c.split("=")[0].trim();
+        if (name.includes("-auth-token") || name.includes("access_token")) {
+          document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
+        }
+      });
+      // Limpiar localStorage
+      if (typeof window !== "undefined") {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.includes("-auth-token") || key.includes("access_token"))) {
+            localStorage.removeItem(key);
+          }
+        }
+      }
+      // Redirigir al index principal tras cerrar sesión
+      router.push("/");
+    }
   }, [insforge, router]);
 
   return {

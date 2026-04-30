@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ThemeToggle } from "@shared/components/theme-toggle";
+import { HomeAuthNav } from "@features/auth/components/home-auth-nav";
 
 export default function HomePage() {
   return (
@@ -22,18 +23,7 @@ export default function HomePage() {
             >
               Tienda
             </Link>
-            <Link
-              href="/login"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Iniciar Sesión
-            </Link>
-            <Link
-              href="/register"
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors"
-            >
-              Registrarse
-            </Link>
+            <HomeAuthNav />
             <div className="pl-2 border-l border-border">
               <ThemeToggle />
             </div>

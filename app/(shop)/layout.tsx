@@ -75,7 +75,7 @@ export default function ShopLayout({
                   onClick={signOut}
                   className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
                 >
-                  Salir
+                  Cerrar sesión
                 </button>
               </div>
             ) : (

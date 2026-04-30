@@ -62,6 +62,16 @@ export default function AuthLayout({
       {/* Panel derecho — Formulario */}
       <div className="flex flex-1 items-center justify-center bg-background px-6 py-12">
         <div className="w-full max-w-sm space-y-6">
+          {/* Mobile Back Button */}
+          <div className="flex lg:hidden mb-2">
+            <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Regresar al inicio
+            </Link>
+          </div>
+
           {/* Mobile logo */}
           <div className="flex items-center justify-center gap-2.5 lg:hidden">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-linear-to-br from-brand-500 to-brand-700 text-sm font-bold text-white shadow-md">

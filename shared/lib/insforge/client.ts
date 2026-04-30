@@ -9,14 +9,15 @@ import { createClient } from "@insforge/sdk";
  */
 export function createBrowserClient() {
   const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY;
 
-  if (!baseUrl) {
+  if (!baseUrl || !anonKey) {
     throw new Error(
-      "NEXT_PUBLIC_INSFORGE_URL no está configurada en .env.local"
+      "Faltan variables públicas de Insforge en .env.local"
     );
   }
 
-  return createClient({ baseUrl });
+  return createClient({ baseUrl, anonKey });
 }
 
 /**

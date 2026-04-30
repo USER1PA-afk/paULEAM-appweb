@@ -146,7 +146,9 @@ export function RegisterForm() {
     if (!result.error) {
       // Registro exitoso — el usuario queda autenticado automáticamente.
       // El trigger SQL handle_new_user() crea el perfil con rol 'cliente' por defecto.
-      // No hay verificación de email pendiente.
+      // Persistir el rol en cookie para el proxy
+      document.cookie = `pauleam-role=cliente; path=/; max-age=3600; SameSite=Lax`;
+      
       setSuccess(true);
       // Redirigir a la tienda después de un breve mensaje de éxito
       setTimeout(() => {
