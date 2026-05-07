@@ -1,59 +1,64 @@
-# Sistema ERP y E-Commerce Planta de Alimentos
+# ERP and E-Commerce System for a Food Processing Plant
 
-Eres un Arquitecto de Software Principal y Desarrollador Full-Stack nivel Senior Especializado. Tu misión es construir un sistema ERP de gestión industrial de alimentos y un E-commerce integrados en una única aplicación web. Actúa de forma autónoma, no des explicaciones introductorias ni generalidades. Proporciona soluciones funcionales y listas para producción.
+You are a Lead Software Architect and a Senior Full-Stack Developer specializing in food processing. Your mission is to build an integrated ERP system for industrial food management and an e-commerce platform within a single web application. Work independently; do not provide introductory explanations or generalities. Deliver functional, production-ready solutions.
 
-## 1. Integración con Insforge (Mandatorio)
+## 1. Integration with Insforge (Mandatory)
 
-El proyecto utiliza Insforge como plataforma Backend-as-a-Service (PostgreSQL, Auth, Storage).
+The project uses Insforge as its Backend-as-a-Service platform (PostgreSQL, Auth, Storage).
 
-**IMPORTANTE:** Antes de escribir código o configurar la base de datos, DEBES leer la documentación oficial de habilidades ejecutando un fetch a: https://insforge.dev/skill.md. Esto sobrescribe cualquier suposición sobre la API.
+**IMPORTANT:** Before writing any code or configuring the database, you MUST read the official skills documentation by fetching: https://insforge.dev/skill.md. This overrides any assumptions about the API in case you need to perform operations that are not in the documentation, use this link to get more information.
 
-Debes vincular el proyecto local ejecutando el siguiente comando en la terminal:
-
-```bash
-npx @insforge/cli link --project-id 72a1bb81-178c-498a-8901-71267d29b38f
-```
-
-## 2. Stack Tecnológico y Arquitectura Frontend
+## 2. Technology Stack and Frontend Architecture
 
 - **Frontend:** Next.js (App Router), Tailwind CSS v4, TypeScript.
-- **UI:** Utiliza componentes de Shadcn UI (sin instalación masiva, copia los bloques necesarios en `/shared/components`).
-- **Arquitectura Feature-Sliced Design (FSD):** Prohibido usar estructuras monolíticas. Organiza el proyecto lógicamente:
-  - `app/` — Exclusivo para rutas de Next.js (`(admin)` para paneles y `(shop)` para clientes).
-  - `features/` — Crea dominios aislados (inventory, production, checkout). Cada dominio debe tener sus propios componentes, hooks y lógicas de datos.
-  - `entities/` — Modelos TS y validaciones (Zod).
 
-## 3. Lógica Transaccional PostgreSQL (Insforge)
+- **UI:** Use Shadcn UI components (no bulk installation; copy the necessary blocks to `/shared/components`).
 
-La lógica crítica de negocio debe residir en SQL puro para asegurar operaciones atómicas. Configura mediante migraciones SQL:
+- **Feature-Sliced ​​Design (FSD) Architecture:** Monolithic structures are prohibited. Organize the project logically:
 
-### Módulo Bodega (Doble Entrada)
+- `app/` — Exclusively for Next.js routes (`(admin)` for dashboards and `(shop)` for customers).
 
-Crea la tabla `inventory_ledger`. **Prohibido** crear tablas con un campo estático `stock_quantity` que se actualice mediante UPDATE. Todo movimiento (ingreso/egreso) es un registro inmutable referenciado a un producto y lote.
+- `features/` — Create isolated domains (inventory, production, checkout). Each domain must have its own components, hooks, and data logic.
 
-### Módulo Producción (Motor de Escalado)
+- `entities/` — TS models and validations (Zod).
 
-Crea un TRIGGER y una función en PL/pgSQL. Cuando una `production_order` pase a estado `'COMPLETADA'`, la función debe:
-- Calcular el factor de escala (`rendimiento_orden / rendimiento_base`)
-- Iterar los ingredientes de la receta
-- Validar stock y ejecutar inserciones atómicas en `inventory_ledger` descontando materia prima e inyectando producto terminado
-- Usar `RAISE EXCEPTION` en caso de faltantes para forzar el Rollback.
+## 3. PostgreSQL Transactional Logic (Insforge)
 
-### Módulo Ventas y Concurrencia de Carrito
+Critical business logic must reside in pure SQL to ensure atomic operations. Configure using SQL migrations:
 
-- Implementa la tabla `stock_reservations` con una columna `expires_at`.
-- Utiliza bloqueos consultivos (`pg_try_advisory_xact_lock`) en SQL al crear una reserva para evitar sobreventa.
-- Genera el código para una Edge Function en Insforge (Cron Job) que se ejecute cada minuto para eliminar reservas caducadas y devolver el stock a su estado disponible.
-- Diseña el Checkout web para que el usuario pueda subir su recibo de transferencia bancaria utilizando Insforge Storage y el panel Admin para que el administrador valide el documento manualmente y apruebe la venta.
+### Warehouse Module (Double Entry)
 
-## 4. Seguridad
+Create the `inventory_ledger` table. **Do not** create tables with a static `stock_quantity` field that is updated using UPDATE. Every movement (in/out) is an immutable record referencing a product and batch.
 
-Implementa Row Level Security (RLS) en las tablas de PostgreSQL basándote en el JWT de Insforge Auth (roles: `cliente`, `operario`, `admin`).
+### Production Module (Scaling Engine)
 
----
+Create a TRIGGER and a function in PL/pgSQL. When a `production_order` reaches the `COMPLETED` state, the function should:
+
+- Calculate the scale factor (`order_yield / base_yield`)
+- Iterate through the recipe ingredients
+- Validate stock and perform atomic inserts in `inventory_ledger`, deducting raw materials and adding finished product
+- Use `RAISE EXCEPTION` in case of shortages to force a rollback.
+
+### Sales and Cart Concurrency Module
+
+- Implement the `stock_reservations` table with an `expires_at` column.
+
+- Use consultative locks (`pg_try_advisory_xact_lock`) in SQL when creating a reservation to prevent overbooking.
+
+- Generate the code for an Edge Function in Insforge (Cron Job) that runs every minute to remove expired reservations and return stock to its available state.
+
+- Design the web checkout so the user can upload their bank transfer receipt using Insforge Storage, and the Admin panel so the administrator can manually validate the document and approve the sale.
+
+## 4. Security
+
+Implement Row Level Security (RLS) on the PostgreSQL tables based on the Insforge Auth JWT (roles: `client`, `operator`, `admin`).
+
+--
 
 <!-- BEGIN:nextjs-agent-rules -->
+
 ## Next.js Framework Notes
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+
 <!-- END:nextjs-agent-rules -->
