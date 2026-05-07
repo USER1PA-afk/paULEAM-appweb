@@ -42,9 +42,7 @@ next-env.d.ts
 
 # InsForge & AI agent skills
 .insforge
-.agent
 .agents
-.augment
 .claude
 .cline
 .github/copilot*
@@ -60,5 +58,4 @@ insforge/seed-*.mjs
 insforge/fix-*.sql
 
 # AI agent config (contienen project IDs y config interna)
-CLAUDE.md
-AGENTS.md
+

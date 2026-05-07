@@ -83,22 +83,18 @@ export default function HomePage() {
             <div className="grid gap-4 sm:grid-cols-2">
               {[
                 {
-                  icon: "📦",
                   title: "Inventario",
                   desc: "Ledger de doble entrada inmutable. Sin UPDATE, solo INSERT.",
                 },
                 {
-                  icon: "⚙️",
                   title: "Producción",
                   desc: "Motor de escalado automático con triggers PL/pgSQL.",
                 },
                 {
-                  icon: "📋",
                   title: "Recetas",
                   desc: "Fórmulas maestras con cálculo de ingredientes proporcional.",
                 },
                 {
-                  icon: "🛒",
                   title: "E-Commerce",
                   desc: "Tienda integrada con reservas de stock concurrentes.",
                 },
@@ -107,8 +103,7 @@ export default function HomePage() {
                   key={feat.title}
                   className="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md hover:border-brand-200 hover:-translate-y-0.5 transition-all duration-200"
                 >
-                  <span className="text-2xl">{feat.icon}</span>
-                  <h3 className="mt-3 text-sm font-semibold text-foreground">
+                  <h3 className="text-sm font-semibold text-foreground">
                     {feat.title}
                   </h3>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
