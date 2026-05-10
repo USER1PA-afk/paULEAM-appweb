@@ -101,7 +101,7 @@ export default function ShopLayout({
       <footer className="border-t border-border bg-card">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Finca Tigrillo
+            © {new Date().getFullYear()} Planta de Alimentos Uleam - ERP
           </p>
           <Link
             href="/login"
