@@ -40,6 +40,12 @@ const NAV_ITEMS = [
     roles: ["admin", "operario"],
   },
   {
+    label: "Proveedores",
+    href: "/admin/suppliers",
+    icon: "🤝",
+    roles: ["admin"],
+  },
+  {
     label: "Órdenes de Venta",
     href: "/admin/orders",
     icon: ShoppingCart,

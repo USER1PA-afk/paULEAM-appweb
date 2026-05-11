@@ -59,3 +59,7 @@ insforge/fix-*.sql
 
 # AI agent config (contienen project IDs y config interna)
 
+
+# InsForge & AI agent skills
+.agent
+.augment
