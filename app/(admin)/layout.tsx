@@ -6,7 +6,7 @@ import { useAuth, useRole } from "@features/auth/hooks";
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "@shared/components/theme-toggle";
 
-import { LayoutDashboard, Tag, ClipboardList, Factory, Boxes, ShoppingCart, Users, Store, X, Menu } from "lucide-react";
+import { LayoutDashboard, Tag, ClipboardList, Factory, Boxes, ShoppingCart, Users, Store, X, Menu, Handshake } from "lucide-react";
 
 const NAV_ITEMS = [
   {
@@ -42,7 +42,7 @@ const NAV_ITEMS = [
   {
     label: "Proveedores",
     href: "/admin/suppliers",
-    icon: "🤝",
+    icon: Handshake,
     roles: ["admin"],
   },
   {
