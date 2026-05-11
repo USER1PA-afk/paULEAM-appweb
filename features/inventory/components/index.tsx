@@ -1,6 +1,7 @@
 "use client";
 
 import { useStockSummary, useInventoryLedger, useInventoryActions, useRealtimeStock } from "@features/inventory/hooks";
+import { useSuppliers } from "@features/suppliers/hooks";
 import { formatDate } from "@shared/lib/utils";
 import { useState, useEffect, useCallback } from "react";
 import { getInsforge } from "@shared/lib/insforge/client";
@@ -10,6 +11,7 @@ interface Product {
   name: string;
   sku: string;
   unit: string;
+  type: string;
 }
 
 /**
@@ -46,7 +48,7 @@ export function StockSummaryTable() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-semibold">Stock Actual</h3>
           {/* Indicador de conexión Realtime */}
@@ -90,13 +92,13 @@ export function StockSummaryTable() {
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                 Producto
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">
                 Tipo
               </th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                 Stock
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">
                 Unidad
               </th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">
@@ -135,7 +137,7 @@ export function StockSummaryTable() {
                       {item.sku}
                     </td>
                     <td className="px-4 py-3 font-medium">{item.name}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 hidden sm:table-cell">
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                           item.type === "MATERIA_PRIMA"
@@ -162,7 +164,7 @@ export function StockSummaryTable() {
                         maximumFractionDigits: 2,
                       })}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
                       {item.unit}
                     </td>
                     <td className="px-4 py-3">
@@ -185,13 +187,14 @@ export function StockSummaryTable() {
 
 /**
  * Formulario de Ingreso de Stock (movimiento INGRESO en ledger).
- * Permite al staff registrar entradas de materia prima o producto terminado.
+ * Cuando tipo = COMPRA, requiere selección de proveedor.
  */
 export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const { registerMovement, loading, error } = useInventoryActions();
+  const { suppliers } = useSuppliers();
   const insforge = getInsforge();
 
   const [form, setForm] = useState({
@@ -200,12 +203,13 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
     unit_cost: "",
     notes: "",
     reference_type: "COMPRA",
+    supplier_id: "",
   });
 
   useEffect(() => {
     insforge.database
       .from("products")
-      .select("id, name, sku, unit")
+      .select("id, name, sku, unit, type")
       .eq("is_active", true)
       .order("name")
       .then(
@@ -214,19 +218,40 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
       );
   }, [insforge]);
 
+  // Cuando cambia el tipo de movimiento, limpiar proveedor si no es COMPRA
+  function handleRefTypeChange(val: string) {
+    setForm((p) => ({
+      ...p,
+      reference_type: val,
+      supplier_id: val === "COMPRA" ? p.supplier_id : "",
+    }));
+  }
+
+  // Al seleccionar un producto MATERIA_PRIMA, pre-filtrar proveedores disponibles
+  const selectedProduct = products.find((p) => p.id === form.product_id);
+  const isCompra = form.reference_type === "COMPRA";
+  const isMateriaPrima = selectedProduct?.type === "MATERIA_PRIMA";
+  const requiresSupplier = isCompra && isMateriaPrima;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (requiresSupplier && !form.supplier_id) {
+      return; // El required en el select lo bloquea también
+    }
+
     const result = await registerMovement({
       product_id: form.product_id,
       quantity: Number(form.quantity),
       unit_cost: form.unit_cost ? Number(form.unit_cost) : 0,
       movement_type: "INGRESO",
       reference_type: form.reference_type,
+      supplier_id: form.supplier_id || undefined,
       notes: form.notes || undefined,
     });
 
     if (!result.error) {
-      setForm({ product_id: "", quantity: "", unit_cost: "", notes: "", reference_type: "COMPRA" });
+      setForm({ product_id: "", quantity: "", unit_cost: "", notes: "", reference_type: "COMPRA", supplier_id: "" });
       setShowForm(false);
       const product = products.find((p) => p.id === form.product_id);
       setSuccess(`✓ Ingreso registrado: ${form.quantity} ${product?.unit ?? ""} de ${product?.name ?? ""}`);
@@ -237,7 +262,7 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold">Ingreso de Stock</h3>
         <button
           onClick={() => {
@@ -271,7 +296,7 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
                 id="entry-product"
                 required
                 value={form.product_id}
-                onChange={(e) => setForm((p) => ({ ...p, product_id: e.target.value }))}
+                onChange={(e) => setForm((p) => ({ ...p, product_id: e.target.value, supplier_id: "" }))}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Seleccionar producto...</option>
@@ -292,7 +317,7 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
                 id="entry-qty"
                 type="number"
                 required
-                min="0.0001"
+                min="0.01"
                 step="0.01"
                 value={form.quantity}
                 onChange={(e) => setForm((p) => ({ ...p, quantity: e.target.value }))}
@@ -326,7 +351,7 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
               <select
                 id="entry-ref"
                 value={form.reference_type}
-                onChange={(e) => setForm((p) => ({ ...p, reference_type: e.target.value }))}
+                onChange={(e) => handleRefTypeChange(e.target.value)}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="COMPRA">Compra a proveedor</option>
@@ -336,8 +361,34 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
               </select>
             </div>
 
+            {/* Proveedor — visible solo cuando tipo = COMPRA y producto = MATERIA_PRIMA */}
+            {isCompra && (
+              <div className="space-y-1.5">
+                <label htmlFor="entry-supplier" className="text-xs font-medium text-muted-foreground">
+                  Proveedor {requiresSupplier ? "*" : ""}
+                  {!isMateriaPrima && isCompra && (
+                    <span className="ml-1 text-[10px] text-muted-foreground/60">(opcional para PT)</span>
+                  )}
+                </label>
+                <select
+                  id="entry-supplier"
+                  required={requiresSupplier}
+                  value={form.supplier_id}
+                  onChange={(e) => setForm((p) => ({ ...p, supplier_id: e.target.value }))}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Seleccionar proveedor...</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.company ?? s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Notas */}
-            <div className="space-y-1.5 sm:col-span-2 lg:col-span-2">
+            <div className={`space-y-1.5 ${isCompra ? "sm:col-span-2 lg:col-span-1" : "sm:col-span-2 lg:col-span-2"}`}>
               <label htmlFor="entry-notes" className="text-xs font-medium text-muted-foreground">
                 Notas
               </label>
@@ -346,7 +397,7 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
                 type="text"
                 value={form.notes}
                 onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                placeholder="Número de factura, proveedor, etc."
+                placeholder="Número de factura, observaciones..."
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -358,7 +409,7 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
             </div>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <button
               type="submit"
               disabled={loading}
@@ -382,6 +433,7 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
 
 /**
  * Tabla del ledger de movimientos de inventario.
+ * Muestra nombre de empresa del proveedor en movimientos COMPRA.
  */
 export function InventoryLedgerTable({
   productId,
@@ -423,13 +475,13 @@ export function InventoryLedgerTable({
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                 Cantidad
               </th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden sm:table-cell">
                 Costo Unit.
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                Referencia
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">
+                Proveedor
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
                 Notas
               </th>
             </tr>
@@ -454,23 +506,30 @@ export function InventoryLedgerTable({
                     {formatDate(entry.created_at)}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        entry.movement_type === "INGRESO"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {entry.movement_type === "INGRESO" ? "↑ Ingreso" : "↓ Egreso"}
-                    </span>
+                    <div className="flex flex-col gap-0.5">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          entry.movement_type === "INGRESO"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {entry.movement_type === "INGRESO" ? "↑ Ingreso" : "↓ Egreso"}
+                      </span>
+                      {entry.reference_type && (
+                        <span className="text-[10px] text-muted-foreground/70 px-0.5">
+                          {entry.reference_type}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right font-semibold tabular-nums">
                     {Number(entry.quantity).toLocaleString("es-EC", {
                       minimumFractionDigits: 0,
-                      maximumFractionDigits: 4,
+                      maximumFractionDigits: 2,
                     })}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground text-xs">
+                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground text-xs hidden sm:table-cell">
                     {entry.unit_cost > 0
                       ? Number(entry.unit_cost).toLocaleString("es-EC", {
                           style: "currency",
@@ -479,10 +538,17 @@ export function InventoryLedgerTable({
                         })
                       : "—"}
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {entry.reference_type ?? "—"}
+                  {/* Proveedor: muestra empresa si hay supplier_id, guión si no */}
+                  <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">
+                    {entry.supplier_company ? (
+                      <span className="inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
+                        🤝 {entry.supplier_company}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground max-w-xs truncate">
+                  <td className="px-4 py-3 text-xs text-muted-foreground max-w-xs truncate hidden lg:table-cell">
                     {entry.notes ?? "—"}
                   </td>
                 </tr>

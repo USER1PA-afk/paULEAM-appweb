@@ -12,6 +12,9 @@ interface LedgerEntry {
   unit_cost: number;
   reference_type: string | null;
   reference_id: string | null;
+  supplier_id: string | null;
+  supplier_company: string | null;  // de inventory_ledger_view
+  supplier_name: string | null;     // de inventory_ledger_view
   notes: string | null;
   created_at: string;
 }
@@ -39,7 +42,7 @@ export function useInventoryLedger(productId?: string) {
     setError(null);
     try {
       let query = insforge.database
-        .from("inventory_ledger")
+        .from("inventory_ledger_view")
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -114,6 +117,7 @@ export function useInventoryActions() {
       unit_cost?: number;
       reference_type?: string;
       reference_id?: string;
+      supplier_id?: string;
       notes?: string;
     }) => {
       setLoading(true);
