@@ -6,47 +6,49 @@ import { useAuth, useRole } from "@features/auth/hooks";
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "@shared/components/theme-toggle";
 
+import { LayoutDashboard, Tag, ClipboardList, Factory, Boxes, ShoppingCart, Users, Store, X, Menu } from "lucide-react";
+
 const NAV_ITEMS = [
   {
-    label: "Dashboard",
+    label: "Inicio",
     href: "/admin/dashboard",
-    icon: "📊",
+    icon: LayoutDashboard,
     roles: ["admin", "operario"],
   },
   {
-    label: "Inventario",
-    href: "/admin/inventory",
-    icon: "📦",
-    roles: ["admin", "operario"],
-  },
-  {
-    label: "Producción",
-    href: "/admin/production",
-    icon: "⚙️",
+    label: "Productos",
+    href: "/admin/products",
+    icon: Tag,
     roles: ["admin", "operario"],
   },
   {
     label: "Recetas",
     href: "/admin/recipes",
-    icon: "📋",
+    icon: ClipboardList,
     roles: ["admin"],
   },
   {
-    label: "Productos",
-    href: "/admin/products",
-    icon: "🏷️",
+    label: "Producción",
+    href: "/admin/production",
+    icon: Factory,
+    roles: ["admin", "operario"],
+  },
+  {
+    label: "Inventario",
+    href: "/admin/inventory",
+    icon: Boxes,
     roles: ["admin", "operario"],
   },
   {
     label: "Órdenes de Venta",
     href: "/admin/orders",
-    icon: "🛒",
+    icon: ShoppingCart,
     roles: ["admin"],
   },
   {
     label: "Usuarios",
     href: "/admin/users",
-    icon: "👥",
+    icon: Users,
     roles: ["admin"],
   },
 ];
@@ -134,7 +136,7 @@ export default function AdminLayout({
             onClick={() => setSidebarOpen(false)}
             className="rounded-md p-1 text-muted-foreground hover:bg-muted lg:hidden"
           >
-            ✕
+            <X className="h-5 w-5" />
           </button>
         </div>
 
@@ -157,7 +159,7 @@ export default function AdminLayout({
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
                   >
-                    <span className="text-base">{item.icon}</span>
+                    <item.icon className={`h-5 w-5 ${isActive ? "text-brand-600" : "text-muted-foreground"}`} />
                     <span>{item.label}</span>
                     {isActive && (
                       <span className="ml-auto h-1.5 w-1.5 rounded-full bg-brand-500" />
@@ -177,7 +179,7 @@ export default function AdminLayout({
             href="/shop/catalog"
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
           >
-            <span className="text-base">🌐</span>
+            <Store className="h-5 w-5 text-muted-foreground" />
             <span>Ver E-Commerce</span>
           </Link>
         </nav>
@@ -220,19 +222,7 @@ export default function AdminLayout({
             onClick={() => setSidebarOpen(true)}
             className="rounded-md p-2 text-muted-foreground hover:bg-muted lg:hidden"
           >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
+            <Menu className="h-5 w-5" />
           </button>
 
           <div className="flex-1" />
