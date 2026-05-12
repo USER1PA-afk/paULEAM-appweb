@@ -86,7 +86,6 @@ export function scaleIngredientsWithStock(
       stock_available: stockAvailable,
       stock_sufficient: isSufficient,
       unit_mismatch: unitMismatch,
-      is_optional: ing.is_optional,
     };
   });
 }

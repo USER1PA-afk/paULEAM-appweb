@@ -327,7 +327,7 @@ export function useScalePreview(recipeId: string | null, targetYield: number) {
       ? scaleIngredientsWithStock(ingredients, scaleFactor, stockMap)
       : [];
 
-  const canProduce = scaledIngredients.every(ing => ing.stock_sufficient || ing.is_optional);
+  const canProduce = scaledIngredients.every(ing => ing.stock_sufficient);
 
   return {
     recipe,

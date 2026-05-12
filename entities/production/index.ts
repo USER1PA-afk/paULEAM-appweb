@@ -69,6 +69,4 @@ export interface ScaledIngredient {
   stock_sufficient: boolean;
   /** Si la unidad de receta difiere de la unidad de inventario */
   unit_mismatch: boolean;
-  /** Si el ingrediente es opcional */
-  is_optional: boolean;
 }
