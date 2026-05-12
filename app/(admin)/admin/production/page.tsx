@@ -1,8 +1,8 @@
 "use client";
 
-import { useProductionOrders, useRecipes } from "@features/production/hooks";
+import { useProductionOrders, useRecipes, ProductionScalePreview, ProductionOrderDetail } from "@features/production";
 import { formatDate } from "@shared/lib/utils";
-import { useState } from "react";
+import React, { useState } from "react";
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   BORRADOR: {
@@ -31,6 +31,8 @@ export default function AdminProductionPage() {
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  
   const [form, setForm] = useState({
     recipe_id: "",
     target_yield: "",
@@ -60,6 +62,9 @@ export default function AdminProductionPage() {
   }
 
   const completedOrders = orders.filter((o) => o.status === "COMPLETADA");
+
+  // Validamos si hay suficientes datos para el preview
+  const showPreview = form.recipe_id !== "" && Number(form.target_yield) > 0;
 
   return (
     <>
@@ -100,82 +105,91 @@ export default function AdminProductionPage() {
 
         {/* Formulario nueva orden */}
         {showForm && (
-          <form
-            onSubmit={handleCreateOrder}
-            className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4 print:hidden"
-          >
-            <h3 className="text-lg font-semibold">Nueva Orden de Producción</h3>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-1.5 sm:col-span-1">
-                <label htmlFor="prod-recipe" className="text-xs font-medium text-muted-foreground">
-                  Receta *
-                </label>
-                <select
-                  id="prod-recipe"
-                  required
-                  value={form.recipe_id}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, recipe_id: e.target.value }))
-                  }
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Seleccionar receta...</option>
-                  {recipes.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} (base: {r.yield_base} {r.yield_unit})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="prod-yield" className="text-xs font-medium text-muted-foreground">
-                  Rendimiento Objetivo *
-                </label>
-                <input
-                  id="prod-yield"
-                  type="number"
-                  required
-                  min="0.01"
-                  step="0.01"
-                  value={form.target_yield}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, target_yield: e.target.value }))
-                  }
-                  placeholder="Ej: 25"
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="prod-notes" className="text-xs font-medium text-muted-foreground">
-                  Notas
-                </label>
-                <input
-                  id="prod-notes"
-                  type="text"
-                  value={form.notes}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, notes: e.target.value }))
-                  }
-                  placeholder="Observaciones..."
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-              </div>
-            </div>
-
-            {formError && (
-              <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
-                {formError}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={creating}
-              className="rounded-lg bg-brand-600 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 transition-colors"
+          <div className="space-y-4 print:hidden">
+            <form
+              onSubmit={handleCreateOrder}
+              className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4"
             >
-              {creating ? "Creando..." : "Crear Orden (Borrador)"}
-            </button>
-          </form>
+              <h3 className="text-lg font-semibold">Nueva Orden de Producción</h3>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5 sm:col-span-1">
+                  <label htmlFor="prod-recipe" className="text-xs font-medium text-muted-foreground">
+                    Receta *
+                  </label>
+                  <select
+                    id="prod-recipe"
+                    required
+                    value={form.recipe_id}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, recipe_id: e.target.value }))
+                    }
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Seleccionar receta...</option>
+                    {recipes.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} (base: {r.yield_base} {r.yield_unit})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="prod-yield" className="text-xs font-medium text-muted-foreground">
+                    Rendimiento Objetivo *
+                  </label>
+                  <input
+                    id="prod-yield"
+                    type="number"
+                    required
+                    min="0.01"
+                    step="0.01"
+                    value={form.target_yield}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, target_yield: e.target.value }))
+                    }
+                    placeholder="Ej: 25"
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="prod-notes" className="text-xs font-medium text-muted-foreground">
+                    Notas
+                  </label>
+                  <input
+                    id="prod-notes"
+                    type="text"
+                    value={form.notes}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, notes: e.target.value }))
+                    }
+                    placeholder="Observaciones..."
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              </div>
+
+              {formError && (
+                <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
+                  {formError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={creating}
+                className="rounded-lg bg-brand-600 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 transition-colors"
+              >
+                {creating ? "Creando..." : "Crear Orden (Borrador)"}
+              </button>
+            </form>
+            
+            {showPreview && (
+              <ProductionScalePreview 
+                recipeId={form.recipe_id} 
+                targetYield={Number(form.target_yield)} 
+              />
+            )}
+          </div>
         )}
 
         {/* Stats rápidas */}
@@ -242,7 +256,7 @@ export default function AdminProductionPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {orders.length === 0 ? (
                   <tr>
                     <td
@@ -261,53 +275,69 @@ export default function AdminProductionPage() {
                     const recipe = recipes.find(
                       (r) => r.id === order.recipe_id
                     );
+                    const isExpanded = expandedOrder === order.id;
+
                     return (
-                      <tr
-                        key={order.id}
-                        className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
-                      >
-                        <td className="px-4 py-3 font-mono text-xs">
-                          {order.id.substring(0, 8)}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                          {formatDate(order.created_at)}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium">
-                          {recipe?.name ?? <span className="text-muted-foreground text-xs">—</span>}
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold tabular-nums">
-                          {Number(order.target_yield).toLocaleString("es-EC")}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${status.className}`}
-                          >
-                            {status.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 print:hidden">
-                          {order.status === "BORRADOR" && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() =>
-                                  updateStatus(order.id, "EN_PROCESO")
-                                }
-                                className="rounded-md bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 transition-colors"
-                              >
-                                Iniciar
-                              </button>
-                            </div>
-                          )}
-                          {order.status === "EN_PROCESO" && (
-                            <button
-                              onClick={() => completeOrder(order.id)}
-                              className="rounded-md bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700 transition-colors"
+                      <React.Fragment key={order.id}>
+                        <tr className="hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 font-mono text-xs">
+                            {order.id.substring(0, 8)}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                            {order.created_at ? formatDate(order.created_at) : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium">
+                            {recipe?.name ?? <span className="text-muted-foreground text-xs">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold tabular-nums">
+                            {Number(order.target_yield).toLocaleString("es-EC")} {recipe?.yield_unit}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${status.className}`}
                             >
-                              Completar
-                            </button>
-                          )}
-                        </td>
-                      </tr>
+                              {status.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 print:hidden">
+                            <div className="flex items-center gap-2">
+                              {order.status === "BORRADOR" && (
+                                <button
+                                  onClick={() =>
+                                    updateStatus(order.id, "EN_PROCESO")
+                                  }
+                                  className="rounded-md bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 transition-colors"
+                                >
+                                  Iniciar
+                                </button>
+                              )}
+                              {order.status === "EN_PROCESO" && (
+                                <button
+                                  onClick={() => completeOrder(order.id)}
+                                  className="rounded-md bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700 transition-colors"
+                                >
+                                  Completar
+                                </button>
+                              )}
+                              {order.status === "COMPLETADA" && (
+                                <button
+                                  onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
+                                  className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted transition-colors"
+                                >
+                                  {isExpanded ? "Ocultar" : "Ver Detalle"}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                        {isExpanded && order.status === "COMPLETADA" && (
+                          <tr className="bg-muted/10 border-t-0">
+                            <td colSpan={6} className="px-4 py-3 pb-4">
+                              <ProductionOrderDetail orderId={order.id} completedAt={order.completed_at ?? null} />
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })
                 )}
