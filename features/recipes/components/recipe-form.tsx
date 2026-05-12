@@ -140,10 +140,25 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
     setError(null);
 
     try {
+      // 1. Validaciones explícitas de frontend
+      if (!name.trim()) {
+        throw new Error("El nombre de la receta es requerido.");
+      }
+      if (!outputProductId) {
+        throw new Error("El producto resultado (terminado) es requerido.");
+      }
+      if (Number(yieldBase) <= 0) {
+        throw new Error("El rendimiento base debe ser mayor a 0.");
+      }
+
       // Validate ingredients
       const validIngredients = ingredientRows.filter(
         (r) => r.product_id && Number(r.quantity) > 0
       );
+
+      if (validIngredients.length === 0) {
+        throw new Error("La receta debe tener al menos un ingrediente válido con cantidad mayor a 0.");
+      }
 
       // Build instructions
       const instructions: InstructionStep[] = stepRows
@@ -205,6 +220,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
         router.push("/admin/recipes");
       }
     } catch (err: unknown) {
+      console.error("[RecipeForm Error]", err);
       setError(err instanceof Error ? err.message : "Error al guardar receta");
     } finally {
       setSaving(false);

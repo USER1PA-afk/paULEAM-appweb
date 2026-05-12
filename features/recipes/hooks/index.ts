@@ -224,14 +224,14 @@ export function useRecipeMutations() {
           yield_base: data.yield_base,
           yield_unit: data.yield_unit,
           description: data.description || null,
-          instructions: JSON.stringify(data.instructions ?? []),
+          instructions: data.instructions ?? [],
           notes: data.notes || null,
           is_active: data.is_active ?? true,
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw new Error(error.details ? `${error.message}: ${error.details}` : error.message || "Error al crear la receta");
       return result as Recipe;
     },
     [insforge]
@@ -257,7 +257,7 @@ export function useRecipeMutations() {
       if (data.yield_base !== undefined) updatePayload.yield_base = data.yield_base;
       if (data.yield_unit !== undefined) updatePayload.yield_unit = data.yield_unit;
       if (data.description !== undefined) updatePayload.description = data.description || null;
-      if (data.instructions !== undefined) updatePayload.instructions = JSON.stringify(data.instructions);
+      if (data.instructions !== undefined) updatePayload.instructions = data.instructions;
       if (data.notes !== undefined) updatePayload.notes = data.notes || null;
 
       const { error } = await insforge.database
@@ -265,7 +265,7 @@ export function useRecipeMutations() {
         .update(updatePayload)
         .eq("id", recipeId);
 
-      if (error) throw error;
+      if (error) throw new Error(error.details ? `${error.message}: ${error.details}` : error.message || "Error al actualizar la receta");
     },
     [insforge]
   );
@@ -277,7 +277,7 @@ export function useRecipeMutations() {
         .from("recipe_ingredients")
         .insert(data);
 
-      if (error) throw error;
+      if (error) throw new Error(error.details ? `${error.message}: ${error.details}` : error.message || "Error al agregar ingrediente");
     },
     [insforge]
   );
@@ -290,7 +290,7 @@ export function useRecipeMutations() {
         .delete()
         .eq("id", ingredientId);
 
-      if (error) throw error;
+      if (error) throw new Error(error.details ? `${error.message}: ${error.details}` : error.message || "Error al eliminar ingrediente");
     },
     [insforge]
   );
@@ -304,7 +304,7 @@ export function useRecipeMutations() {
         .delete()
         .eq("recipe_id", recipeId);
 
-      if (delErr) throw delErr;
+      if (delErr) throw new Error(delErr.details ? `${delErr.message}: ${delErr.details}` : delErr.message || "Error al limpiar ingredientes anteriores");
 
       // Insertar nuevos
       if (ingredients.length > 0) {
@@ -319,7 +319,7 @@ export function useRecipeMutations() {
           .from("recipe_ingredients")
           .insert(rows);
 
-        if (insErr) throw insErr;
+        if (insErr) throw new Error(insErr.details ? `${insErr.message}: ${insErr.details}` : insErr.message || "Error al insertar nuevos ingredientes");
       }
     },
     [insforge]
