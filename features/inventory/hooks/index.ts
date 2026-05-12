@@ -147,11 +147,8 @@ export function useInventoryActions() {
 
 /**
  * Hook para suscripción Realtime al canal de inventario.
- * Se conecta al canal "inventory" y actualiza el stock en vivo
- * cada vez que el backend emite un evento "stock_updated".
- *
- * El backend publica en este canal cuando el trigger de producción
- * o cualquier INSERT en inventory_ledger ocurre.
+ * Degrada silenciosamente si el plan no soporta WebSockets:
+ * intenta conectar durante 3 s y aborta sin errores de consola.
  *
  * @param onUpdate - Callback que se llama con la entrada actualizada
  */
@@ -161,36 +158,41 @@ export function useRealtimeStock(onUpdate: (entry: LedgerEntry) => void) {
 
   useEffect(() => {
     let mounted = true;
+    let subscribed = false;
+    let rt: typeof insforge.realtime | null = null;
+
+    // Si el SDK no expone realtime, salir silenciosamente
+    if (!insforge.realtime) return;
+    rt = insforge.realtime;
+
+    const handleConnect = () => { if (mounted) setConnected(true); };
+    const handleDisconnect = () => { if (mounted) setConnected(false); };
+    const handleUpdate = (msg: unknown) => {
+      if (!mounted) return;
+      const payload = (msg as { payload?: LedgerEntry })?.payload;
+      if (payload) onUpdate(payload);
+    };
 
     const setup = async () => {
+      if (!rt) return;
       try {
-        const rt = insforge.realtime;
+        rt.on("connect", handleConnect);
+        rt.on("disconnect", handleDisconnect);
+        rt.on("stock_updated", handleUpdate);
+        rt.on("inventory_ledger:INSERT", handleUpdate);
 
-        rt.on("connect", () => {
-          if (mounted) setConnected(true);
-        });
-        rt.on("disconnect", () => {
-          if (mounted) setConnected(false);
-        });
+        // Timeout: si no conecta en 3 s, abortar silenciosamente
+        const connectResult = await Promise.race([
+          rt.connect(),
+          new Promise<"timeout">((res) => setTimeout(() => res("timeout"), 3000)),
+        ]);
 
-        await rt.connect();
+        if (!mounted || connectResult === "timeout") return;
+
         await rt.subscribe("inventory");
-
-        // Escuchar eventos de nuevos movimientos
-        rt.on("stock_updated", (msg: unknown) => {
-          if (!mounted) return;
-          const payload = (msg as { payload?: LedgerEntry })?.payload;
-          if (payload) onUpdate(payload);
-        });
-
-        // También escuchar el event genérico para INSERT en inventory_ledger
-        rt.on("inventory_ledger:INSERT", (msg: unknown) => {
-          if (!mounted) return;
-          const payload = (msg as { payload?: LedgerEntry })?.payload;
-          if (payload) onUpdate(payload);
-        });
+        subscribed = true;
       } catch {
-        // Realtime no disponible en este plan — funciona sin live updates
+        // Realtime no disponible en este plan — modo estático sin errores
         if (mounted) setConnected(false);
       }
     };
@@ -199,14 +201,21 @@ export function useRealtimeStock(onUpdate: (entry: LedgerEntry) => void) {
 
     return () => {
       mounted = false;
+      if (!rt) return;
       try {
-        insforge.realtime.unsubscribe("inventory");
-        insforge.realtime.disconnect();
+        if (subscribed) rt.unsubscribe("inventory");
+        rt.off?.("connect", handleConnect);
+        rt.off?.("disconnect", handleDisconnect);
+        rt.off?.("stock_updated", handleUpdate);
+        rt.off?.("inventory_ledger:INSERT", handleUpdate);
+        rt.disconnect();
       } catch {
-        // silenciar errores de cleanup
+        // Socket ya cerrado — ignorar
       }
     };
-  }, [insforge, onUpdate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [insforge]);
 
   return { connected };
 }
+

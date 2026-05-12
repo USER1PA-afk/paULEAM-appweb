@@ -2,7 +2,13 @@
 
 import { useProductionOrders, useRecipes, ProductionScalePreview, ProductionOrderDetail } from "@features/production";
 import { formatDate } from "@shared/lib/utils";
+<<<<<<< Updated upstream
 import React, { useState } from "react";
+=======
+import { useRole } from "@features/auth/hooks";
+import { useState } from "react";
+>>>>>>> Stashed changes
+
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   BORRADOR: {
@@ -24,15 +30,22 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
 };
 
 export default function AdminProductionPage() {
-  const { orders, loading, completeOrder, updateStatus, createOrder, refetch } =
+  const { orders, loading, completeOrder, updateStatus, createOrder, cancelOrder, refetch } =
     useProductionOrders();
   const { recipes } = useRecipes();
+  const { role } = useRole();
+  const isAdmin = role === "admin";
 
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+<<<<<<< Updated upstream
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   
+=======
+  // Per-row error state: orderId -> error message
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+>>>>>>> Stashed changes
   const [form, setForm] = useState({
     recipe_id: "",
     target_yield: "",
@@ -59,6 +72,29 @@ export default function AdminProductionPage() {
     setForm({ recipe_id: "", target_yield: "", notes: "" });
     setShowForm(false);
     refetch();
+  }
+
+  function setRowError(orderId: string, msg: string | null) {
+    setRowErrors((prev) => {
+      if (msg === null) {
+        const { [orderId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [orderId]: msg };
+    });
+  }
+
+  async function handleComplete(orderId: string) {
+    setRowError(orderId, null);
+    const result = await completeOrder(orderId);
+    if (result.error) setRowError(orderId, result.error as string);
+  }
+
+  async function handleCancel(orderId: string) {
+    if (!confirm("¿Cancelar esta orden de producción? Esta acción no se puede deshacer.")) return;
+    setRowError(orderId, null);
+    const result = await cancelOrder(orderId);
+    if (result.error) setRowError(orderId, result.error as string);
   }
 
   const completedOrders = orders.filter((o) => o.status === "COMPLETADA");
@@ -278,6 +314,7 @@ export default function AdminProductionPage() {
                     const isExpanded = expandedOrder === order.id;
 
                     return (
+<<<<<<< Updated upstream
                       <React.Fragment key={order.id}>
                         <tr className="hover:bg-muted/30 transition-colors">
                           <td className="px-4 py-3 font-mono text-xs">
@@ -314,10 +351,64 @@ export default function AdminProductionPage() {
                               {order.status === "EN_PROCESO" && (
                                 <button
                                   onClick={() => completeOrder(order.id)}
+=======
+                      <tr
+                        key={order.id}
+                        className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="px-4 py-3 font-mono text-xs">
+                          {order.id.substring(0, 8)}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDate(order.created_at)}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium">
+                          {recipe?.name ?? <span className="text-muted-foreground text-xs">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold tabular-nums">
+                          {Number(order.target_yield).toLocaleString("es-EC")}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${status.className}`}
+                          >
+                            {status.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 print:hidden">
+                          {/* Actions for BORRADOR */}
+                          {order.status === "BORRADOR" && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() =>
+                                  updateStatus(order.id, "EN_PROCESO")
+                                }
+                                className="rounded-md bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 transition-colors"
+                              >
+                                Iniciar
+                              </button>
+                              {isAdmin && (
+                                <button
+                                  onClick={() => handleCancel(order.id)}
+                                  className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  Cancelar
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          {/* Actions for EN_PROCESO */}
+                          {order.status === "EN_PROCESO" && (
+                            <div className="flex flex-col gap-2">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleComplete(order.id)}
+>>>>>>> Stashed changes
                                   className="rounded-md bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700 transition-colors"
                                 >
                                   Completar
                                 </button>
+<<<<<<< Updated upstream
                               )}
                               {order.status === "COMPLETADA" && (
                                 <button
@@ -338,6 +429,27 @@ export default function AdminProductionPage() {
                           </tr>
                         )}
                       </React.Fragment>
+=======
+                                {isAdmin && (
+                                  <button
+                                    onClick={() => handleCancel(order.id)}
+                                    className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                                  >
+                                    Cancelar
+                                  </button>
+                                )}
+                              </div>
+                              {/* Inline error from trigger (e.g. stock insuficiente) */}
+                              {rowErrors[order.id] && (
+                                <div className="max-w-xs rounded-md bg-destructive/10 border border-destructive/20 px-2 py-1 text-[10px] text-destructive leading-tight">
+                                  {rowErrors[order.id]}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+>>>>>>> Stashed changes
                     );
                   })
                 )}

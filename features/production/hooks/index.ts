@@ -75,15 +75,14 @@ export function useProductionOrders() {
   const completeOrder = useCallback(
     async (orderId: string) => {
       try {
-        const { data, error: updateError } = await insforge.database
+        const { error: updateError } = await insforge.database
           .from("production_orders")
           .update({ status: "COMPLETADA" })
-          .eq("id", orderId)
-          .select();
+          .eq("id", orderId);
 
         if (updateError) throw updateError;
         await fetchOrders();
-        return { data, error: null };
+        return { data: null, error: null };
       } catch (err: unknown) {
         return {
           data: null,
@@ -98,15 +97,14 @@ export function useProductionOrders() {
   const updateStatus = useCallback(
     async (orderId: string, status: ProductionStatus) => {
       try {
-        const { data, error: updateError } = await insforge.database
+        const { error: updateError } = await insforge.database
           .from("production_orders")
           .update({ status })
-          .eq("id", orderId)
-          .select();
+          .eq("id", orderId);
 
         if (updateError) throw updateError;
         await fetchOrders();
-        return { data, error: null };
+        return { data: null, error: null };
       } catch (err: unknown) {
         return {
           data: null,
@@ -120,6 +118,32 @@ export function useProductionOrders() {
     [insforge, fetchOrders]
   );
 
+  /**
+   * Cancelar orden — solo admin. Cambia estado a CANCELADA.
+   * No activa el trigger de producción (solo aplica para COMPLETADA).
+   */
+  const cancelOrder = useCallback(
+    async (orderId: string) => {
+      try {
+        const { error: updateError } = await insforge.database
+          .from("production_orders")
+          .update({ status: "CANCELADA" })
+          .eq("id", orderId);
+
+        if (updateError) throw updateError;
+        await fetchOrders();
+        return { data: null, error: null };
+      } catch (err: unknown) {
+        return {
+          data: null,
+          error:
+            err instanceof Error ? err.message : "Error al cancelar orden",
+        };
+      }
+    },
+    [insforge, fetchOrders]
+  );
+
   return {
     orders,
     loading,
@@ -127,6 +151,7 @@ export function useProductionOrders() {
     createOrder,
     completeOrder,
     updateStatus,
+    cancelOrder,
     refetch: fetchOrders,
   };
 }

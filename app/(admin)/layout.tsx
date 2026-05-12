@@ -22,16 +22,16 @@ const NAV_ITEMS = [
     roles: ["admin", "operario"],
   },
   {
+    label: "Proveedores",
+    href: "/admin/suppliers",
+    icon: Handshake,
+    roles: ["admin"],
+  },
+  {
     label: "Recetas",
     href: "/admin/recipes",
     icon: ClipboardList,
     roles: ["admin"],
-  },
-  {
-    label: "Producción",
-    href: "/admin/production",
-    icon: Factory,
-    roles: ["admin", "operario"],
   },
   {
     label: "Inventario",
@@ -40,21 +40,30 @@ const NAV_ITEMS = [
     roles: ["admin", "operario"],
   },
   {
-    label: "Proveedores",
-    href: "/admin/suppliers",
-    icon: Handshake,
-    roles: ["admin"],
-  },
-  {
-    label: "Órdenes de Venta",
-    href: "/admin/orders",
-    icon: ShoppingCart,
-    roles: ["admin"],
+    label: "Producción",
+    href: "/admin/production",
+    icon: Factory,
+    roles: ["admin", "operario"],
   },
   {
     label: "Usuarios",
     href: "/admin/users",
     icon: Users,
+    roles: ["admin"],
+  },
+];
+
+const SUB_ITEMS = [
+  {
+    label: "Ver E-Commerce",
+    href: "/shop/catalog",
+    icon: Store,
+    roles: ["admin", "operario"],
+  },
+  {
+    label: "Órdenes de Venta",
+    href: "/admin/orders",
+    icon: ShoppingCart,
     roles: ["admin"],
   },
 ];
@@ -176,18 +185,37 @@ export default function AdminLayout({
             })}
           </ul>
 
-          {/* Divider + Tienda */}
+          {/* Divider + Tienda/Comercial */}
           <div className="my-4 border-t border-border" />
           <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Tienda
+            Comercial
           </div>
-          <Link
-            href="/shop/catalog"
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
-          >
-            <Store className="h-5 w-5 text-muted-foreground" />
-            <span>Ver E-Commerce</span>
-          </Link>
+          <ul className="space-y-1">
+            {SUB_ITEMS.filter(
+              (item) => role && item.roles.includes(role)
+            ).map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                      isActive
+                        ? "bg-brand-50 text-brand-700 shadow-sm ring-1 ring-brand-200"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <item.icon className={`h-5 w-5 ${isActive ? "text-brand-600" : "text-muted-foreground"}`} />
+                    <span>{item.label}</span>
+                    {isActive && (
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-brand-500" />
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </nav>
 
         {/* User section */}
