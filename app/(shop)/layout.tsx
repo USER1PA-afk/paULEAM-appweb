@@ -6,6 +6,9 @@ import { useAuth, useRole } from "@features/auth/hooks";
 import { useCart } from "@features/checkout/hooks";
 import { ThemeToggle } from "@shared/components/theme-toggle";
 import { useEffect } from "react";
+import { ShoppingCart } from "lucide-react";
+import { Footer } from "@shared/components/footer";
+
 
 export default function ShopLayout({
   children,
@@ -58,7 +61,7 @@ export default function ShopLayout({
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              🛒 Carrito
+              <span className="inline-flex items-center gap-1.5"><ShoppingCart className="h-4 w-4" /> Carrito</span>
               {itemCount > 0 && (
                 <span className="absolute -top-2 -right-4 inline-flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
                   {itemCount}
@@ -97,20 +100,8 @@ export default function ShopLayout({
       {/* Content */}
       <main className="flex-1">{children}</main>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-card">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-          <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Planta de Alimentos Uleam - ERP
-          </p>
-          <Link
-            href="/login"
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Panel Admin →
-          </Link>
-        </div>
-      </footer>
+      <Footer />
+
     </div>
   );
 }

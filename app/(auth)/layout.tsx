@@ -1,85 +1,125 @@
 import Link from "next/link";
 
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
-      {/* Panel izquierdo — Brand */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-linear-to-br from-brand-700 via-brand-600 to-brand-800">
-        {/* Pattern overlay */}
+
+      {/* ── Panel izquierdo — Identidad ULEAM ── */}
+      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden flex-col bg-brand-600">
+
+        {/* Dot pattern */}
         <div
-          className="absolute inset-0 opacity-10"
+          className="absolute inset-0 opacity-[0.08]"
           style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.3) 1px, transparent 0)`,
-            backgroundSize: "32px 32px",
+            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.6) 1px, transparent 0)`,
+            backgroundSize: "28px 28px",
           }}
         />
 
-        <div className="relative z-10 flex flex-col justify-between p-12">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-lg font-bold text-white backdrop-blur-sm">
-              P
+        {/* Green diagonal accent */}
+        <div className="absolute bottom-0 right-0 w-64 h-64 bg-accent-500/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 -left-10 w-40 h-40 bg-white/5 rounded-full blur-2xl" />
+
+        <div className="relative z-10 flex flex-col h-full p-12">
+
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-3 self-start">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm border border-white/20">
+              <span className="text-base font-extrabold text-white">U</span>
             </div>
-            <span className="text-xl font-bold text-white">PAuleam</span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-base font-extrabold text-white uppercase tracking-tight">
+                PAuleam
+              </span>
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-white/60">
+                Planta de Alimentos
+              </span>
+            </div>
           </Link>
 
-          <div className="space-y-6">
-            <h2 className="text-4xl font-bold leading-tight text-white">
-              Gestión Integral
-              <br />
-              <span className="text-brand-200">de tu Planta</span>
-            </h2>
-            <p className="max-w-md text-base leading-relaxed text-brand-100/80">
-              Inventario, producción, recetas y ventas en un solo lugar.
-              Control total de tu operación alimentaria con trazabilidad
-              completa.
-            </p>
-            <div className="flex gap-8 pt-4">
-              <div>
-                <div className="text-2xl font-bold text-white">100%</div>
-                <div className="text-xs text-brand-200">Trazable</div>
+          {/* Main copy — centered vertically */}
+          <div className="flex-1 flex flex-col justify-center space-y-8">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent-400 animate-pulse" />
+                <span className="text-xs font-semibold text-white/80 uppercase tracking-widest">
+                  Sistema ERP v2
+                </span>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-white">24/7</div>
-                <div className="text-xs text-brand-200">Disponible</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-white">∞</div>
-                <div className="text-xs text-brand-200">Escalable</div>
-              </div>
+
+              <h2 className="text-4xl font-extrabold leading-tight text-white">
+                Gestión Integral
+                <br />
+                <span className="text-accent-300">de tu Planta</span>
+              </h2>
+              <p className="max-w-sm text-sm leading-relaxed text-white/70">
+                Inventario, producción, recetas y ventas en un solo lugar.
+                Control total de tu operación alimentaria con trazabilidad
+                completa.
+              </p>
+            </div>
+
+            {/* Stats */}
+            <div className="flex gap-8">
+              {[
+                { value: "100%", label: "Trazable"   },
+                { value: "24/7", label: "Disponible" },
+                { value: "∞",    label: "Escalable"  },
+              ].map((s) => (
+                <div key={s.label}>
+                  <div className="text-2xl font-extrabold text-white">{s.value}</div>
+                  <div className="text-xs text-white/50 mt-0.5">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Feature pills */}
+            <div className="flex flex-wrap gap-2">
+              {["Inventario", "Producción", "Recetas", "E-Commerce"].map((f) => (
+                <span
+                  key={f}
+                  className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium text-white/80"
+                >
+                  {f}
+                </span>
+              ))}
             </div>
           </div>
 
-          <p className="text-xs text-brand-200/60">
-            © {new Date().getFullYear()} Planta de Alimentos Uleam - ERP
+          {/* Footer */}
+          <p className="text-[11px] text-white/40">
+            © {new Date().getFullYear()} Universidad Laica Eloy Alfaro de Manabí
           </p>
         </div>
       </div>
 
-      {/* Panel derecho — Formulario */}
-      <div className="flex flex-1 items-center justify-center bg-background px-6 py-12">
-        <div className="w-full max-w-sm space-y-6">
-          {/* Mobile Back Button */}
-          <div className="flex lg:hidden mb-2">
-            <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Regresar al inicio
-            </Link>
-          </div>
+      {/* ── Panel derecho — Formulario ── */}
+      <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-12">
 
-          {/* Mobile logo */}
-          <div className="flex items-center justify-center gap-2.5 lg:hidden">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-linear-to-br from-brand-500 to-brand-700 text-sm font-bold text-white shadow-md">
-              P
+        {/* Mobile header */}
+        <div className="w-full max-w-sm mb-6 lg:hidden space-y-3">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Regresar al inicio
+          </Link>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 shadow-md">
+              <span className="text-xs font-extrabold text-white">U</span>
             </div>
-            <span className="text-lg font-bold text-foreground">PAuleam</span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm font-extrabold uppercase tracking-tight text-foreground">PAuleam</span>
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">Planta de Alimentos</span>
+            </div>
           </div>
+        </div>
 
+        {/* Form slot */}
+        <div className="w-full max-w-sm space-y-6">
           {children}
         </div>
       </div>

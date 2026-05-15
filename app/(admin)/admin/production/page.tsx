@@ -4,6 +4,7 @@ import { useProductionOrders, useRecipes, ProductionScalePreview, ProductionOrde
 import { formatDate } from "@shared/lib/utils";
 import React, { useState } from "react";
 import { useRole } from "@features/auth/hooks";
+import { Printer } from "lucide-react";
 
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
@@ -120,7 +121,7 @@ export default function AdminProductionPage() {
               onClick={() => window.print()}
               className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors flex items-center gap-2"
             >
-              <span>📄</span> PDF
+              <Printer className="h-4 w-4" /> PDF
             </button>
             <button
               onClick={() => setShowForm(!showForm)}

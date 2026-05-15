@@ -5,6 +5,7 @@ import { useSuppliers } from "@features/suppliers/hooks";
 import { formatDate } from "@shared/lib/utils";
 import { useState, useEffect, useCallback } from "react";
 import { getInsforge } from "@shared/lib/insforge/client";
+import { RefreshCw, Zap, PackagePlus, FileDown, Handshake as HandshakeIcon, ArrowUp, ArrowDown } from "lucide-react";
 
 interface Product {
   id: string;
@@ -70,15 +71,15 @@ export function StockSummaryTable() {
         </div>
         <button
           onClick={refetch}
-          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
         >
-          ↻ Actualizar
+          <RefreshCw className="h-3.5 w-3.5" /> Actualizar
         </button>
       </div>
 
       {pulse && (
-        <div className="rounded-md bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-medium text-brand-700 animate-pulse">
-          ⚡ Movimiento detectado — stock actualizado
+        <div className="flex items-center gap-1.5 rounded-md bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-medium text-brand-700 animate-pulse dark:bg-brand-900/20 dark:border-brand-800 dark:text-brand-300">
+          <Zap className="h-3.5 w-3.5 shrink-0" /> Movimiento detectado — stock actualizado
         </div>
       )}
 
@@ -254,7 +255,7 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
       setForm({ product_id: "", quantity: "", unit_cost: "", notes: "", reference_type: "COMPRA", supplier_id: "" });
       setShowForm(false);
       const product = products.find((p) => p.id === form.product_id);
-      setSuccess(`✓ Ingreso registrado: ${form.quantity} ${product?.unit ?? ""} de ${product?.name ?? ""}`);
+      setSuccess(`Ingreso registrado: ${form.quantity} ${product?.unit ?? ""} de ${product?.name ?? ""}`);
       setTimeout(() => setSuccess(null), 5000);
       onSuccess?.();
     }
@@ -271,7 +272,7 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
           }}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors"
         >
-          {showForm ? "Cancelar" : "📥 Nuevo Ingreso"}
+          {showForm ? "Cancelar" : <span className="inline-flex items-center gap-1.5"><PackagePlus className="h-4 w-4" /> Nuevo Ingreso</span>}
         </button>
       </div>
 
@@ -514,7 +515,11 @@ export function InventoryLedgerTable({
                             : "bg-red-100 text-red-700"
                         }`}
                       >
-                        {entry.movement_type === "INGRESO" ? "↑ Ingreso" : "↓ Egreso"}
+                        {entry.movement_type === "INGRESO" ? (
+                          <span className="inline-flex items-center gap-1"><ArrowUp className="h-3 w-3" /> Ingreso</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1"><ArrowDown className="h-3 w-3" /> Egreso</span>
+                        )}
                       </span>
                       {entry.reference_type && (
                         <span className="text-[10px] text-muted-foreground/70 px-0.5">
@@ -542,7 +547,7 @@ export function InventoryLedgerTable({
                   <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">
                     {entry.supplier_company ? (
                       <span className="inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-                        🤝 {entry.supplier_company}
+                        <HandshakeIcon className="h-3 w-3 shrink-0" /> {entry.supplier_company}
                       </span>
                     ) : (
                       "—"
@@ -572,7 +577,7 @@ export function InventoryReportButton() {
       }}
       className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors print:hidden flex items-center gap-2"
     >
-      <span>📄</span> Exportar PDF
+      <FileDown className="h-4 w-4" /> Exportar PDF
     </button>
   );
 }

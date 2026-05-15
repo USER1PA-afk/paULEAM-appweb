@@ -3,6 +3,7 @@
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useCart } from "@features/checkout/hooks";
 import { useState, useEffect, useCallback } from "react";
+import { Leaf, ImageOff, ShoppingCart as CartIcon } from "lucide-react";
 
 interface CatalogProduct {
   id: string;
@@ -55,7 +56,7 @@ export default function CatalogPage() {
     if (result.error) {
       setMessage(`Error: ${result.error}`);
     } else {
-      setMessage(`✓ ${product.name} agregado al carrito`);
+      setMessage(`${product.name} agregado al carrito`);
     }
     setAddingId(null);
     setTimeout(() => setMessage(null), 3000);
@@ -92,7 +93,7 @@ export default function CatalogPage() {
         </div>
       ) : products.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-24 text-muted-foreground">
-          <span className="text-5xl mb-4">🌿</span>
+          <Leaf className="h-12 w-12 mb-4 opacity-30" />
           <p className="text-lg font-medium">Próximamente</p>
           <p className="text-sm mt-1">
             No hay productos disponibles en este momento.
@@ -115,7 +116,7 @@ export default function CatalogPage() {
                   />
                 ) : (
                   <div className="flex flex-col items-center text-muted-foreground">
-                    <span className="text-5xl opacity-30">🧀</span>
+                    <ImageOff className="h-12 w-12 opacity-20" />
                   </div>
                 )}
                 <div className="absolute top-3 right-3">
@@ -170,7 +171,14 @@ export default function CatalogPage() {
                       disabled={cartLoading || addingId === product.id}
                       className="flex-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 transition-all text-center"
                     >
-                      {addingId === product.id ? "..." : "🛒 Agregar"}
+                      {addingId === product.id ? (
+                        "Agregando..."
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5">
+                          <CartIcon className="h-3.5 w-3.5" />
+                          Agregar
+                        </span>
+                      )}
                     </button>
                   </div>
                 </div>

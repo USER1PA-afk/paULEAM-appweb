@@ -6,6 +6,7 @@ import { Recipe } from "@entities/recipe";
 import { Product } from "@entities/product";
 import { useScalePreview, useRecipeIngredients } from "../hooks";
 import { formatScaledQuantity, MEASUREMENT_UNITS } from "../lib";
+import { Check, X, ArrowDown, ArrowUp } from "lucide-react";
 
 /**
  * Componente: Preview de Escalado de Producción
@@ -89,9 +90,13 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
                   </td>
                   <td className="py-2.5 pl-4 text-center">
                     {ing.stock_sufficient ? (
-                      <span className="inline-flex items-center text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-medium">✓ OK</span>
+                      <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-medium">
+                        <Check className="h-3 w-3" /> OK
+                      </span>
                     ) : (
-                      <span className="inline-flex items-center text-xs text-red-700 bg-red-100 px-2 py-0.5 rounded-full font-medium">✗ Insuficiente</span>
+                      <span className="inline-flex items-center gap-1 text-xs text-red-700 bg-red-100 px-2 py-0.5 rounded-full font-medium">
+                        <X className="h-3 w-3" /> Insuficiente
+                      </span>
                     )}
                   </td>
                 </tr>
@@ -156,14 +161,14 @@ export function ProductionOrderDetail({ orderId, completedAt }: { orderId: strin
       <ul className="space-y-1">
         {egresos.map(e => (
           <li key={e.id} className="flex justify-between items-center text-xs">
-            <span className="text-red-600 font-medium">↓ {e.product_name}</span>
+            <span className="inline-flex items-center gap-1 text-red-600 font-medium"><ArrowDown className="h-3 w-3 shrink-0" /> {e.product_name}</span>
             <span className="tabular-nums text-muted-foreground">{e.quantity} {e.product_unit}</span>
           </li>
         ))}
         {egresos.length > 0 && ingresos.length > 0 && <div className="h-px bg-border/50 my-1" />}
         {ingresos.map(e => (
           <li key={e.id} className="flex justify-between items-center text-xs">
-            <span className="text-green-600 font-medium">↑ {e.product_name}</span>
+            <span className="inline-flex items-center gap-1 text-green-600 font-medium"><ArrowUp className="h-3 w-3 shrink-0" /> {e.product_name}</span>
             <span className="tabular-nums text-muted-foreground font-semibold">{e.quantity} {e.product_unit}</span>
           </li>
         ))}

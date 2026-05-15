@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import { SupplierSelect } from "@features/suppliers/components";
 import { useSupplierActions } from "@features/suppliers/hooks";
 import { useRole } from "@features/auth/hooks";
+import { Tag, AlertTriangle, Pencil, Trash2, Star } from "lucide-react";
 
 interface Product {
   id: string;
@@ -328,8 +329,9 @@ export default function AdminProductsPage() {
             // HAS ledger entries — can only deactivate
             <>
               <div className="space-y-1">
-                <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
-                  ⚠ No se puede eliminar “{deletingProduct?.name}”
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  No se puede eliminar &ldquo;{deletingProduct?.name}&rdquo;
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Este producto tiene <strong>{deleteLedgerCount}</strong> movimiento{deleteLedgerCount !== 1 ? "s" : ""} en el libro de inventario.
@@ -356,8 +358,9 @@ export default function AdminProductsPage() {
             // ZERO ledger entries — safe to hard delete
             <>
               <div className="space-y-1">
-                <p className="text-sm font-semibold text-destructive">
-                  ⚠ ¿Eliminar “{deletingProduct?.name}” permanentemente?
+                <p className="text-sm font-semibold text-destructive flex items-center gap-1.5">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  ¿Eliminar &ldquo;{deletingProduct?.name}&rdquo; permanentemente?
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Este producto no tiene movimientos de inventario. La eliminación es permanente e irreversible.
@@ -568,7 +571,7 @@ export default function AdminProductsPage() {
               {products.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
-                    <span className="text-3xl block mb-2">🏷️</span>
+                    <Tag className="h-8 w-8 mx-auto mb-2 opacity-25" />
                     No hay productos. Crea el primero con el botón de arriba.
                   </td>
                 </tr>
@@ -609,7 +612,7 @@ export default function AdminProductsPage() {
                                     : "bg-muted text-muted-foreground"
                                 }`}
                               >
-                                {s.is_primary && "★ "}
+                                {s.is_primary && <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />}
                                 {s.company ?? s.name}
                               </span>
                             ))}
@@ -641,16 +644,16 @@ export default function AdminProductsPage() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => openEdit(p)}
-                          className="rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors whitespace-nowrap"
+                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors whitespace-nowrap"
                         >
-                          ✏ Editar
+                          <Pencil className="h-3 w-3" /> Editar
                         </button>
                         {isAdmin && (
                           <button
                             onClick={() => openDeleteConfirm(p)}
-                            className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors whitespace-nowrap"
+                            className="inline-flex items-center gap-1 rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors whitespace-nowrap"
                           >
-                            🗑 Eliminar
+                            <Trash2 className="h-3 w-3" /> Eliminar
                           </button>
                         )}
                       </div>

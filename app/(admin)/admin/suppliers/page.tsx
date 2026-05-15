@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SuppliersTable, SupplierForm } from "@features/suppliers/components";
 import { useAllSuppliers, useSupplierActions } from "@features/suppliers/hooks";
 import type { Supplier } from "@entities/supplier";
+import { CircleCheck } from "lucide-react";
 
 export default function AdminSuppliersPage() {
   const { suppliers, loading, error, refetch } = useAllSuppliers();
@@ -68,8 +69,8 @@ export default function AdminSuppliersPage() {
 
       {/* Success toast */}
       {successMsg && (
-        <div className="rounded-md bg-brand-50 border border-brand-200 px-4 py-3 text-sm font-medium text-brand-700 dark:bg-brand-900/20 dark:border-brand-800 dark:text-brand-300">
-          ✓ {successMsg}
+        <div className="flex items-center gap-2 rounded-md bg-brand-50 border border-brand-200 px-4 py-3 text-sm font-medium text-brand-700 dark:bg-brand-900/20 dark:border-brand-800 dark:text-brand-300">
+          <CircleCheck className="h-4 w-4 shrink-0" /> {successMsg}
         </div>
       )}
 

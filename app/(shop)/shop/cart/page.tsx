@@ -2,6 +2,7 @@
 
 import { useCart } from "@features/checkout/hooks";
 import Link from "next/link";
+import { ShoppingCart, Package, X } from "lucide-react";
 
 export default function CartPage() {
   const { items, total, itemCount, removeItem, clearCart, isEmpty } = useCart();
@@ -9,7 +10,7 @@ export default function CartPage() {
   if (isEmpty) {
     return (
       <div className="mx-auto max-w-2xl px-6 py-24 text-center">
-        <span className="text-6xl block mb-4">🛒</span>
+        <ShoppingCart className="h-16 w-16 mx-auto mb-4 opacity-25" />
         <h1 className="text-2xl font-bold text-foreground">
           Tu carrito está vacío
         </h1>
@@ -43,8 +44,8 @@ export default function CartPage() {
               key={item.product_id}
               className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm"
             >
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted text-2xl">
-                🧀
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                <Package className="h-7 w-7 opacity-40" />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-foreground truncate">
@@ -72,7 +73,7 @@ export default function CartPage() {
                 className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
                 title="Eliminar"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
           ))}

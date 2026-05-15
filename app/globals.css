@@ -1,76 +1,92 @@
 @import "tailwindcss";
 
 /* ============================================
-   PAuleam Design System — Tailwind CSS v4
+   PAuleam Design System — ULEAM Visual Identity
    ============================================ */
 
 :root {
-  /* Brand Colors */
-  --color-brand-50: #f0fdf4;
-  --color-brand-100: #dcfce7;
-  --color-brand-200: #bbf7d0;
-  --color-brand-300: #86efac;
-  --color-brand-400: #4ade80;
-  --color-brand-500: #22c55e;
-  --color-brand-600: #16a34a;
-  --color-brand-700: #15803d;
-  --color-brand-800: #166534;
-  --color-brand-900: #14532d;
+  /* ULEAM Brand — Rojo Principal */
+  --color-brand-50:  #fff0f0;
+  --color-brand-100: #ffd6d6;
+  --color-brand-200: #ffadad;
+  --color-brand-300: #ff8080;
+  --color-brand-400: #ff4d4d;
+  --color-brand-500: #ff0000;
+  --color-brand-600: #cc0000;
+  --color-brand-700: #990000;
+  --color-brand-800: #660000;
+  --color-brand-900: #330000;
 
-  /* Neutral */
-  --background: #ffffff;
-  --foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --border: #e2e8f0;
-  --ring: #22c55e;
+  /* ULEAM Accent — Verde Institucional */
+  --color-accent-50:  #f4fae8;
+  --color-accent-100: #e4f3c0;
+  --color-accent-200: #cce88a;
+  --color-accent-300: #b4da57;
+  --color-accent-400: #a0ce32;
+  --color-accent-500: #94c11f;
+  --color-accent-600: #779b18;
+  --color-accent-700: #5a7411;
+  --color-accent-800: #3d4e0b;
+  --color-accent-900: #1e2705;
+
+  /* ULEAM Gris Institucional */
+  --color-uleam-gray: #4a4a49;
+
+  /* Neutral — Modo Claro */
+  --background:         #f5f5f5;
+  --foreground:         #121212;
+  --muted:              #ebebeb;
+  --muted-foreground:   #4a4a49;
+  --border:             #d9d9d9;
+  --ring:               #ff0000;
 
   /* Surfaces */
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  --card:               #ffffff;
+  --card-foreground:    #121212;
+  --popover:            #ffffff;
+  --popover-foreground: #121212;
 
   /* States */
-  --destructive: #ef4444;
-  --destructive-foreground: #fef2f2;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --info: #3b82f6;
+  --destructive:        #cc0000;
+  --destructive-foreground: #fff0f0;
+  --success:            #94c11f;
+  --warning:            #f59e0b;
+  --info:               #3b82f6;
 
   /* Radius */
   --radius: 0.625rem;
 }
 
 .dark {
-  --background: #020617;
-  --foreground: #f8fafc;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --border: #1e293b;
-  --card: #0f172a;
-  --card-foreground: #f8fafc;
-  --popover: #0f172a;
-  --popover-foreground: #f8fafc;
+  --background:         #121212;
+  --foreground:         #f5f5f5;
+  --muted:              #1e1e1e;
+  --muted-foreground:   #a0a0a0;
+  --border:             #2a2a2a;
+  --card:               #1e1e1e;
+  --card-foreground:    #f5f5f5;
+  --popover:            #1e1e1e;
+  --popover-foreground: #f5f5f5;
+  --ring:               #ff4d4d;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
-  --color-ring: var(--ring);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
+  --color-background:        var(--background);
+  --color-foreground:        var(--foreground);
+  --color-muted:             var(--muted);
+  --color-muted-foreground:  var(--muted-foreground);
+  --color-border:            var(--border);
+  --color-ring:              var(--ring);
+  --color-card:              var(--card);
+  --color-card-foreground:   var(--card-foreground);
+  --color-popover:           var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  --color-destructive: var(--destructive);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-info: var(--info);
+  --color-destructive:       var(--destructive);
+  --color-success:           var(--success);
+  --color-warning:           var(--warning);
+  --color-info:              var(--info);
 
-  --color-brand-50: var(--color-brand-50);
+  --color-brand-50:  var(--color-brand-50);
   --color-brand-100: var(--color-brand-100);
   --color-brand-200: var(--color-brand-200);
   --color-brand-300: var(--color-brand-300);
@@ -80,6 +96,19 @@
   --color-brand-700: var(--color-brand-700);
   --color-brand-800: var(--color-brand-800);
   --color-brand-900: var(--color-brand-900);
+
+  --color-accent-50:  var(--color-accent-50);
+  --color-accent-100: var(--color-accent-100);
+  --color-accent-200: var(--color-accent-200);
+  --color-accent-300: var(--color-accent-300);
+  --color-accent-400: var(--color-accent-400);
+  --color-accent-500: var(--color-accent-500);
+  --color-accent-600: var(--color-accent-600);
+  --color-accent-700: var(--color-accent-700);
+  --color-accent-800: var(--color-accent-800);
+  --color-accent-900: var(--color-accent-900);
+
+  --color-uleam-gray: var(--color-uleam-gray);
 
   --font-sans: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
   --radius-sm: calc(var(--radius) - 0.25rem);
@@ -94,26 +123,21 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Focus ring utilities */
 *:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
-/* Animations */
 @keyframes grow {
   from { width: 0; }
-  to { width: 100%; }
+  to   { width: 100%; }
 }
 
 /* ============================
    Print / PDF Styles
-   Oculta la UI de navegación y
-   deja sólo el contenido tabular.
    ============================ */
 @media print {
-  /* Ocultar sidebar, navbar, botones de acción */
   aside,
   nav,
   .print\:hidden,
@@ -122,21 +146,18 @@ body {
     display: none !important;
   }
 
-  /* Fondo blanco, texto negro */
   body {
     background: white !important;
     color: black !important;
     font-size: 11pt;
   }
 
-  /* El contenido principal ocupa todo el ancho */
   main {
     padding: 0 !important;
     margin: 0 !important;
     max-width: 100% !important;
   }
 
-  /* Bordes visibles en tablas */
   table {
     border-collapse: collapse;
     width: 100%;
@@ -154,12 +175,10 @@ body {
     print-color-adjust: exact;
   }
 
-  /* Evitar corte de filas */
   tr {
     page-break-inside: avoid;
   }
 
-  /* Mostrar elementos print:block */
   .print\:block {
     display: block !important;
   }

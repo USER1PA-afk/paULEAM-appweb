@@ -4,27 +4,39 @@ import { useStockSummary } from "@features/inventory/hooks";
 import { useProductionOrders } from "@features/production/hooks";
 import { useOrderManagement } from "@features/checkout/hooks";
 import Link from "next/link";
+import {
+  Tag,
+  AlertTriangle,
+  Settings2,
+  ShoppingCart,
+  PackagePlus,
+  Wrench,
+  Plus,
+  ClipboardList,
+  Package,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 function StatCard({
   label,
   value,
-  icon,
+  icon: Icon,
   trend,
   href,
   color = "brand",
 }: {
   label: string;
   value: string | number;
-  icon: string;
+  icon: LucideIcon;
   trend?: string;
   href: string;
   color?: "brand" | "blue" | "amber" | "red";
 }) {
   const colorMap = {
     brand: "from-brand-500 to-brand-600",
-    blue: "from-blue-500 to-blue-600",
+    blue:  "from-blue-500 to-blue-600",
     amber: "from-amber-500 to-amber-600",
-    red: "from-red-500 to-red-600",
+    red:   "from-red-500 to-red-600",
   };
 
   return (
@@ -45,10 +57,9 @@ function StatCard({
           <div
             className={`flex h-10 w-10 items-center justify-center rounded-lg bg-linear-to-br ${colorMap[color]} text-white shadow-sm`}
           >
-            <span className="text-lg">{icon}</span>
+            <Icon className="h-5 w-5" />
           </div>
         </div>
-        {/* Decorative gradient line */}
         <div
           className={`absolute bottom-0 left-0 h-0.5 w-full bg-linear-to-r ${colorMap[color]} opacity-0 transition-opacity group-hover:opacity-100`}
         />
@@ -61,20 +72,20 @@ function QuickAction({
   label,
   description,
   href,
-  icon,
+  icon: Icon,
 }: {
   label: string;
   description: string;
   href: string;
-  icon: string;
+  icon: LucideIcon;
 }) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-4 rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:shadow-sm hover:border-brand-200 hover:bg-brand-50/30"
+      className="flex items-center gap-4 rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:shadow-sm hover:border-brand-200 hover:bg-brand-50/30 dark:hover:bg-brand-900/10"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-lg">
-        {icon}
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+        <Icon className="h-5 w-5" />
       </div>
       <div className="min-w-0">
         <p className="text-sm font-semibold text-foreground">{label}</p>
@@ -89,29 +100,19 @@ export default function AdminDashboard() {
   const { orders: prodOrders } = useProductionOrders();
   const { orders: salesOrders } = useOrderManagement();
 
-  const totalProducts = summary.length;
-  const lowStock = summary.filter((s) => Number(s.stock_actual) < 10 && Number(s.stock_actual) > 0).length;
-  const outOfStock = summary.filter((s) => Number(s.stock_actual) <= 0).length;
-
-  const pendingProduction = prodOrders.filter(
-    (o) => o.status === "BORRADOR" || o.status === "EN_PROCESO"
-  ).length;
-  const completedProduction = prodOrders.filter(
-    (o) => o.status === "COMPLETADA"
-  ).length;
-
-  const pendingSales = salesOrders.filter(
-    (o) => o.status === "PAGADO"
-  ).length;
-  const totalSales = salesOrders.length;
+  const totalProducts    = summary.length;
+  const lowStock         = summary.filter((s) => Number(s.stock_actual) < 10 && Number(s.stock_actual) > 0).length;
+  const outOfStock       = summary.filter((s) => Number(s.stock_actual) <= 0).length;
+  const pendingProduction = prodOrders.filter((o) => o.status === "BORRADOR" || o.status === "EN_PROCESO").length;
+  const completedProduction = prodOrders.filter((o) => o.status === "COMPLETADA").length;
+  const pendingSales     = salesOrders.filter((o) => o.status === "PAGADO").length;
+  const totalSales       = salesOrders.length;
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Dashboard
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Resumen general del sistema ERP — Planta de Alimentos Uleam
         </p>
@@ -122,7 +123,7 @@ export default function AdminDashboard() {
         <StatCard
           label="Productos"
           value={totalProducts}
-          icon="🏷️"
+          icon={Tag}
           trend={`${outOfStock} sin stock`}
           href="/admin/products"
           color="brand"
@@ -130,7 +131,7 @@ export default function AdminDashboard() {
         <StatCard
           label="Stock Bajo"
           value={lowStock}
-          icon="⚠️"
+          icon={AlertTriangle}
           trend="Requieren atención"
           href="/admin/inventory"
           color="amber"
@@ -138,7 +139,7 @@ export default function AdminDashboard() {
         <StatCard
           label="Producción Activa"
           value={pendingProduction}
-          icon="⚙️"
+          icon={Settings2}
           trend={`${completedProduction} completadas`}
           href="/admin/production"
           color="blue"
@@ -146,7 +147,7 @@ export default function AdminDashboard() {
         <StatCard
           label="Ventas Pendientes"
           value={pendingSales}
-          icon="🛒"
+          icon={ShoppingCart}
           trend={`${totalSales} total`}
           href="/admin/orders"
           color="red"
@@ -157,46 +158,42 @@ export default function AdminDashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Quick Actions */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">
-            Acciones Rápidas
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">Acciones Rápidas</h2>
           <div className="grid gap-3">
             <QuickAction
               label="Nuevo Ingreso de Stock"
               description="Registrar entrada de materia prima al inventario"
               href="/admin/inventory"
-              icon="📥"
+              icon={PackagePlus}
             />
             <QuickAction
               label="Crear Orden de Producción"
               description="Iniciar una nueva corrida de producción"
               href="/admin/production"
-              icon="🔧"
+              icon={Wrench}
             />
             <QuickAction
               label="Registrar Producto"
               description="Agregar nuevo producto o materia prima"
               href="/admin/products"
-              icon="➕"
+              icon={Plus}
             />
             <QuickAction
               label="Ver Órdenes de Venta"
               description="Aprobar pagos y gestionar pedidos"
               href="/admin/orders"
-              icon="📋"
+              icon={ClipboardList}
             />
           </div>
         </div>
 
         {/* Stock Summary mini */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">
-            Stock Actual
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">Stock Actual</h2>
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             {summary.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <span className="text-3xl mb-2">📦</span>
+                <Package className="h-10 w-10 mb-3 opacity-30" />
                 <p className="text-sm">No hay productos registrados</p>
                 <Link
                   href="/admin/products"
@@ -214,7 +211,7 @@ export default function AdminDashboard() {
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span
-                        className={`inline-flex h-2 w-2 rounded-full ${
+                        className={`inline-flex h-2 w-2 rounded-full shrink-0 ${
                           Number(item.stock_actual) <= 0
                             ? "bg-red-500"
                             : Number(item.stock_actual) < 10
@@ -223,23 +220,15 @@ export default function AdminDashboard() {
                         }`}
                       />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">
-                          {item.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {item.sku}
-                        </p>
+                        <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">{item.sku}</p>
                       </div>
                     </div>
                     <div className="text-right pl-4">
                       <p className="text-sm font-semibold tabular-nums text-foreground">
-                        {Number(item.stock_actual).toLocaleString("es-EC", {
-                          maximumFractionDigits: 2,
-                        })}
+                        {Number(item.stock_actual).toLocaleString("es-EC", { maximumFractionDigits: 2 })}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.unit}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{item.unit}</p>
                     </div>
                   </div>
                 ))}

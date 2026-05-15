@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSuppliers, useSupplierActions } from "@features/suppliers/hooks";
 import type { Supplier, CreateSupplier } from "@entities/supplier";
+import { Plus, X, Handshake } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────
 // SupplierQuickAddForm — inline modal para crear proveedor sin salir del form
@@ -38,8 +39,8 @@ export function SupplierQuickAddForm({ onCreated, onCancel }: SupplierQuickAddFo
 
   return (
     <div className="rounded-xl border border-brand-200 bg-brand-50/60 p-4 shadow-sm space-y-3 dark:bg-brand-900/20 dark:border-brand-800">
-      <p className="text-sm font-semibold text-brand-700 dark:text-brand-300">
-        ➕ Nuevo Proveedor
+      <p className="text-sm font-semibold text-brand-700 dark:text-brand-300 flex items-center gap-1.5">
+        <Plus className="h-4 w-4" /> Nuevo Proveedor
       </p>
       {/* Plain div — NOT a form, to avoid nested <form> hydration error */}
       <div className="space-y-3">
@@ -197,7 +198,11 @@ export function SupplierSelect({ selectedIds, primaryId, onChange }: SupplierSel
           onClick={() => setShowQuickAdd((v) => !v)}
           className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors"
         >
-          {showQuickAdd ? "✕ Cancelar" : "➕ Nuevo proveedor"}
+          {showQuickAdd ? (
+            <span className="inline-flex items-center gap-1"><X className="h-3.5 w-3.5" /> Cancelar</span>
+          ) : (
+            <span className="inline-flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Nuevo proveedor</span>
+          )}
         </button>
       </div>
 
@@ -264,12 +269,12 @@ export function SupplierSelect({ selectedIds, primaryId, onChange }: SupplierSel
                         : "bg-muted text-muted-foreground hover:bg-brand-100 hover:text-brand-700"
                     }`}
                   >
-                    {isPrimary ? "★ Principal" : "Marcar principal"}
+                    {isPrimary ? "Principal" : "Marcar principal"}
                   </button>
                 )}
                 {selected && selectedIds.length === 1 && (
                   <span className="shrink-0 rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-semibold text-white">
-                    ★ Principal
+                    Principal
                   </span>
                 )}
               </label>
@@ -280,7 +285,7 @@ export function SupplierSelect({ selectedIds, primaryId, onChange }: SupplierSel
 
       {needsPrimarySelection && (
         <p className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs font-medium text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300">
-          ⚠ Con múltiples proveedores, debes seleccionar cuál es el principal.
+          Con múltiples proveedores, debes seleccionar cuál es el principal.
         </p>
       )}
 
@@ -308,7 +313,7 @@ export function SuppliersTable({
   if (suppliers.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-        <span className="text-4xl mb-3">🤝</span>
+        <Handshake className="h-10 w-10 mb-3 opacity-25" />
         <p className="text-sm">No hay proveedores registrados.</p>
       </div>
     );

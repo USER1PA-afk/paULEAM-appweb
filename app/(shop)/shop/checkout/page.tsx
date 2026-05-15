@@ -4,6 +4,7 @@ import { useCart, useCheckout } from "@features/checkout/hooks";
 import { useAuth } from "@features/auth/hooks";
 import { useState } from "react";
 import Link from "next/link";
+import { LockKeyhole, ShoppingCart, CircleCheck, FileText, Upload } from "lucide-react";
 
 export default function CheckoutPage() {
   const { items, total, isEmpty, clearCart } = useCart();
@@ -17,7 +18,7 @@ export default function CheckoutPage() {
   if (!isAuthenticated) {
     return (
       <div className="mx-auto max-w-lg px-6 py-24 text-center">
-        <span className="text-5xl block mb-4">🔐</span>
+        <LockKeyhole className="h-14 w-14 mx-auto mb-4 opacity-25" />
         <h1 className="text-xl font-bold">Inicia sesión para continuar</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Necesitas una cuenta para completar tu compra.
@@ -35,7 +36,7 @@ export default function CheckoutPage() {
   if (isEmpty && !success) {
     return (
       <div className="mx-auto max-w-lg px-6 py-24 text-center">
-        <span className="text-5xl block mb-4">🛒</span>
+        <ShoppingCart className="h-14 w-14 mx-auto mb-4 opacity-25" />
         <h1 className="text-xl font-bold">Carrito vacío</h1>
         <Link
           href="/shop/catalog"
@@ -50,7 +51,7 @@ export default function CheckoutPage() {
   if (success) {
     return (
       <div className="mx-auto max-w-lg px-6 py-24 text-center">
-        <span className="text-6xl block mb-4">✅</span>
+        <CircleCheck className="h-16 w-16 mx-auto mb-4 text-accent-500" />
         <h1 className="text-2xl font-bold text-foreground">¡Orden Enviada!</h1>
         <p className="mt-3 text-sm text-muted-foreground">
           Tu comprobante de pago ha sido recibido. Un administrador revisará y
@@ -161,7 +162,7 @@ export default function CheckoutPage() {
             >
               {receipt ? (
                 <>
-                  <span className="text-3xl block">📄</span>
+                  <FileText className="h-8 w-8 mx-auto text-brand-500" />
                   <p className="text-sm font-medium text-foreground">
                     {receipt.name}
                   </p>
@@ -171,7 +172,7 @@ export default function CheckoutPage() {
                 </>
               ) : (
                 <>
-                  <span className="text-4xl block">📤</span>
+                  <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
                   <p className="text-sm font-medium text-foreground">
                     Subir comprobante de pago
                   </p>
