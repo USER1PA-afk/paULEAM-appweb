@@ -64,7 +64,7 @@ export default function HomePage() {
           </Link>
 
           {/* Nav links */}
-          <nav className="hidden items-center gap-6 sm:flex">
+          <nav aria-label="Principal" className="hidden items-center gap-6 sm:flex">
             <Link
               href="/shop/catalog"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -88,10 +88,11 @@ export default function HomePage() {
       <div className="h-1 w-full bg-linear-to-r from-brand-600 via-brand-500 to-accent-500" />
 
       {/* ── Hero ── */}
-      <section className="relative flex flex-1 items-center overflow-hidden">
+      <main id="main-content" className="relative flex flex-1 items-center overflow-hidden">
         {/* Background */}
-        <div className="absolute inset-0 bg-linear-to-br from-brand-50/60 via-background to-accent-50/40 dark:from-brand-900/20 dark:via-background dark:to-accent-900/10" />
+        <div aria-hidden="true" className="absolute inset-0 bg-linear-to-br from-brand-50/60 via-background to-accent-50/40 dark:from-brand-900/20 dark:via-background dark:to-accent-900/10" />
         <div
+          aria-hidden="true"
           className="absolute inset-0 opacity-[0.025] dark:opacity-[0.04]"
           style={{
             backgroundImage: `radial-gradient(circle at 1px 1px, var(--color-brand-500) 1px, transparent 0)`,
@@ -106,7 +107,7 @@ export default function HomePage() {
             <div className="space-y-7">
               {/* Institution badge */}
               <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 dark:border-brand-800 dark:bg-brand-900/20">
-                <span className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" />
+                <span className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" aria-hidden="true" />
                 <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">
                   ULEAM · Planta de Alimentos · ERP v2
                 </span>
@@ -153,7 +154,7 @@ export default function HomePage() {
                   className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-brand-700 hover:shadow-lg active:scale-[.98] transition-all duration-150"
                 >
                   Ver Catálogo
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                   </svg>
                 </Link>
@@ -174,7 +175,7 @@ export default function HomePage() {
                   className={`group rounded-2xl border-2 ${feat.color} bg-card p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200`}
                 >
                   <div className="mb-3 flex items-center justify-between">
-                    <feat.Icon className={`h-6 w-6 ${feat.iconColor}`} />
+                    <feat.Icon aria-hidden="true" className={`h-6 w-6 ${feat.iconColor}`} />
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${feat.badge}`}>
                       Módulo
                     </span>
@@ -188,7 +189,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-      </section>
+      </main>
 
       <Footer />
 

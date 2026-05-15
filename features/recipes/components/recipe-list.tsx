@@ -12,7 +12,9 @@ export function RecipeList() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+        <div role="status" className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
+          <span className="sr-only">Cargando recetas...</span>
+        </div>
       </div>
     );
   }
@@ -20,7 +22,7 @@ export function RecipeList() {
   if (recipes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-card py-20 text-muted-foreground">
-        <div className="flex items-center justify-center h-14 w-14 rounded-2xl bg-brand-50 mb-4 dark:bg-brand-900/20">
+        <div aria-hidden="true" className="flex items-center justify-center h-14 w-14 rounded-2xl bg-brand-50 mb-4 dark:bg-brand-900/20">
           <Beaker className="h-7 w-7 text-brand-600" />
         </div>
         <p className="text-sm font-medium text-foreground">No hay recetas registradas</p>
@@ -40,7 +42,7 @@ export function RecipeList() {
     <div className="space-y-4">
       {/* Desktop: Table View */}
       <div className="hidden lg:block overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-        <table className="w-full text-sm">
+        <table aria-label="Lista de recetas" className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40">
               <th className="px-5 py-3.5 text-left font-semibold text-muted-foreground text-xs uppercase tracking-wider">
@@ -91,16 +93,18 @@ export function RecipeList() {
                   <div className="flex items-center justify-end gap-2">
                     <button
                       onClick={() => router.push(`/admin/recipes/${r.id}`)}
+                      aria-label={`Ver ingredientes de ${r.name}`}
                       className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                     >
-                      <Eye className="h-3.5 w-3.5" />
+                      <Eye aria-hidden="true" className="h-3.5 w-3.5" />
                       Ver Ingredientes
                     </button>
                     <button
                       onClick={() => router.push(`/admin/recipes/${r.id}/edit`)}
+                      aria-label={`Editar receta ${r.name}`}
                       className="flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 transition-colors"
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
                       Editar
                     </button>
                   </div>
@@ -148,16 +152,18 @@ export function RecipeList() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => router.push(`/admin/recipes/${r.id}`)}
+                  aria-label={`Ver ingredientes de ${r.name}`}
                   className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
-                  <Eye className="h-3.5 w-3.5" />
+                  <Eye aria-hidden="true" className="h-3.5 w-3.5" />
                   Ver
                 </button>
                 <button
                   onClick={() => router.push(`/admin/recipes/${r.id}/edit`)}
+                  aria-label={`Editar receta ${r.name}`}
                   className="flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 transition-colors"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
                   Editar
                 </button>
               </div>

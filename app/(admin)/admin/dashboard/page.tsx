@@ -55,6 +55,7 @@ function StatCard({
             )}
           </div>
           <div
+            aria-hidden="true"
             className={`flex h-10 w-10 items-center justify-center rounded-lg bg-linear-to-br ${colorMap[color]} text-white shadow-sm`}
           >
             <Icon className="h-5 w-5" />
@@ -84,7 +85,7 @@ function QuickAction({
       href={href}
       className="flex items-center gap-4 rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:shadow-sm hover:border-brand-200 hover:bg-brand-50/30 dark:hover:bg-brand-900/10"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+      <div aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
         <Icon className="h-5 w-5" />
       </div>
       <div className="min-w-0">

@@ -63,6 +63,7 @@ export function LoginForm() {
         <input
           id="login-email"
           type="email"
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -81,6 +82,7 @@ export function LoginForm() {
         <input
           id="login-password"
           type="password"
+          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
@@ -90,7 +92,7 @@ export function LoginForm() {
       </div>
 
       {error && (
-        <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
+        <div role="alert" className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -164,6 +166,7 @@ export function RegisterForm() {
       <div className="space-y-4 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 ring-4 ring-brand-100">
           <svg
+            aria-hidden="true"
             className="h-8 w-8 text-brand-600"
             fill="none"
             viewBox="0 0 24 24"
@@ -206,6 +209,7 @@ export function RegisterForm() {
         <input
           id="register-name"
           type="text"
+          autoComplete="name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
@@ -224,6 +228,7 @@ export function RegisterForm() {
         <input
           id="register-email"
           type="email"
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -242,6 +247,7 @@ export function RegisterForm() {
         <input
           id="register-phone"
           type="tel"
+          autoComplete="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="+593 9XX XXX XXXX"
@@ -259,6 +265,7 @@ export function RegisterForm() {
         <input
           id="register-password"
           type="password"
+          autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
@@ -278,6 +285,7 @@ export function RegisterForm() {
         <input
           id="register-confirm"
           type="password"
+          autoComplete="new-password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
@@ -287,7 +295,7 @@ export function RegisterForm() {
       </div>
 
       {displayError && (
-        <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
+        <div role="alert" className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
           {displayError}
         </div>
       )}

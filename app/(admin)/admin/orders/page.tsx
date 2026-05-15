@@ -31,11 +31,13 @@ export default function AdminOrdersPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+          <div role="status" className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
+            <span className="sr-only">Cargando órdenes...</span>
+          </div>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
+          <table aria-label="Órdenes de venta" className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">
@@ -101,6 +103,7 @@ export default function AdminOrdersPage() {
                             href={order.payment_receipt_url}
                             target="_blank"
                             rel="noopener noreferrer"
+                            aria-label={`Ver recibo de la orden ${order.id.substring(0, 8)} (abre en nueva pestaña)`}
                             className="text-xs text-brand-600 hover:text-brand-700 underline transition-colors"
                           >
                             Ver recibo
@@ -116,12 +119,14 @@ export default function AdminOrdersPage() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => approveOrder(order.id)}
+                              aria-label={`Aprobar orden ${order.id.substring(0, 8)}`}
                               className="rounded-md bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700 transition-colors"
                             >
                               Aprobar
                             </button>
                             <button
                               onClick={() => rejectOrder(order.id)}
+                              aria-label={`Rechazar orden ${order.id.substring(0, 8)}`}
                               className="rounded-md border border-destructive/30 px-2 py-1 text-xs text-destructive hover:bg-destructive/10 transition-colors"
                             >
                               Rechazar

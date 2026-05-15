@@ -5,7 +5,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="flex min-h-screen">
 
       {/* ── Panel izquierdo — Identidad ULEAM ── */}
-      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden flex-col bg-brand-600">
+      <div aria-hidden="true" className="hidden lg:flex lg:w-[45%] relative overflow-hidden flex-col bg-brand-600">
 
         {/* Dot pattern */}
         <div
@@ -94,7 +94,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       </div>
 
       {/* ── Panel derecho — Formulario ── */}
-      <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-12">
+      <main id="main-content" className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-12">
 
         {/* Mobile header */}
         <div className="w-full max-w-sm mb-6 lg:hidden space-y-3">
@@ -122,7 +122,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="w-full max-w-sm space-y-6">
           {children}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -62,7 +62,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (authLoading || (isAuthenticated && roleLoading) || role === "cliente" || (!authLoading && !isAuthenticated)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+        <div role="status" className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
+          <span className="sr-only">Cargando...</span>
+        </div>
       </div>
     );
   }
@@ -73,6 +75,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <li>
         <Link
           href={item.href}
+          aria-current={isActive ? "page" : undefined}
           onClick={() => setSidebarOpen(false)}
           className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
             isActive
@@ -80,9 +83,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
-          <item.icon className={`h-4.5 w-4.5 shrink-0 ${isActive ? "text-white" : "text-muted-foreground"}`} />
+          <item.icon aria-hidden="true" className={`h-4.5 w-4.5 shrink-0 ${isActive ? "text-white" : "text-muted-foreground"}`} />
           <span className="flex-1">{item.label}</span>
-          {isActive && <span className="h-1.5 w-1.5 rounded-full bg-white/60" />}
+          {isActive && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-white/60" />}
         </Link>
       </li>
     );
@@ -101,6 +104,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* ── Sidebar ── */}
       <aside
+        id="admin-sidebar"
+        aria-label="Menú de navegación"
         className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col transform border-r border-border bg-card transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
@@ -125,14 +130,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
+            aria-label="Cerrar menú lateral"
             className="rounded-md p-1 text-muted-foreground hover:bg-muted lg:hidden"
           >
-            <X className="h-4 w-4" />
+            <X aria-hidden="true" className="h-4 w-4" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+        <nav aria-label="Principal" className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
           <div>
             <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
               Navegación
@@ -178,7 +184,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               onClick={signOut}
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 dark:hover:bg-brand-900/20 dark:hover:text-brand-300 dark:hover:border-brand-800 transition-all"
             >
-              <LogOut className="h-3.5 w-3.5" />
+              <LogOut aria-hidden="true" className="h-3.5 w-3.5" />
               Cerrar sesión
             </button>
           )}
@@ -192,9 +198,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-card/90 px-5 backdrop-blur-md">
           <button
             onClick={() => setSidebarOpen(true)}
+            aria-label="Abrir menú lateral"
+            aria-expanded={sidebarOpen}
+            aria-controls="admin-sidebar"
             className="rounded-md p-2 text-muted-foreground hover:bg-muted lg:hidden"
           >
-            <Menu className="h-5 w-5" />
+            <Menu aria-hidden="true" className="h-5 w-5" />
           </button>
 
           {/* Breadcrumb hint */}
@@ -221,7 +230,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">{children}</main>
+        <main id="main-content" className="flex-1 overflow-y-auto p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

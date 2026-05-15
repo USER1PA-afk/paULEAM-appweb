@@ -40,30 +40,34 @@ export function SupplierQuickAddForm({ onCreated, onCancel }: SupplierQuickAddFo
   return (
     <div className="rounded-xl border border-brand-200 bg-brand-50/60 p-4 shadow-sm space-y-3 dark:bg-brand-900/20 dark:border-brand-800">
       <p className="text-sm font-semibold text-brand-700 dark:text-brand-300 flex items-center gap-1.5">
-        <Plus className="h-4 w-4" /> Nuevo Proveedor
+        <Plus aria-hidden="true" className="h-4 w-4" /> Nuevo Proveedor
       </p>
       {/* Plain div — NOT a form, to avoid nested <form> hydration error */}
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label htmlFor="quick-name" className="text-xs font-medium text-muted-foreground">
               Nombre contacto *
             </label>
             <input
+              id="quick-name"
               value={form.name}
               onChange={(e) => { setForm((p) => ({ ...p, name: e.target.value })); setNameError(""); }}
               placeholder="Juan Pérez"
+              aria-invalid={!!nameError}
+              aria-describedby={nameError ? "quick-name-error" : undefined}
               className={`w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${
                 nameError ? "border-destructive" : "border-border"
               }`}
             />
-            {nameError && <p className="text-[10px] text-destructive">{nameError}</p>}
+            {nameError && <p id="quick-name-error" role="alert" className="text-[10px] text-destructive">{nameError}</p>}
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label htmlFor="quick-company" className="text-xs font-medium text-muted-foreground">
               Empresa / Razón social
             </label>
             <input
+              id="quick-company"
               value={form.company ?? ""}
               onChange={(e) => setForm((p) => ({ ...p, company: e.target.value }))}
               placeholder="Frutas del Valle S.A."
@@ -71,8 +75,9 @@ export function SupplierQuickAddForm({ onCreated, onCancel }: SupplierQuickAddFo
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">RUC</label>
+            <label htmlFor="quick-ruc" className="text-xs font-medium text-muted-foreground">RUC</label>
             <input
+              id="quick-ruc"
               value={form.ruc ?? ""}
               onChange={(e) => setForm((p) => ({ ...p, ruc: e.target.value }))}
               placeholder="1234567890001"
@@ -80,8 +85,9 @@ export function SupplierQuickAddForm({ onCreated, onCancel }: SupplierQuickAddFo
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Teléfono</label>
+            <label htmlFor="quick-phone" className="text-xs font-medium text-muted-foreground">Teléfono</label>
             <input
+              id="quick-phone"
               value={form.phone ?? ""}
               onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
               placeholder="0999 123 456"
@@ -89,10 +95,11 @@ export function SupplierQuickAddForm({ onCreated, onCancel }: SupplierQuickAddFo
             />
           </div>
           <div className="space-y-1 sm:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label htmlFor="quick-email" className="text-xs font-medium text-muted-foreground">
               Email de contacto
             </label>
             <input
+              id="quick-email"
               type="email"
               value={form.email ?? ""}
               onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
@@ -103,7 +110,7 @@ export function SupplierQuickAddForm({ onCreated, onCancel }: SupplierQuickAddFo
         </div>
 
         {error && (
-          <p className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
+          <p role="alert" className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
             {error}
           </p>
         )}
@@ -199,9 +206,9 @@ export function SupplierSelect({ selectedIds, primaryId, onChange }: SupplierSel
           className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors"
         >
           {showQuickAdd ? (
-            <span className="inline-flex items-center gap-1"><X className="h-3.5 w-3.5" /> Cancelar</span>
+            <span className="inline-flex items-center gap-1"><X aria-hidden="true" className="h-3.5 w-3.5" /> Cancelar</span>
           ) : (
-            <span className="inline-flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Nuevo proveedor</span>
+            <span className="inline-flex items-center gap-1"><Plus aria-hidden="true" className="h-3.5 w-3.5" /> Nuevo proveedor</span>
           )}
         </button>
       </div>
@@ -262,7 +269,8 @@ export function SupplierSelect({ selectedIds, primaryId, onChange }: SupplierSel
                       e.preventDefault();
                       setPrimary(s.id);
                     }}
-                    title="Marcar como primario"
+                    aria-label={`Marcar ${s.company ?? s.name} como proveedor principal`}
+                    aria-pressed={isPrimary}
                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold transition-colors ${
                       isPrimary
                         ? "bg-brand-600 text-white"
@@ -313,7 +321,7 @@ export function SuppliersTable({
   if (suppliers.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-        <Handshake className="h-10 w-10 mb-3 opacity-25" />
+        <Handshake aria-hidden="true" className="h-10 w-10 mb-3 opacity-25" />
         <p className="text-sm">No hay proveedores registrados.</p>
       </div>
     );
@@ -321,7 +329,7 @@ export function SuppliersTable({
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-      <table className="w-full text-sm">
+      <table aria-label="Proveedores registrados" className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/50">
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">Empresa</th>
@@ -449,10 +457,11 @@ export function SupplierForm({ initial, onSuccess, onCancel }: SupplierFormProps
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">
+          <label htmlFor="supplier-name" className="text-xs font-medium text-muted-foreground">
             Nombre contacto *
           </label>
           <input
+            id="supplier-name"
             required
             value={form.name}
             onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
@@ -462,10 +471,11 @@ export function SupplierForm({ initial, onSuccess, onCancel }: SupplierFormProps
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">
+          <label htmlFor="supplier-company" className="text-xs font-medium text-muted-foreground">
             Empresa / Razón social
           </label>
           <input
+            id="supplier-company"
             value={form.company ?? ""}
             onChange={(e) => setForm((p) => ({ ...p, company: e.target.value }))}
             placeholder="Frutas del Valle S.A."
@@ -474,8 +484,9 @@ export function SupplierForm({ initial, onSuccess, onCancel }: SupplierFormProps
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">RUC</label>
+          <label htmlFor="supplier-ruc" className="text-xs font-medium text-muted-foreground">RUC</label>
           <input
+            id="supplier-ruc"
             value={form.ruc ?? ""}
             onChange={(e) => setForm((p) => ({ ...p, ruc: e.target.value }))}
             placeholder="1234567890001"
@@ -484,10 +495,11 @@ export function SupplierForm({ initial, onSuccess, onCancel }: SupplierFormProps
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">
+          <label htmlFor="supplier-email" className="text-xs font-medium text-muted-foreground">
             Email de contacto
           </label>
           <input
+            id="supplier-email"
             type="email"
             value={form.email ?? ""}
             onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
@@ -497,8 +509,9 @@ export function SupplierForm({ initial, onSuccess, onCancel }: SupplierFormProps
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Teléfono</label>
+          <label htmlFor="supplier-phone" className="text-xs font-medium text-muted-foreground">Teléfono</label>
           <input
+            id="supplier-phone"
             value={form.phone ?? ""}
             onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
             placeholder="0999 123 456"
@@ -507,8 +520,9 @@ export function SupplierForm({ initial, onSuccess, onCancel }: SupplierFormProps
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Dirección</label>
+          <label htmlFor="supplier-address" className="text-xs font-medium text-muted-foreground">Dirección</label>
           <input
+            id="supplier-address"
             value={form.address ?? ""}
             onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
             placeholder="Av. Principal 123, Quito"
@@ -517,8 +531,9 @@ export function SupplierForm({ initial, onSuccess, onCancel }: SupplierFormProps
         </div>
 
         <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
-          <label className="text-xs font-medium text-muted-foreground">Notas</label>
+          <label htmlFor="supplier-notes" className="text-xs font-medium text-muted-foreground">Notas</label>
           <input
+            id="supplier-notes"
             value={form.notes ?? ""}
             onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
             placeholder="Notas adicionales"
@@ -528,7 +543,7 @@ export function SupplierForm({ initial, onSuccess, onCancel }: SupplierFormProps
       </div>
 
       {error && (
-        <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
+        <div role="alert" className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
           {error}
         </div>
       )}

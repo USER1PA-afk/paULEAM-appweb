@@ -34,14 +34,16 @@ export function StockSummaryTable() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+        <div role="status" className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
+          <span className="sr-only">Cargando stock...</span>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+      <div role="alert" className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
         {error}
       </div>
     );
@@ -54,10 +56,11 @@ export function StockSummaryTable() {
           <h3 className="text-lg font-semibold">Stock Actual</h3>
           {/* Indicador de conexión Realtime */}
           <span
-            title={connected ? "Stock en vivo activo" : "Sin conexión realtime"}
+            aria-label={connected ? "Stock en vivo activo" : "Sin conexión realtime"}
             className="flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium"
           >
             <span
+              aria-hidden="true"
               className={`inline-block h-2 w-2 rounded-full ${
                 connected
                   ? "bg-brand-500 animate-pulse"
@@ -73,18 +76,18 @@ export function StockSummaryTable() {
           onClick={refetch}
           className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
         >
-          <RefreshCw className="h-3.5 w-3.5" /> Actualizar
+          <RefreshCw aria-hidden="true" className="h-3.5 w-3.5" /> Actualizar
         </button>
       </div>
 
       {pulse && (
-        <div className="flex items-center gap-1.5 rounded-md bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-medium text-brand-700 animate-pulse dark:bg-brand-900/20 dark:border-brand-800 dark:text-brand-300">
-          <Zap className="h-3.5 w-3.5 shrink-0" /> Movimiento detectado — stock actualizado
+        <div role="status" aria-live="polite" className="flex items-center gap-1.5 rounded-md bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-medium text-brand-700 animate-pulse dark:bg-brand-900/20 dark:border-brand-800 dark:text-brand-300">
+          <Zap aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /> Movimiento detectado — stock actualizado
         </div>
       )}
 
       <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
+        <table aria-label="Resumen de stock actual" className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">
@@ -272,12 +275,12 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
           }}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors"
         >
-          {showForm ? "Cancelar" : <span className="inline-flex items-center gap-1.5"><PackagePlus className="h-4 w-4" /> Nuevo Ingreso</span>}
+          {showForm ? "Cancelar" : <span className="inline-flex items-center gap-1.5"><PackagePlus aria-hidden="true" className="h-4 w-4" /> Nuevo Ingreso</span>}
         </button>
       </div>
 
       {success && (
-        <div className="rounded-md bg-brand-50 border border-brand-200 px-4 py-3 text-sm font-medium text-brand-700">
+        <div role="status" aria-live="polite" className="rounded-md bg-brand-50 border border-brand-200 px-4 py-3 text-sm font-medium text-brand-700">
           {success}
         </div>
       )}
@@ -405,7 +408,7 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
           </div>
 
           {error && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
+            <div role="alert" className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
               {error}
             </div>
           )}
@@ -432,126 +435,170 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
   );
 }
 
-/**
- * Tabla del ledger de movimientos de inventario.
- * Muestra nombre de empresa del proveedor en movimientos COMPRA.
- */
-export function InventoryLedgerTable({
-  productId,
-}: {
-  productId?: string;
-}) {
+const LEDGER_DEFAULT = 5;
+const LEDGER_STEP = 10;
+
+const REF_TYPES = ["COMPRA", "AJUSTE", "DEVOLUCION", "PRODUCCION"] as const;
+
+export function InventoryLedgerTable({ productId }: { productId?: string }) {
   const { entries, loading, error } = useInventoryLedger(productId);
+  const [movType, setMovType] = useState("");
+  const [refType, setRefType] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [visible, setVisible] = useState(LEDGER_DEFAULT);
+
+  useEffect(() => { setVisible(LEDGER_DEFAULT); }, [movType, refType, dateFrom, dateTo]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+        <div role="status" className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
+          <span className="sr-only">Cargando movimientos...</span>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+      <div role="alert" className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
         {error}
       </div>
     );
   }
 
+  const filtered = entries.filter((e) => {
+    if (movType && e.movement_type !== movType) return false;
+    if (refType && e.reference_type !== refType) return false;
+    if (dateFrom && new Date(e.created_at) < new Date(dateFrom)) return false;
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59, 999);
+      if (new Date(e.created_at) > end) return false;
+    }
+    return true;
+  });
+
+  const shown = filtered.slice(0, visible);
+  const hasMore = visible < filtered.length;
+  const hasActiveFilter = movType || refType || dateFrom || dateTo;
+
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Movimientos de Inventario</h3>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="text-lg font-semibold">Movimientos de Inventario</h3>
+        {hasActiveFilter && (
+          <button
+            onClick={() => { setMovType(""); setRefType(""); setDateFrom(""); setDateTo(""); }}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Limpiar filtros
+          </button>
+        )}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2">
+        <select
+          value={movType}
+          onChange={(e) => setMovType(e.target.value)}
+          aria-label="Filtrar por tipo de movimiento"
+          className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">Todos los tipos</option>
+          <option value="INGRESO">Ingreso</option>
+          <option value="EGRESO">Egreso</option>
+        </select>
+
+        <select
+          value={refType}
+          onChange={(e) => setRefType(e.target.value)}
+          aria-label="Filtrar por origen"
+          className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">Todos los orígenes</option>
+          {REF_TYPES.map((r) => (
+            <option key={r} value={r}>{r.charAt(0) + r.slice(1).toLowerCase()}</option>
+          ))}
+        </select>
+
+        <div className="flex items-center gap-1.5">
+          <label htmlFor="ledger-from" className="text-xs text-muted-foreground">Desde</label>
+          <input
+            id="ledger-from"
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            max={dateTo || undefined}
+            className="rounded-md border border-border bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <label htmlFor="ledger-to" className="text-xs text-muted-foreground">Hasta</label>
+          <input
+            id="ledger-to"
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            min={dateFrom || undefined}
+            className="rounded-md border border-border bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+      </div>
 
       <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
+        <table aria-label="Movimientos de inventario" className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                Fecha
-              </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                Tipo
-              </th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                Cantidad
-              </th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden sm:table-cell">
-                Costo Unit.
-              </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">
-                Proveedor
-              </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
-                Notas
-              </th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Fecha</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tipo</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Cantidad</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden sm:table-cell">Costo Unit.</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Proveedor</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Notas</th>
             </tr>
           </thead>
           <tbody>
-            {entries.length === 0 ? (
+            {shown.length === 0 ? (
               <tr>
-                <td
-                  colSpan={6}
-                  className="px-4 py-8 text-center text-muted-foreground"
-                >
-                  Sin movimientos registrados
+                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                  {hasActiveFilter ? "Sin resultados para los filtros aplicados" : "Sin movimientos registrados"}
                 </td>
               </tr>
             ) : (
-              entries.map((entry) => (
-                <tr
-                  key={entry.id}
-                  className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
-                >
+              shown.map((entry) => (
+                <tr key={entry.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                     {formatDate(entry.created_at)}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-0.5">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                          entry.movement_type === "INGRESO"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${entry.movement_type === "INGRESO" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                         {entry.movement_type === "INGRESO" ? (
-                          <span className="inline-flex items-center gap-1"><ArrowUp className="h-3 w-3" /> Ingreso</span>
+                          <span className="inline-flex items-center gap-1"><ArrowUp aria-hidden="true" className="h-3 w-3" /> Ingreso</span>
                         ) : (
-                          <span className="inline-flex items-center gap-1"><ArrowDown className="h-3 w-3" /> Egreso</span>
+                          <span className="inline-flex items-center gap-1"><ArrowDown aria-hidden="true" className="h-3 w-3" /> Egreso</span>
                         )}
                       </span>
                       {entry.reference_type && (
-                        <span className="text-[10px] text-muted-foreground/70 px-0.5">
-                          {entry.reference_type}
-                        </span>
+                        <span className="text-[10px] text-muted-foreground/70 px-0.5">{entry.reference_type}</span>
                       )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right font-semibold tabular-nums">
-                    {Number(entry.quantity).toLocaleString("es-EC", {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 2,
-                    })}
+                    {Number(entry.quantity).toLocaleString("es-EC", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-muted-foreground text-xs hidden sm:table-cell">
-                    {entry.unit_cost > 0
-                      ? Number(entry.unit_cost).toLocaleString("es-EC", {
-                          style: "currency",
-                          currency: "USD",
-                          minimumFractionDigits: 2,
-                        })
-                      : "—"}
+                    {entry.unit_cost > 0 ? Number(entry.unit_cost).toLocaleString("es-EC", { style: "currency", currency: "USD", minimumFractionDigits: 2 }) : "—"}
                   </td>
-                  {/* Proveedor: muestra empresa si hay supplier_id, guión si no */}
                   <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">
                     {entry.supplier_company ? (
-                      <span className="inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-                        <HandshakeIcon className="h-3 w-3 shrink-0" /> {entry.supplier_company}
+                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
+                        <HandshakeIcon aria-hidden="true" className="h-3 w-3 shrink-0" /> {entry.supplier_company}
                       </span>
-                    ) : (
-                      "—"
-                    )}
+                    ) : "—"}
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground max-w-xs truncate hidden lg:table-cell">
                     {entry.notes ?? "—"}
@@ -562,6 +609,30 @@ export function InventoryLedgerTable({
           </tbody>
         </table>
       </div>
+
+      {(hasMore || visible > LEDGER_DEFAULT) && (
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>Mostrando {shown.length} de {filtered.length}</span>
+          <div className="flex gap-2">
+            {hasMore && (
+              <button
+                onClick={() => setVisible((v) => v + LEDGER_STEP)}
+                className="rounded-md border border-border px-3 py-1.5 hover:bg-muted transition-colors"
+              >
+                Ver más
+              </button>
+            )}
+            {visible > LEDGER_DEFAULT && (
+              <button
+                onClick={() => setVisible(LEDGER_DEFAULT)}
+                className="rounded-md border border-border px-3 py-1.5 hover:bg-muted transition-colors"
+              >
+                Contraer
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -577,7 +648,7 @@ export function InventoryReportButton() {
       }}
       className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors print:hidden flex items-center gap-2"
     >
-      <FileDown className="h-4 w-4" /> Exportar PDF
+      <FileDown aria-hidden="true" className="h-4 w-4" /> Exportar PDF
     </button>
   );
 }

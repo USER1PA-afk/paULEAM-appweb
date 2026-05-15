@@ -41,9 +41,10 @@ export default function ShopLayout({
             </span>
           </Link>
 
-          <nav className="flex items-center gap-4 sm:gap-6">
+          <nav aria-label="Tienda" className="flex items-center gap-4 sm:gap-6">
             <Link
               href="/shop/catalog"
+              aria-current={pathname === "/shop/catalog" ? "page" : undefined}
               className={`text-sm font-medium transition-colors ${
                 pathname === "/shop/catalog"
                   ? "text-brand-600"
@@ -55,15 +56,19 @@ export default function ShopLayout({
 
             <Link
               href="/shop/cart"
+              aria-current={pathname === "/shop/cart" ? "page" : undefined}
               className={`relative text-sm font-medium transition-colors ${
                 pathname === "/shop/cart"
                   ? "text-brand-600"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <span className="inline-flex items-center gap-1.5"><ShoppingCart className="h-4 w-4" /> Carrito</span>
+              <span className="inline-flex items-center gap-1.5">
+                <ShoppingCart aria-hidden="true" className="h-4 w-4" />
+                Carrito
+              </span>
               {itemCount > 0 && (
-                <span className="absolute -top-2 -right-4 inline-flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
+                <span aria-label={`${itemCount} artículos en el carrito`} className="absolute -top-2 -right-4 inline-flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
                   {itemCount}
                 </span>
               )}
@@ -98,7 +103,7 @@ export default function ShopLayout({
       </header>
 
       {/* Content */}
-      <main className="flex-1">{children}</main>
+      <main id="main-content" className="flex-1">{children}</main>
 
       <Footer />
 

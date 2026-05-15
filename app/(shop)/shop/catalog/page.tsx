@@ -77,6 +77,8 @@ export default function CatalogPage() {
       {/* Toast */}
       {message && (
         <div
+          role="alert"
+          aria-live="assertive"
           className={`fixed bottom-6 right-6 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg transition-all duration-300 ${
             message.startsWith("Error")
               ? "bg-destructive text-white"
@@ -89,11 +91,13 @@ export default function CatalogPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-24">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+          <div role="status" className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
+            <span className="sr-only">Cargando productos...</span>
+          </div>
         </div>
       ) : products.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-24 text-muted-foreground">
-          <Leaf className="h-12 w-12 mb-4 opacity-30" />
+          <Leaf aria-hidden="true" className="h-12 w-12 mb-4 opacity-30" />
           <p className="text-lg font-medium">Próximamente</p>
           <p className="text-sm mt-1">
             No hay productos disponibles en este momento.
@@ -116,7 +120,7 @@ export default function CatalogPage() {
                   />
                 ) : (
                   <div className="flex flex-col items-center text-muted-foreground">
-                    <ImageOff className="h-12 w-12 opacity-20" />
+                    <ImageOff aria-hidden="true" className="h-12 w-12 opacity-20" />
                   </div>
                 )}
                 <div className="absolute top-3 right-3">
@@ -163,8 +167,8 @@ export default function CatalogPage() {
                       step={product.unit === "und" ? "1" : "0.01"}
                       value={quantities[product.id] || 1}
                       onChange={(e) => setQuantities({ ...quantities, [product.id]: Number(e.target.value) })}
+                      aria-label={`Cantidad de ${product.name} (${product.unit})`}
                       className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                      title={`Cantidad en ${product.unit}`}
                     />
                     <button
                       onClick={() => handleAddToCart(product)}
@@ -175,7 +179,7 @@ export default function CatalogPage() {
                         "Agregando..."
                       ) : (
                         <span className="inline-flex items-center gap-1.5">
-                          <CartIcon className="h-3.5 w-3.5" />
+                          <CartIcon aria-hidden="true" className="h-3.5 w-3.5" />
                           Agregar
                         </span>
                       )}

@@ -21,13 +21,15 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
   if (loading) {
     return (
       <div className="flex justify-center p-6 border rounded-lg bg-card">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
+        <div role="status" className="h-6 w-6 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600">
+          <span className="sr-only">Cargando preview de producción...</span>
+        </div>
       </div>
     );
   }
 
   if (error) {
-    return <div className="p-4 text-sm text-destructive bg-destructive/10 rounded-lg">{error}</div>;
+    return <div role="alert" className="p-4 text-sm text-destructive bg-destructive/10 rounded-lg">{error}</div>;
   }
 
   if (!recipe) return null;
@@ -48,7 +50,7 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table aria-label="Ingredientes requeridos para producción" className="w-full text-sm">
           <thead>
             <tr className="border-b text-xs text-muted-foreground">
               <th className="text-left font-medium pb-2 pr-4">Ingrediente</th>
@@ -91,11 +93,11 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
                   <td className="py-2.5 pl-4 text-center">
                     {ing.stock_sufficient ? (
                       <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-medium">
-                        <Check className="h-3 w-3" /> OK
+                        <Check aria-hidden="true" className="h-3 w-3" /> OK
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-xs text-red-700 bg-red-100 px-2 py-0.5 rounded-full font-medium">
-                        <X className="h-3 w-3" /> Insuficiente
+                        <X aria-hidden="true" className="h-3 w-3" /> Insuficiente
                       </span>
                     )}
                   </td>
@@ -107,7 +109,7 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
       </div>
 
       {!canProduce && (
-        <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive mt-2">
+        <div role="alert" className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive mt-2">
           <strong>No hay stock suficiente</strong> para producir la cantidad deseada. Por favor, reabastezca los ingredientes marcados en rojo.
         </div>
       )}
@@ -161,14 +163,14 @@ export function ProductionOrderDetail({ orderId, completedAt }: { orderId: strin
       <ul className="space-y-1">
         {egresos.map(e => (
           <li key={e.id} className="flex justify-between items-center text-xs">
-            <span className="inline-flex items-center gap-1 text-red-600 font-medium"><ArrowDown className="h-3 w-3 shrink-0" /> {e.product_name}</span>
+            <span className="inline-flex items-center gap-1 text-red-600 font-medium"><ArrowDown aria-hidden="true" className="h-3 w-3 shrink-0" /> {e.product_name}</span>
             <span className="tabular-nums text-muted-foreground">{e.quantity} {e.product_unit}</span>
           </li>
         ))}
-        {egresos.length > 0 && ingresos.length > 0 && <div className="h-px bg-border/50 my-1" />}
+        {egresos.length > 0 && ingresos.length > 0 && <div aria-hidden="true" className="h-px bg-border/50 my-1" />}
         {ingresos.map(e => (
           <li key={e.id} className="flex justify-between items-center text-xs">
-            <span className="inline-flex items-center gap-1 text-green-600 font-medium"><ArrowUp className="h-3 w-3 shrink-0" /> {e.product_name}</span>
+            <span className="inline-flex items-center gap-1 text-green-600 font-medium"><ArrowUp aria-hidden="true" className="h-3 w-3 shrink-0" /> {e.product_name}</span>
             <span className="tabular-nums text-muted-foreground font-semibold">{e.quantity} {e.product_unit}</span>
           </li>
         ))}

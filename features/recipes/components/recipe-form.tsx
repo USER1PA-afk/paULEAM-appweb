@@ -230,7 +230,9 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
   if (isEditing && recipeLoading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+        <div role="status" className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
+          <span className="sr-only">Cargando receta...</span>
+        </div>
       </div>
     );
   }
@@ -243,7 +245,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
           onClick={() => router.push("/admin/recipes")}
           className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
           Volver
         </button>
         <div>
@@ -264,7 +266,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
         {/* ================================= */}
         <section className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5">
           <div className="flex items-center gap-2 border-b border-border pb-3">
-            <div className="h-2 w-2 rounded-full bg-brand-500" />
+            <div aria-hidden="true" className="h-2 w-2 rounded-full bg-brand-500" />
             <h2 className="text-base font-semibold">Información General</h2>
           </div>
 
@@ -325,6 +327,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                 <select
                   value={yieldUnit}
                   onChange={(e) => setYieldUnit(e.target.value)}
+                  aria-label="Unidad del rendimiento base"
                   className="w-28 rounded-lg border border-border bg-background px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
                 >
                   {unitOptions.map((u) => (
@@ -359,7 +362,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
         <section className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-border pb-3">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-blue-500" />
+              <div aria-hidden="true" className="h-2 w-2 rounded-full bg-blue-500" />
               <h2 className="text-base font-semibold">Ingredientes</h2>
               <span className="text-xs text-muted-foreground">({ingredientRows.length})</span>
             </div>
@@ -368,7 +371,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
               onClick={addIngredientRow}
               className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus aria-hidden="true" className="h-3.5 w-3.5" />
               Agregar Ingrediente
             </button>
           </div>
@@ -397,11 +400,12 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                 >
                   {/* # + Product */}
                   <div className="sm:col-span-5 flex items-center gap-2">
-                    <span className="text-xs font-bold text-muted-foreground w-5 shrink-0 tabular-nums">
+                    <span aria-hidden="true" className="text-xs font-bold text-muted-foreground w-5 shrink-0 tabular-nums">
                       {idx + 1}.
                     </span>
                     <select
                       required
+                      aria-label={`Ingrediente ${idx + 1}: materia prima`}
                       value={row.product_id}
                       onChange={(e) => updateIngredientRow(row.key, "product_id", e.target.value)}
                       className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -422,6 +426,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                       required
                       min="0.0001"
                       step="0.0001"
+                      aria-label={`Ingrediente ${idx + 1}: cantidad`}
                       value={row.quantity}
                       onChange={(e) => updateIngredientRow(row.key, "quantity", e.target.value)}
                       placeholder="Cantidad"
@@ -432,6 +437,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                   {/* Unit */}
                   <div className="sm:col-span-3">
                     <select
+                      aria-label={`Ingrediente ${idx + 1}: unidad de medida`}
                       value={row.unit}
                       onChange={(e) => updateIngredientRow(row.key, "unit", e.target.value)}
                       className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -449,10 +455,10 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                     <button
                       type="button"
                       onClick={() => removeIngredientRow(row.key)}
+                      aria-label={`Eliminar ingrediente ${idx + 1}`}
                       className="rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      title="Eliminar ingrediente"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 aria-hidden="true" className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -467,7 +473,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
         <section className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-border pb-3">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-amber-500" />
+              <div aria-hidden="true" className="h-2 w-2 rounded-full bg-amber-500" />
               <h2 className="text-base font-semibold">Instrucciones de Preparación</h2>
               <span className="text-xs text-muted-foreground">({stepRows.length})</span>
             </div>
@@ -476,7 +482,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
               onClick={addStepRow}
               className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus aria-hidden="true" className="h-3.5 w-3.5" />
               Agregar Paso
             </button>
           </div>
@@ -496,7 +502,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                   className="rounded-lg border border-border/50 bg-muted/20 p-4 hover:border-border transition-colors"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="flex items-center gap-1 mt-2">
+                    <div aria-hidden="true" className="flex items-center gap-1 mt-2">
                       <GripVertical className="h-4 w-4 text-muted-foreground/50" />
                       <span className="flex items-center justify-center h-6 w-6 rounded-full bg-amber-100 text-amber-700 text-xs font-bold dark:bg-amber-900/30 dark:text-amber-400">
                         {idx + 1}
@@ -506,6 +512,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                     <div className="flex-1 space-y-3">
                       {/* Description */}
                       <textarea
+                        aria-label={`Paso ${idx + 1}: descripción de la instrucción`}
                         value={step.description}
                         onChange={(e) => updateStepRow(step.key, "description", e.target.value)}
                         rows={2}
@@ -516,10 +523,11 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                       {/* Temperature + Duration */}
                       <div className="flex gap-3">
                         <div className="flex-1 space-y-1">
-                          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                          <label htmlFor={`step-${step.key}-temp`} className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                             Temperatura
                           </label>
                           <input
+                            id={`step-${step.key}-temp`}
                             value={step.temperature}
                             onChange={(e) => updateStepRow(step.key, "temperature", e.target.value)}
                             className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -527,10 +535,11 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                           />
                         </div>
                         <div className="flex-1 space-y-1">
-                          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                          <label htmlFor={`step-${step.key}-dur`} className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                             Duración
                           </label>
                           <input
+                            id={`step-${step.key}-dur`}
                             value={step.duration}
                             onChange={(e) => updateStepRow(step.key, "duration", e.target.value)}
                             className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -543,10 +552,10 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                     <button
                       type="button"
                       onClick={() => removeStepRow(step.key)}
+                      aria-label={`Eliminar paso ${idx + 1}`}
                       className="mt-2 rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      title="Eliminar paso"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 aria-hidden="true" className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -560,11 +569,12 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
         {/* ================================= */}
         <section className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
           <div className="flex items-center gap-2 border-b border-border pb-3">
-            <div className="h-2 w-2 rounded-full bg-purple-500" />
-            <h2 className="text-base font-semibold">Observaciones</h2>
+            <div aria-hidden="true" className="h-2 w-2 rounded-full bg-purple-500" />
+            <h2 id="recipe-notes-heading" className="text-base font-semibold">Observaciones</h2>
           </div>
 
           <textarea
+            aria-labelledby="recipe-notes-heading"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
@@ -575,7 +585,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
 
         {/* Error */}
         {error && (
-          <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+          <div role="alert" className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
             {error}
           </div>
         )}
@@ -594,7 +604,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
             disabled={saving}
             className="flex items-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 transition-colors"
           >
-            <Save className="h-4 w-4" />
+            <Save aria-hidden="true" className="h-4 w-4" />
             {saving
               ? "Guardando..."
               : isEditing

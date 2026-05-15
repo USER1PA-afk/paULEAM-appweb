@@ -10,7 +10,7 @@ export default function CartPage() {
   if (isEmpty) {
     return (
       <div className="mx-auto max-w-2xl px-6 py-24 text-center">
-        <ShoppingCart className="h-16 w-16 mx-auto mb-4 opacity-25" />
+        <ShoppingCart aria-hidden="true" className="h-16 w-16 mx-auto mb-4 opacity-25" />
         <h1 className="text-2xl font-bold text-foreground">
           Tu carrito está vacío
         </h1>
@@ -44,7 +44,7 @@ export default function CartPage() {
               key={item.product_id}
               className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm"
             >
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+              <div aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                 <Package className="h-7 w-7 opacity-40" />
               </div>
               <div className="flex-1 min-w-0">
@@ -70,10 +70,10 @@ export default function CartPage() {
               </div>
               <button
                 onClick={() => removeItem(item.product_id)}
+                aria-label={`Eliminar ${item.name} del carrito`}
                 className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                title="Eliminar"
               >
-                <X className="h-4 w-4" />
+                <X aria-hidden="true" className="h-4 w-4" />
               </button>
             </div>
           ))}
