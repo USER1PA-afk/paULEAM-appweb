@@ -90,7 +90,7 @@ export default function HomePage() {
       {/* ── Hero ── */}
       <main id="main-content" className="relative flex flex-1 items-center overflow-hidden">
         {/* Background */}
-        <div aria-hidden="true" className="absolute inset-0 bg-linear-to-br from-brand-50/60 via-background to-accent-50/40 dark:from-brand-900/20 dark:via-background dark:to-accent-900/10" />
+        <div aria-hidden="true" className="absolute inset-0 bg-white dark:bg-background" />
         <div
           aria-hidden="true"
           className="absolute inset-0 opacity-[0.025] dark:opacity-[0.04]"
@@ -109,7 +109,7 @@ export default function HomePage() {
               <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 dark:border-brand-800 dark:bg-brand-900/20">
                 <span className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" aria-hidden="true" />
                 <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">
-                  ULEAM · Planta de Alimentos · ERP v2
+                  ULEAM · Planta de Alimentos · ERP
                 </span>
               </div>
 
@@ -176,9 +176,6 @@ export default function HomePage() {
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <feat.Icon aria-hidden="true" className={`h-6 w-6 ${feat.iconColor}`} />
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${feat.badge}`}>
-                      Módulo
-                    </span>
                   </div>
                   <h3 className="text-sm font-bold text-foreground">{feat.title}</h3>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">

@@ -3,16 +3,13 @@
 import { useOrderManagement } from "@features/checkout/hooks";
 import { formatDate, formatCurrency } from "@shared/lib/utils";
 
-const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  PENDIENTE: { label: "Pendiente", className: "bg-yellow-100 text-yellow-700" },
-  PAGADO: { label: "Pagado", className: "bg-blue-100 text-blue-700" },
-  APROBADO: { label: "Aprobado", className: "bg-green-100 text-green-700" },
-  ENVIADO: { label: "Enviado", className: "bg-purple-100 text-purple-700" },
-  COMPLETADO: {
-    label: "Completado",
-    className: "bg-emerald-100 text-emerald-700",
-  },
-  CANCELADO: { label: "Cancelado", className: "bg-red-100 text-red-700" },
+const STATUS_LABELS: Record<string, { label: string; dot: string }> = {
+  PENDIENTE: { label: "Pendiente", dot: "bg-yellow-500" },
+  PAGADO: { label: "Pagado", dot: "bg-blue-500" },
+  APROBADO: { label: "Aprobado", dot: "bg-accent-500" },
+  ENVIADO: { label: "Enviado", dot: "bg-violet-500" },
+  COMPLETADO: { label: "Completado", dot: "bg-accent-500" },
+  CANCELADO: { label: "Cancelado", dot: "bg-red-500" },
 };
 
 export default function AdminOrdersPage() {
@@ -74,7 +71,7 @@ export default function AdminOrdersPage() {
                 orders.map((order) => {
                   const status = STATUS_LABELS[order.status] ?? {
                     label: order.status,
-                    className: "bg-gray-100 text-gray-700",
+                    dot: "bg-gray-400",
                   };
                   return (
                     <tr
@@ -91,10 +88,9 @@ export default function AdminOrdersPage() {
                         {formatCurrency(order.total)}
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${status.className}`}
-                        >
-                          {status.label}
+                        <span className="inline-flex items-center gap-1.5">
+                          <span aria-hidden="true" className={`h-2 w-2 rounded-full ${status.dot}`} />
+                          <span className="text-xs font-medium text-foreground">{status.label}</span>
                         </span>
                       </td>
                       <td className="px-4 py-3">

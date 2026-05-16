@@ -7,23 +7,11 @@ import { useRole } from "@features/auth/hooks";
 import { Printer } from "lucide-react";
 
 
-const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  BORRADOR: {
-    label: "Borrador",
-    className: "bg-gray-100 text-gray-700",
-  },
-  EN_PROCESO: {
-    label: "En Proceso",
-    className: "bg-blue-100 text-blue-700",
-  },
-  COMPLETADA: {
-    label: "Completada",
-    className: "bg-green-100 text-green-700",
-  },
-  CANCELADA: {
-    label: "Cancelada",
-    className: "bg-red-100 text-red-700",
-  },
+const STATUS_LABELS: Record<string, { label: string; dot: string }> = {
+  BORRADOR: { label: "Borrador", dot: "bg-gray-400" },
+  EN_PROCESO: { label: "En Proceso", dot: "bg-blue-500" },
+  COMPLETADA: { label: "Completada", dot: "bg-accent-500" },
+  CANCELADA: { label: "Cancelada", dot: "bg-red-500" },
 };
 
 export default function AdminProductionPage() {
@@ -211,11 +199,11 @@ export default function AdminProductionPage() {
                 {creating ? "Creando..." : "Crear Orden (Borrador)"}
               </button>
             </form>
-            
+
             {showPreview && (
-              <ProductionScalePreview 
-                recipeId={form.recipe_id} 
-                targetYield={Number(form.target_yield)} 
+              <ProductionScalePreview
+                recipeId={form.recipe_id}
+                targetYield={Number(form.target_yield)}
               />
             )}
           </div>
@@ -227,30 +215,26 @@ export default function AdminProductionPage() {
             {
               label: "Total",
               value: orders.length,
-              color: "bg-muted",
             },
             {
               label: "Borrador",
               value: orders.filter((o) => o.status === "BORRADOR").length,
-              color: "bg-gray-100 text-gray-700",
             },
             {
               label: "En Proceso",
               value: orders.filter((o) => o.status === "EN_PROCESO").length,
-              color: "bg-blue-100 text-blue-700",
             },
             {
               label: "Completadas",
               value: completedOrders.length,
-              color: "bg-green-100 text-green-700",
             },
           ].map((s) => (
             <div
               key={s.label}
-              className={`rounded-lg px-4 py-3 ${s.color}`}
+              className="rounded-xl border border-border bg-card p-4 shadow-sm"
             >
-              <p className="text-xs font-medium opacity-70">{s.label}</p>
-              <p className="text-2xl font-bold tabular-nums">{s.value}</p>
+              <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground">{s.value}</p>
             </div>
           ))}
         </div>
@@ -299,7 +283,7 @@ export default function AdminProductionPage() {
                   orders.map((order) => {
                     const status = STATUS_LABELS[order.status] ?? {
                       label: order.status,
-                      className: "bg-gray-100 text-gray-700",
+                      dot: "bg-gray-400",
                     };
                     const recipe = recipes.find(
                       (r) => r.id === order.recipe_id
@@ -322,10 +306,9 @@ export default function AdminProductionPage() {
                             {Number(order.target_yield).toLocaleString("es-EC")} {recipe?.yield_unit}
                           </td>
                           <td className="px-4 py-3">
-                            <span
-                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${status.className}`}
-                            >
-                              {status.label}
+                            <span className="inline-flex items-center gap-1.5">
+                              <span aria-hidden="true" className={`h-2 w-2 rounded-full ${status.dot}`} />
+                              <span className="text-xs font-medium text-foreground">{status.label}</span>
                             </span>
                           </td>
                           <td className="px-4 py-3 print:hidden">

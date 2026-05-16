@@ -13,10 +13,10 @@ interface UserProfile {
   created_at: string;
 }
 
-const ROLE_BADGES: Record<string, { label: string; className: string }> = {
-  admin: { label: "Administrador", className: "bg-brand-100 text-brand-700" },
-  operario: { label: "Operario", className: "bg-blue-100 text-blue-700" },
-  cliente: { label: "Cliente", className: "bg-amber-100 text-amber-700" },
+const ROLE_BADGES: Record<string, { label: string; dot: string }> = {
+  admin: { label: "Administrador", dot: "bg-brand-600" },
+  operario: { label: "Operario", dot: "bg-blue-500" },
+  cliente: { label: "Cliente", dot: "bg-amber-500" },
 };
 
 export default function AdminUsersPage() {
@@ -65,22 +65,25 @@ export default function AdminUsersPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <span className="inline-flex rounded-full bg-brand-100 px-2.5 py-0.5 text-[10px] font-semibold text-brand-700">
-              Administrador
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-brand-600" />
+              <span className="text-xs font-medium text-foreground">Administrador</span>
             </span>
             <span className="text-xs text-muted-foreground">Control total del sistema</span>
           </div>
           <span className="text-border">|</span>
           <div className="flex items-center gap-2">
-            <span className="inline-flex rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-semibold text-blue-700">
-              Operario
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-blue-500" />
+              <span className="text-xs font-medium text-foreground">Operario</span>
             </span>
             <span className="text-xs text-muted-foreground">Inventario + Producción</span>
           </div>
           <span className="text-border">|</span>
           <div className="flex items-center gap-2">
-            <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700">
-              Cliente
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-amber-500" />
+              <span className="text-xs font-medium text-foreground">Cliente</span>
             </span>
             <span className="text-xs text-muted-foreground">Solo e-commerce</span>
           </div>
@@ -107,7 +110,7 @@ export default function AdminUsersPage() {
               {users.map((u) => {
                 const badge = ROLE_BADGES[u.role] ?? {
                   label: u.role,
-                  className: "bg-gray-100 text-gray-700",
+                  dot: "bg-gray-400",
                 };
                 const isEditing = editingId === u.id;
 
@@ -141,10 +144,9 @@ export default function AdminUsersPage() {
                           <option value="cliente">Cliente</option>
                         </select>
                       ) : (
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${badge.className}`}
-                        >
-                          {badge.label}
+                        <span className="inline-flex items-center gap-1.5">
+                          <span aria-hidden="true" className={`h-2 w-2 rounded-full ${badge.dot}`} />
+                          <span className="text-xs font-medium text-foreground">{badge.label}</span>
                         </span>
                       )}
                     </td>

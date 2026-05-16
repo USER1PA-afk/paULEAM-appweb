@@ -142,16 +142,11 @@ export function StockSummaryTable() {
                     </td>
                     <td className="px-4 py-3 font-medium">{item.name}</td>
                     <td className="px-4 py-3 hidden sm:table-cell">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                          item.type === "MATERIA_PRIMA"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {item.type === "MATERIA_PRIMA"
-                          ? "Materia Prima"
-                          : "Producto Terminado"}
+                      <span className="inline-flex items-center gap-1.5">
+                        <span aria-hidden="true" className={`h-2 w-2 rounded-full ${item.type === "MATERIA_PRIMA" ? "bg-blue-500" : "bg-accent-500"}`} />
+                        <span className="text-xs font-medium text-foreground">
+                          {item.type === "MATERIA_PRIMA" ? "Materia Prima" : "Prod. Terminado"}
+                        </span>
                       </span>
                     </td>
                     <td
@@ -575,12 +570,13 @@ export function InventoryLedgerTable({ productId }: { productId?: string }) {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-0.5">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${entry.movement_type === "INGRESO" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                        {entry.movement_type === "INGRESO" ? (
-                          <span className="inline-flex items-center gap-1"><ArrowUp aria-hidden="true" className="h-3 w-3" /> Ingreso</span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1"><ArrowDown aria-hidden="true" className="h-3 w-3" /> Egreso</span>
-                        )}
+                      <span className="inline-flex items-center gap-1.5">
+                        <span aria-hidden="true" className={`h-2 w-2 rounded-full ${entry.movement_type === "INGRESO" ? "bg-accent-500" : "bg-red-500"}`} />
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-foreground">
+                          {entry.movement_type === "INGRESO"
+                            ? <><ArrowUp aria-hidden="true" className="h-3 w-3" /> Ingreso</>
+                            : <><ArrowDown aria-hidden="true" className="h-3 w-3" /> Egreso</>}
+                        </span>
                       </span>
                       {entry.reference_type && (
                         <span className="text-[10px] text-muted-foreground/70 px-0.5">{entry.reference_type}</span>
