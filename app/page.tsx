@@ -100,11 +100,11 @@ export default function HomePage() {
           }}
         />
 
-        <div className="relative z-10 mx-auto max-w-6xl px-6 py-20 lg:py-16">
-          <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
+        <div className="relative z-10 mx-auto max-w-6xl px-6 py-10 lg:py-8">
+          <div className="grid gap-8 lg:gap-12 lg:grid-cols-2 lg:items-center">
 
             {/* Copy */}
-            <div className="space-y-7">
+            <div className="space-y-5">
               {/* Institution badge */}
               <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 dark:border-brand-800 dark:bg-brand-900/20">
                 <span className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" aria-hidden="true" />
@@ -172,10 +172,10 @@ export default function HomePage() {
               {FEATURES.map((feat) => (
                 <div
                   key={feat.title}
-                  className={`group rounded-2xl border-2 ${feat.color} bg-card p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200`}
+                  className={`group rounded-2xl border-2 ${feat.color} bg-card p-4 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200`}
                 >
-                  <div className="mb-3 flex items-center justify-between">
-                    <feat.Icon aria-hidden="true" className={`h-6 w-6 ${feat.iconColor}`} />
+                  <div className="mb-2 flex items-center justify-between">
+                    <feat.Icon aria-hidden="true" className={`h-5 w-5 ${feat.iconColor}`} />
                   </div>
                   <h3 className="text-sm font-bold text-foreground">{feat.title}</h3>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">

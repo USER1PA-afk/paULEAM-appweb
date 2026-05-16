@@ -217,7 +217,7 @@ export default function AdminDashboard() {
                             ? "bg-red-500"
                             : Number(item.stock_actual) < 10
                             ? "bg-amber-500"
-                            : "bg-brand-500"
+                            : "bg-accent-500"
                         }`}
                       />
                       <div className="min-w-0">
