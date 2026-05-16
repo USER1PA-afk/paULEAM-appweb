@@ -119,7 +119,7 @@ export default function AdminProductionPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => window.print()}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors flex items-center gap-2"
+              className="rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors flex items-center gap-2"
             >
               <Printer className="h-4 w-4" /> PDF
             </button>
@@ -343,7 +343,7 @@ export default function AdminProductionPage() {
                                 {isAdmin && (
                                   <button
                                     onClick={() => handleCancel(order.id)}
-                                    className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                                    className="rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors"
                                   >
                                     Cancelar
                                   </button>
@@ -363,7 +363,7 @@ export default function AdminProductionPage() {
                                   {isAdmin && (
                                     <button
                                       onClick={() => handleCancel(order.id)}
-                                      className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                                      className="rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors"
                                     >
                                       Cancelar
                                     </button>
@@ -382,7 +382,7 @@ export default function AdminProductionPage() {
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                                  className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted transition-colors"
+                                  className="rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
                                 >
                                   {isExpanded ? "Ocultar" : "Ver Detalle"}
                                 </button>

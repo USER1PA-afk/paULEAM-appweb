@@ -243,7 +243,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
       <div className="flex items-center gap-4">
         <button
           onClick={() => router.push("/admin/recipes")}
-          className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
+          className="flex items-center gap-1.5 rounded-lg bg-zinc-600 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
         >
           <ArrowLeft aria-hidden="true" className="h-4 w-4" />
           Volver
@@ -595,7 +595,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
           <button
             type="button"
             onClick={() => router.push("/admin/recipes")}
-            className="rounded-lg border border-border px-6 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+            className="rounded-lg border border-border bg-background px-6 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
           >
             Cancelar
           </button>

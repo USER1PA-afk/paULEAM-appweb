@@ -27,7 +27,7 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
       <div className="space-y-4">
         <button
           onClick={() => router.push("/admin/recipes")}
-          className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
+          className="flex items-center gap-1.5 rounded-lg bg-zinc-600 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Volver
@@ -48,7 +48,7 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push("/admin/recipes")}
-            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
+            className="flex items-center gap-1.5 rounded-lg bg-zinc-600 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Volver
@@ -63,7 +63,7 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+            className="flex items-center gap-2 rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
           >
             <Printer className="h-4 w-4" />
             Imprimir

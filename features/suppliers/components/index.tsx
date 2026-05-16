@@ -127,7 +127,7 @@ export function SupplierQuickAddForm({ onCreated, onCancel }: SupplierQuickAddFo
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-border px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+            className="rounded-lg border border-border bg-background px-4 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
           >
             Cancelar
           </button>
@@ -389,16 +389,16 @@ export function SuppliersTable({
                 <div className="flex items-center justify-end gap-2">
                   <button
                     onClick={() => onEdit(s)}
-                    className="rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                    className="rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
                   >
                     Editar
                   </button>
                   <button
                     onClick={() => onToggle(s.id, s.is_active)}
-                    className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                    className={`rounded-md px-2 py-1 text-xs font-medium text-white transition-colors ${
                       s.is_active
-                        ? "border-red-200 text-red-600 hover:bg-red-50"
-                        : "border-green-200 text-green-600 hover:bg-green-50"
+                        ? "bg-red-600 hover:bg-red-700"
+                        : "bg-green-600 hover:bg-green-700"
                     }`}
                   >
                     {s.is_active ? "Desactivar" : "Activar"}
@@ -559,7 +559,7 @@ export function SupplierForm({ initial, onSuccess, onCancel }: SupplierFormProps
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-border px-6 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+          className="rounded-lg border border-border bg-background px-6 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
         >
           Cancelar
         </button>

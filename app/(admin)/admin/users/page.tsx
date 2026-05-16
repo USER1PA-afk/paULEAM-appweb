@@ -169,7 +169,7 @@ export default function AdminUsersPage() {
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
-                            className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted transition-colors"
+                            className="rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors"
                           >
                             Cancelar
                           </button>
@@ -180,7 +180,7 @@ export default function AdminUsersPage() {
                             setEditingId(u.id);
                             setEditRole(u.role);
                           }}
-                          className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted transition-colors"
+                          className="rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
                         >
                           Editar rol
                         </button>

@@ -74,7 +74,7 @@ export function StockSummaryTable() {
         </div>
         <button
           onClick={refetch}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-md bg-zinc-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
         >
           <RefreshCw aria-hidden="true" className="h-3.5 w-3.5" /> Actualizar
         </button>
@@ -424,7 +424,7 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded-lg border border-border px-6 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+              className="rounded-lg border border-border bg-background px-6 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
             >
               Cancelar
             </button>
@@ -617,7 +617,7 @@ export function InventoryLedgerTable({ productId }: { productId?: string }) {
             {hasMore && (
               <button
                 onClick={() => setVisible((v) => v + LEDGER_STEP)}
-                className="rounded-md border border-border px-3 py-1.5 hover:bg-muted transition-colors"
+                className="rounded-md bg-zinc-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
               >
                 Ver más
               </button>
@@ -625,7 +625,7 @@ export function InventoryLedgerTable({ productId }: { productId?: string }) {
             {visible > LEDGER_DEFAULT && (
               <button
                 onClick={() => setVisible(LEDGER_DEFAULT)}
-                className="rounded-md border border-border px-3 py-1.5 hover:bg-muted transition-colors"
+                className="rounded-md bg-zinc-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
               >
                 Contraer
               </button>
@@ -646,7 +646,7 @@ export function InventoryReportButton() {
       onClick={() => {
         window.print();
       }}
-      className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors print:hidden flex items-center gap-2"
+      className="rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors print:hidden flex items-center gap-2"
     >
       <FileDown aria-hidden="true" className="h-4 w-4" /> Exportar PDF
     </button>

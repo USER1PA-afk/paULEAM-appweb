@@ -4,6 +4,7 @@ import { getInsforge } from "@shared/lib/insforge/client";
 import { useCart } from "@features/checkout/hooks";
 import { useState, useEffect, useCallback } from "react";
 import { Leaf, ImageOff, ShoppingCart as CartIcon } from "lucide-react";
+import Image from "next/image";
 
 interface CatalogProduct {
   id: string;
@@ -113,10 +114,12 @@ export default function CatalogPage() {
               {/* Image placeholder */}
               <div className="relative aspect-square bg-linear-to-br from-brand-50 to-muted flex items-center justify-center overflow-hidden">
                 {product.image_url ? (
-                  <img
+                  <Image
                     src={product.image_url}
                     alt={product.name}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 ) : (
                   <div className="flex flex-col items-center text-muted-foreground">

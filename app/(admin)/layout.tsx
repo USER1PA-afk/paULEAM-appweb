@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth, useRole } from "@features/auth/hooks";
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "@shared/components/theme-toggle";
+import { useSessionGuard } from "@shared/hooks/use-session-guard";
 
 import {
   LayoutDashboard,
@@ -56,6 +57,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (role === "cliente") router.replace("/shop/catalog");
   }, [role, router, authLoading, isAuthenticated]);
 
+  useSessionGuard(signOut);
+
   const filteredNav = NAV_ITEMS.filter((item) => role && item.roles.includes(role));
   const roleInfo    = role ? ROLE_LABELS[role] : null;
 
@@ -85,7 +88,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         >
           <item.icon aria-hidden="true" className={`h-4.5 w-4.5 shrink-0 ${isActive ? "text-white" : "text-muted-foreground"}`} />
           <span className="flex-1">{item.label}</span>
-          {isActive && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-white/60" />}
         </Link>
       </li>
     );

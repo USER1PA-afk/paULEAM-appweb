@@ -127,7 +127,7 @@ export default function AdminOrdersPage() {
                             <button
                               onClick={() => rejectOrder(order.id)}
                               aria-label={`Rechazar orden ${order.id.substring(0, 8)}`}
-                              className="rounded-md border border-destructive/30 px-2 py-1 text-xs text-destructive hover:bg-destructive/10 transition-colors"
+                              className="rounded-md bg-destructive px-2 py-1 text-xs font-medium text-white hover:bg-destructive/90 transition-colors"
                             >
                               Rechazar
                             </button>

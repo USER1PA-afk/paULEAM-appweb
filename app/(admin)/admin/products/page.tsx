@@ -348,7 +348,7 @@ export default function AdminProductsPage() {
                 </button>
                 <button
                   onClick={cancelDelete}
-                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+                  className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
                 >
                   Cancelar
                 </button>
@@ -376,7 +376,7 @@ export default function AdminProductsPage() {
                 </button>
                 <button
                   onClick={cancelDelete}
-                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+                  className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
                 >
                   Cancelar
                 </button>
@@ -539,7 +539,7 @@ export default function AdminProductsPage() {
             <button
               type="button"
               onClick={() => { setShowForm(false); resetForm(); }}
-              className="rounded-lg border border-border px-6 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+              className="rounded-lg border border-border bg-background px-6 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
             >
               Cancelar
             </button>
@@ -644,14 +644,14 @@ export default function AdminProductsPage() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => openEdit(p)}
-                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors whitespace-nowrap"
+                          className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors whitespace-nowrap"
                         >
                           <Pencil className="h-3 w-3" /> Editar
                         </button>
                         {isAdmin && (
                           <button
                             onClick={() => openDeleteConfirm(p)}
-                            className="inline-flex items-center gap-1 rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors whitespace-nowrap"
+                            className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors whitespace-nowrap"
                           >
                             <Trash2 className="h-3 w-3" /> Eliminar
                           </button>

@@ -94,7 +94,7 @@ export function RecipeList() {
                     <button
                       onClick={() => router.push(`/admin/recipes/${r.id}`)}
                       aria-label={`Ver ingredientes de ${r.name}`}
-                      className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      className="flex items-center gap-1.5 rounded-md bg-zinc-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
                     >
                       <Eye aria-hidden="true" className="h-3.5 w-3.5" />
                       Ver Ingredientes
@@ -153,7 +153,7 @@ export function RecipeList() {
                 <button
                   onClick={() => router.push(`/admin/recipes/${r.id}`)}
                   aria-label={`Ver ingredientes de ${r.name}`}
-                  className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  className="flex items-center gap-1.5 rounded-md bg-zinc-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
                 >
                   <Eye aria-hidden="true" className="h-3.5 w-3.5" />
                   Ver
