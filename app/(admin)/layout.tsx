@@ -48,7 +48,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router    = useRouter();
   const { user, signOut, isAuthenticated, loading: authLoading } = useAuth();
   const { role, isStaff, loading: roleLoading } = useRole();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen]           = useState(false);
+
+  const handleHamburgerClick = () => {
+    if (window.innerWidth >= 1024) {
+      setSidebarCollapsed((prev) => !prev);
+    } else {
+      setSidebarOpen((prev) => !prev);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) { router.replace("/login"); return; }
@@ -79,15 +88,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <Link
           href={item.href}
           aria-current={isActive ? "page" : undefined}
+          title={item.label}
           onClick={() => setSidebarOpen(false)}
-          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+          className={`flex items-center gap-3 px-3 rounded-lg py-2.5 text-sm font-medium transition-all duration-300 ease-in-out ${
+            sidebarCollapsed ? "lg:justify-center lg:px-0 lg:gap-0" : ""
+          } ${
             isActive
               ? "bg-brand-600 text-white shadow-md"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
-          <item.icon aria-hidden="true" className={`h-4.5 w-4.5 shrink-0 ${isActive ? "text-white" : "text-muted-foreground"}`} />
-          <span className="flex-1">{item.label}</span>
+          <item.icon
+            aria-hidden="true"
+            className={`shrink-0 h-4.5 w-4.5 ${sidebarCollapsed ? "lg:h-5 lg:w-5" : ""} ${
+              isActive ? "text-white" : "text-muted-foreground"
+            }`}
+          />
+          <span className={`flex-1 ${sidebarCollapsed ? "lg:hidden" : ""}`}>{item.label}</span>
         </Link>
       </li>
     );
@@ -108,20 +125,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside
         id="admin-sidebar"
         aria-label="Menú de navegación"
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col transform border-r border-border bg-card transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card transition-all duration-300 ease-in-out
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          lg:static lg:translate-x-0
+          ${sidebarCollapsed ? "lg:w-16" : "lg:w-64"}`}
       >
         {/* ULEAM top accent */}
         <div className="h-0.5 w-full bg-linear-to-r from-brand-600 via-brand-500 to-accent-500 shrink-0" />
 
         {/* Logo */}
-        <div className="flex h-16 items-center justify-between border-b border-border px-4 shrink-0">
+        <div className={`flex h-[54px] items-center justify-between px-4 border-b border-border shrink-0 transition-all duration-300 ease-in-out ${
+          sidebarCollapsed ? "lg:justify-center lg:px-0" : ""
+        }`}>
           <Link href="/admin/dashboard" className="flex items-center gap-2.5 min-w-0">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 shadow-sm">
               <span className="text-xs font-extrabold text-white">U</span>
             </div>
-            <div className="flex flex-col leading-tight min-w-0">
+            <div className={`flex flex-col leading-tight min-w-0 ${sidebarCollapsed ? "lg:hidden" : ""}`}>
               <span className="text-sm font-extrabold uppercase tracking-tight text-foreground">
                 PAuleam
               </span>
@@ -140,9 +160,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Navigation */}
-        <nav aria-label="Principal" className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+        <nav
+          aria-label="Principal"
+          className={`flex-1 overflow-y-auto py-4 space-y-5 transition-all duration-300 ease-in-out ${
+            sidebarCollapsed ? "px-2" : "px-3"
+          }`}
+        >
           <div>
-            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+            <p className={`mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ${
+              sidebarCollapsed ? "lg:hidden" : ""
+            }`}>
               Navegación
             </p>
             <ul className="space-y-0.5">
@@ -151,11 +178,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           <div>
-            <div className="mb-2 border-t border-border pt-4">
+            <div className={`mb-2 border-t border-border pt-4 ${sidebarCollapsed ? "lg:hidden" : ""}`}>
               <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
                 Comercial
               </p>
             </div>
+            {sidebarCollapsed && <div className="hidden lg:block mb-2" />}
             <ul className="space-y-0.5">
               {SUB_ITEMS.filter((item) => role && item.roles.includes(role)).map((item) => (
                 <NavLink key={item.href} item={item} />
@@ -164,32 +192,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </nav>
 
-        {/* User section */}
-        <div className="shrink-0 border-t border-border p-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white shadow-sm">
-              {user?.profile?.name?.charAt(0)?.toUpperCase() ?? "?"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-semibold text-foreground">
-                {user?.profile?.name ?? user?.email ?? "Sin sesión"}
-              </p>
-              {roleInfo && (
-                <span className={`inline-block mt-0.5 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${roleInfo.cls}`}>
-                  {roleInfo.label}
-                </span>
-              )}
-            </div>
-          </div>
-          {isAuthenticated && (
-            <button
-              onClick={signOut}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 dark:hover:bg-brand-900/20 dark:hover:text-brand-300 dark:hover:border-brand-800 transition-all"
-            >
-              <LogOut aria-hidden="true" className="h-3.5 w-3.5" />
-              Cerrar sesión
-            </button>
-          )}
+        {/* Sidebar footer: theme toggle */}
+        <div className={`shrink-0 border-t border-border p-3 flex transition-all duration-300 ease-in-out ${
+          sidebarCollapsed ? "justify-start lg:justify-center" : "justify-start"
+        }`}>
+          <ThemeToggle />
         </div>
       </aside>
 
@@ -199,35 +206,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Top bar */}
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-card/90 px-5 backdrop-blur-md">
           <button
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Abrir menú lateral"
-            aria-expanded={sidebarOpen}
+            onClick={handleHamburgerClick}
+            aria-label="Alternar menú lateral"
             aria-controls="admin-sidebar"
-            className="rounded-md p-2 text-muted-foreground hover:bg-muted lg:hidden"
+            className="rounded-md p-2 text-muted-foreground hover:bg-muted"
           >
             <Menu aria-hidden="true" className="h-5 w-5" />
           </button>
 
-          {/* Breadcrumb hint */}
-          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="font-semibold text-brand-600 dark:text-brand-400">ULEAM</span>
-            <span className="opacity-40">/</span>
-            <span>
-              {NAV_ITEMS.find((i) => i.href === pathname)?.label ??
-               SUB_ITEMS.find((i) => i.href === pathname)?.label ??
-               "Panel"}
-            </span>
-          </div>
-
           <div className="flex-1" />
 
           <div className="flex items-center gap-3">
-            {isStaff && (
-              <span className="hidden sm:inline-flex items-center rounded-full bg-brand-50 dark:bg-brand-900/20 px-3 py-1 text-[11px] font-semibold text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
-                {role === "admin" ? "Administrador" : "Operario"}
+            <div className="hidden sm:flex flex-col items-end leading-tight">
+              <span className="text-sm font-semibold text-foreground truncate max-w-[8rem]">
+                {user?.profile?.name ?? user?.email ?? "Sin sesión"}
               </span>
+              {roleInfo && (
+                <span className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${roleInfo.cls}`}>
+                  {roleInfo.label}
+                </span>
+              )}
+            </div>
+
+            {isAuthenticated && (
+              <button
+                onClick={signOut}
+                aria-label="Cerrar sesión"
+                title="Cerrar sesión"
+                className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-900/20 dark:hover:text-brand-300 transition-all duration-150"
+              >
+                <LogOut aria-hidden="true" className="h-4 w-4" />
+              </button>
             )}
-            <ThemeToggle />
           </div>
         </header>
 
