@@ -357,8 +357,10 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
         </section>
 
         {/* ================================= */}
-        {/* INGREDIENTES                      */}
+        {/* INGREDIENTES + INSTRUCCIONES      */}
         {/* ================================= */}
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+
         <section className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-border pb-3">
             <div className="flex items-center gap-2">
@@ -384,82 +386,87 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {/* Header */}
-              <div className="hidden sm:grid sm:grid-cols-12 gap-3 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="space-y-2">
+              {/* Column headers — desktop only */}
+              <div className="hidden sm:grid sm:grid-cols-12 gap-3 px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                 <div className="col-span-5">Materia Prima</div>
                 <div className="col-span-3">Cantidad</div>
                 <div className="col-span-3">Unidad</div>
-                <div className="col-span-1"></div>
+                <div className="col-span-1" />
               </div>
 
               {ingredientRows.map((row, idx) => (
                 <div
                   key={row.key}
-                  className="grid gap-3 sm:grid-cols-12 items-start rounded-lg border border-border/50 bg-muted/20 p-3 hover:border-border transition-colors"
+                  className="rounded-lg border border-border/50 bg-muted/30 p-3 hover:border-border hover:bg-muted/50 transition-all duration-150"
                 >
-                  {/* # + Product */}
-                  <div className="sm:col-span-5 flex items-center gap-2">
-                    <span aria-hidden="true" className="text-xs font-bold text-muted-foreground w-5 shrink-0 tabular-nums">
-                      {idx + 1}.
-                    </span>
-                    <select
-                      required
-                      aria-label={`Ingrediente ${idx + 1}: materia prima`}
-                      value={row.product_id}
-                      onChange={(e) => updateIngredientRow(row.key, "product_id", e.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="">Seleccionar ingrediente...</option>
-                      {rawMaterials.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} ({p.sku})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Desktop: 12-col grid / Mobile: stacked */}
+                  <div className="flex flex-col gap-2 sm:grid sm:grid-cols-12 sm:gap-3 sm:items-center">
 
-                  {/* Quantity */}
-                  <div className="sm:col-span-3">
-                    <input
-                      type="number"
-                      required
-                      min="0.0001"
-                      step="0.0001"
-                      aria-label={`Ingrediente ${idx + 1}: cantidad`}
-                      value={row.quantity}
-                      onChange={(e) => updateIngredientRow(row.key, "quantity", e.target.value)}
-                      placeholder="Cantidad"
-                      className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring tabular-nums"
-                    />
-                  </div>
+                    {/* # + Product — full width on mobile */}
+                    <div className="sm:col-span-5 flex items-center gap-2">
+                      <span
+                        aria-hidden="true"
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white dark:bg-blue-500 dark:text-zinc-950 text-[10px] font-extrabold select-none shadow-sm"
+                      >
+                        {idx + 1}
+                      </span>
+                      <select
+                        required
+                        aria-label={`Ingrediente ${idx + 1}: materia prima`}
+                        value={row.product_id}
+                        onChange={(e) => updateIngredientRow(row.key, "product_id", e.target.value)}
+                        className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
+                      >
+                        <option value="">Seleccionar ingrediente...</option>
+                        {rawMaterials.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.sku})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                  {/* Unit */}
-                  <div className="sm:col-span-3">
-                    <select
-                      aria-label={`Ingrediente ${idx + 1}: unidad de medida`}
-                      value={row.unit}
-                      onChange={(e) => updateIngredientRow(row.key, "unit", e.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      {unitOptions.map((u) => (
-                        <option key={u.value} value={u.value}>
-                          {u.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Delete */}
-                  <div className="sm:col-span-1 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => removeIngredientRow(row.key)}
-                      aria-label={`Eliminar ingrediente ${idx + 1}`}
-                      className="rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                    >
-                      <Trash2 aria-hidden="true" className="h-4 w-4" />
-                    </button>
+                    {/* Quantity + Unit + Delete — flex row on mobile, grid cols on sm+ */}
+                    <div className="flex items-center gap-2 sm:contents">
+                      <div className="flex-1 sm:col-span-3">
+                        <input
+                          type="number"
+                          required
+                          min="0.0001"
+                          step="0.0001"
+                          aria-label={`Ingrediente ${idx + 1}: cantidad`}
+                          value={row.quantity}
+                          onChange={(e) => updateIngredientRow(row.key, "quantity", e.target.value)}
+                          placeholder="Cantidad"
+                          className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring tabular-nums transition-shadow"
+                        />
+                      </div>
+                      <div className="flex-1 sm:col-span-3">
+                        <select
+                          aria-label={`Ingrediente ${idx + 1}: unidad de medida`}
+                          value={row.unit}
+                          onChange={(e) => updateIngredientRow(row.key, "unit", e.target.value)}
+                          className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
+                        >
+                          {unitOptions.map((u) => (
+                            <option key={u.value} value={u.value}>
+                              {u.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="shrink-0 sm:col-span-1 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={() => removeIngredientRow(row.key)}
+                          aria-label={`Eliminar ingrediente ${idx + 1}`}
+                          className="rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <Trash2 aria-hidden="true" className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -495,65 +502,74 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {stepRows.map((step, idx) => (
                 <div
                   key={step.key}
-                  className="rounded-lg border border-border/50 bg-muted/20 p-4 hover:border-border transition-colors"
+                  className="rounded-lg border border-border/50 bg-muted/30 p-4 hover:border-border hover:bg-muted/50 transition-all duration-150"
                 >
                   <div className="flex items-start gap-3">
-                    <div aria-hidden="true" className="flex items-center gap-1 mt-2">
-                      <GripVertical className="h-4 w-4 text-muted-foreground/50" />
-                      <span className="flex items-center justify-center h-6 w-6 rounded-full bg-amber-100 text-amber-700 text-xs font-bold dark:bg-amber-900/30 dark:text-amber-400">
+                    {/* Grip + step number (high contrast circle badge) */}
+                    <div aria-hidden="true" className="flex items-center gap-2 shrink-0 pt-2.5">
+                      <GripVertical className="h-4 w-4 text-muted-foreground/45" />
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-600 text-white dark:bg-amber-500 dark:text-zinc-950 text-xs font-bold select-none shadow-sm">
                         {idx + 1}
                       </span>
                     </div>
 
-                    <div className="flex-1 space-y-3">
+                    {/* Content: description | temp + duration (side by side on lg) */}
+                    <div className="flex-1 grid gap-3 xl:grid-cols-[1fr_260px]">
                       {/* Description */}
                       <textarea
                         aria-label={`Paso ${idx + 1}: descripción de la instrucción`}
                         value={step.description}
                         onChange={(e) => updateStepRow(step.key, "description", e.target.value)}
                         rows={2}
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none transition-shadow"
                         placeholder={`Paso ${idx + 1}: Describir la instrucción...`}
                       />
 
-                      {/* Temperature + Duration */}
-                      <div className="flex gap-3">
-                        <div className="flex-1 space-y-1">
-                          <label htmlFor={`step-${step.key}-temp`} className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                      {/* Temperature + Duration — siempre side by side */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label
+                            htmlFor={`step-${step.key}-temp`}
+                            className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
+                          >
                             Temperatura
                           </label>
                           <input
                             id={`step-${step.key}-temp`}
                             value={step.temperature}
                             onChange={(e) => updateStepRow(step.key, "temperature", e.target.value)}
-                            className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
                             placeholder="Ej: 70°C"
                           />
                         </div>
-                        <div className="flex-1 space-y-1">
-                          <label htmlFor={`step-${step.key}-dur`} className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                        <div className="space-y-1">
+                          <label
+                            htmlFor={`step-${step.key}-dur`}
+                            className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
+                          >
                             Duración
                           </label>
                           <input
                             id={`step-${step.key}-dur`}
                             value={step.duration}
                             onChange={(e) => updateStepRow(step.key, "duration", e.target.value)}
-                            className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
                             placeholder="Ej: 10 min"
                           />
                         </div>
                       </div>
                     </div>
 
+                    {/* Delete */}
                     <button
                       type="button"
                       onClick={() => removeStepRow(step.key)}
                       aria-label={`Eliminar paso ${idx + 1}`}
-                      className="mt-2 rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      className="shrink-0 mt-2 rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                     >
                       <Trash2 aria-hidden="true" className="h-4 w-4" />
                     </button>
@@ -563,6 +579,8 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
             </div>
           )}
         </section>
+
+        </div>{/* end lg:grid-cols-2 */}
 
         {/* ================================= */}
         {/* OBSERVACIONES                     */}
