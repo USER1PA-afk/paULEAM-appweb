@@ -88,7 +88,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
           {/* Footer */}
           <p className="text-[11px] text-white/40">
-            © {new Date().getFullYear()} Universidad Laica Eloy Alfaro de Manabí
+            © {new Date().getFullYear()} ULEAM · Planta de Alimentos · ERP
           </p>
         </div>
       </div>
