@@ -56,7 +56,7 @@ function MenuIcon({ isOpen }: { isOpen: boolean }) {
         className={base}
         style={
           isOpen
-            ? { width: 18, height: 2,  top: 0,  left: 0, borderRadius: 2,    backgroundColor: "#4B4B4B" }
+            ? { width: 18, height: 3,  top: 0,  left: 0, borderRadius: 3,    backgroundColor: "#4B4B4B" }
             : { width: 6,  height: 6,  top: 0,  left: 6, borderRadius: "50%", backgroundColor: "#4B4B4B" }
         }
       />
@@ -65,7 +65,7 @@ function MenuIcon({ isOpen }: { isOpen: boolean }) {
         className={base}
         style={
           isOpen
-            ? { width: 18, height: 2,  top: 9,  left: 0, borderRadius: 2,    backgroundColor: "#D90404" }
+            ? { width: 18, height: 3,  top: 8.5, left: 0, borderRadius: 3,    backgroundColor: "#D90404" }
             : { width: 6,  height: 6,  top: 7,  left: 6, borderRadius: "50%", backgroundColor: "#D90404" }
         }
       />
@@ -74,7 +74,7 @@ function MenuIcon({ isOpen }: { isOpen: boolean }) {
         className={base}
         style={
           isOpen
-            ? { width: 18, height: 2,  top: 18, left: 0, borderRadius: 2,    backgroundColor: "#1FA34A" }
+            ? { width: 18, height: 3,  top: 17, left: 0, borderRadius: 3,    backgroundColor: "#1FA34A" }
             : { width: 6,  height: 6,  top: 14, left: 6, borderRadius: "50%", backgroundColor: "#1FA34A" }
         }
       />
@@ -195,9 +195,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             aria-label="Alternar menú lateral"
             aria-controls="admin-sidebar"
             aria-expanded={menuIconOpen}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md
-              text-muted-foreground hover:bg-muted hover:text-foreground
-              transition-colors duration-200"
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md
+              transition-all duration-200 ease-out
+              ${menuIconOpen 
+                ? "bg-transparent text-foreground hover:bg-muted" 
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
           >
             <MenuIcon isOpen={menuIconOpen} />
           </button>
