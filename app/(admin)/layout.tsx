@@ -16,8 +16,6 @@ import {
   ShoppingCart,
   Users,
   Store,
-  X,
-  Menu,
   Handshake,
   LogOut,
 } from "lucide-react";
@@ -33,8 +31,8 @@ const NAV_ITEMS = [
 ];
 
 const SUB_ITEMS = [
-  { label: "Ver E-Commerce",    href: "/shop/catalog",    icon: Store,        roles: ["admin", "operario"] },
-  { label: "Órdenes de Venta",  href: "/admin/orders",    icon: ShoppingCart, roles: ["admin"] },
+  { label: "Ver E-Commerce",   href: "/shop/catalog",  icon: Store,        roles: ["admin", "operario"] },
+  { label: "Órdenes de Venta", href: "/admin/orders",  icon: ShoppingCart, roles: ["admin"] },
 ];
 
 const ROLE_LABELS: Record<string, { label: string; cls: string }> = {
@@ -43,13 +41,56 @@ const ROLE_LABELS: Record<string, { label: string; cls: string }> = {
   cliente:  { label: "Cliente",       cls: "bg-amber-500 text-white" },
 };
 
+/* ── Animated menu icon ──────────────────────────────────────────
+   Closed → 3 stacked dots (circles) in brand colors:
+            gray #4B4B4B · red #D90404 · green #1FA34A
+   Open   → 3 horizontal hamburger lines, same color order
+   Transitions: CSS transition-all on width / height / border-radius / position
+─────────────────────────────────────────────────────────────────*/
+function MenuIcon({ isOpen }: { isOpen: boolean }) {
+  const base = "absolute block transition-all duration-300 ease-in-out";
+  return (
+    <div className="relative" style={{ width: 18, height: 20 }}>
+      {/* Top — institutional gray */}
+      <span
+        className={base}
+        style={
+          isOpen
+            ? { width: 18, height: 2,  top: 0,  left: 0, borderRadius: 2,    backgroundColor: "#4B4B4B" }
+            : { width: 6,  height: 6,  top: 0,  left: 6, borderRadius: "50%", backgroundColor: "#4B4B4B" }
+        }
+      />
+      {/* Middle — brand red */}
+      <span
+        className={base}
+        style={
+          isOpen
+            ? { width: 18, height: 2,  top: 9,  left: 0, borderRadius: 2,    backgroundColor: "#D90404" }
+            : { width: 6,  height: 6,  top: 7,  left: 6, borderRadius: "50%", backgroundColor: "#D90404" }
+        }
+      />
+      {/* Bottom — institutional green */}
+      <span
+        className={base}
+        style={
+          isOpen
+            ? { width: 18, height: 2,  top: 18, left: 0, borderRadius: 2,    backgroundColor: "#1FA34A" }
+            : { width: 6,  height: 6,  top: 14, left: 6, borderRadius: "50%", backgroundColor: "#1FA34A" }
+        }
+      />
+    </div>
+  );
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname  = usePathname();
-  const router    = useRouter();
+  const pathname = usePathname();
+  const router   = useRouter();
+
   const { user, signOut, isAuthenticated, loading: authLoading } = useAuth();
   const { role, isStaff, loading: roleLoading } = useRole();
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [sidebarOpen, setSidebarOpen]           = useState(false);
+  const [sidebarOpen,      setSidebarOpen]      = useState(false);
 
   const handleHamburgerClick = () => {
     if (window.innerWidth >= 1024) {
@@ -68,13 +109,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useSessionGuard(signOut);
 
-  const filteredNav = NAV_ITEMS.filter((item) => role && item.roles.includes(role));
-  const roleInfo    = role ? ROLE_LABELS[role] : null;
+  const filteredNav  = NAV_ITEMS.filter((item) => role && item.roles.includes(role));
+  const roleInfo     = role ? ROLE_LABELS[role] : null;
 
-  if (authLoading || (isAuthenticated && roleLoading) || role === "cliente" || (!authLoading && !isAuthenticated)) {
+  /*
+    Icon open-state:
+    - Desktop expanded (!sidebarCollapsed=true)  → hamburger lines (sidebar is open)
+    - Desktop collapsed (sidebarCollapsed=true)  → vertical dots  (sidebar is closed)
+    - Mobile: sidebarCollapsed never changes (false), so icon follows sidebarOpen
+      On mobile the hamburger lines are the universal "menu" symbol — acceptable UX.
+  */
+  const menuIconOpen = sidebarOpen || !sidebarCollapsed;
+
+  if (
+    authLoading ||
+    (isAuthenticated && roleLoading) ||
+    role === "cliente" ||
+    (!authLoading && !isAuthenticated)
+  ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div role="status" className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
+        <div
+          role="status"
+          className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600"
+        >
           <span className="sr-only">Cargando...</span>
         </div>
       </div>
@@ -90,159 +148,198 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           aria-current={isActive ? "page" : undefined}
           title={item.label}
           onClick={() => setSidebarOpen(false)}
-          className={`flex items-center gap-3 px-3 rounded-lg py-2.5 text-sm font-medium transition-all duration-300 ease-in-out ${
-            sidebarCollapsed ? "lg:justify-center lg:px-0 lg:gap-0" : ""
-          } ${
-            isActive
-              ? "bg-brand-600 text-white shadow-md"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-          }`}
+          className={`flex items-center gap-3 rounded-lg py-2 px-3 text-sm font-medium
+            transition-all duration-200 ease-out
+            ${sidebarCollapsed ? "lg:justify-center lg:px-0 lg:gap-0" : ""}
+            ${
+              isActive
+                ? "bg-brand-600 text-white shadow-sm"
+                : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+            }`}
         >
           <item.icon
             aria-hidden="true"
-            className={`shrink-0 h-4.5 w-4.5 ${sidebarCollapsed ? "lg:h-5 lg:w-5" : ""} ${
-              isActive ? "text-white" : "text-muted-foreground"
-            }`}
+            className={`shrink-0 h-4 w-4 transition-colors
+              ${isActive ? "text-white" : "text-muted-foreground"}`}
           />
-          <span className={`flex-1 ${sidebarCollapsed ? "lg:hidden" : ""}`}>{item.label}</span>
+          <span className={`truncate ${sidebarCollapsed ? "lg:hidden" : ""}`}>
+            {item.label}
+          </span>
         </Link>
       </li>
     );
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
 
-      {/* Mobile overlay */}
-      {sidebarOpen && (
+      {/* ══════════════════════════════════════════
+          Full-width Header
+          Left:  hamburger + brand (width tracks sidebar)
+          Right: user name / role badge / logout
+      ══════════════════════════════════════════ */}
+      <header className="shrink-0 z-50 h-12 flex items-center border-b border-border bg-card/95 backdrop-blur-md shadow-sm">
+
+        {/* Brand section — mirrors sidebar width on desktop */}
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ── Sidebar ── */}
-      <aside
-        id="admin-sidebar"
-        aria-label="Menú de navegación"
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card transition-all duration-300 ease-in-out
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:static lg:translate-x-0
-          ${sidebarCollapsed ? "lg:w-16" : "lg:w-64"}`}
-      >
-        {/* ULEAM top accent */}
-        <div className="h-0.5 w-full bg-linear-to-r from-brand-600 via-brand-500 to-accent-500 shrink-0" />
-
-        {/* Logo */}
-        <div className={`flex h-[54px] items-center justify-between px-4 border-b border-border shrink-0 transition-all duration-300 ease-in-out ${
-          sidebarCollapsed ? "lg:justify-center lg:px-0" : ""
-        }`}>
-          <Link href="/admin/dashboard" className="flex items-center gap-2.5 min-w-0">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 shadow-sm">
-              <span className="text-xs font-extrabold text-white">U</span>
-            </div>
-            <div className={`flex flex-col leading-tight min-w-0 ${sidebarCollapsed ? "lg:hidden" : ""}`}>
-              <span className="text-sm font-extrabold uppercase tracking-tight text-foreground">
-                PAuleam
-              </span>
-              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground truncate">
-                ERP · Planta de Alimentos
-              </span>
-            </div>
-          </Link>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            aria-label="Cerrar menú lateral"
-            className="rounded-md p-1 text-muted-foreground hover:bg-muted lg:hidden"
-          >
-            <X aria-hidden="true" className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <nav
-          aria-label="Principal"
-          className={`flex-1 overflow-y-auto py-4 space-y-5 transition-all duration-300 ease-in-out ${
-            sidebarCollapsed ? "px-2" : "px-3"
-          }`}
+          className={`flex items-center h-full shrink-0 border-r border-border/60
+            transition-all duration-300 ease-in-out px-3 gap-3
+            ${sidebarCollapsed
+              ? "lg:w-16 lg:px-0 lg:justify-center lg:gap-0"
+              : "lg:w-64"
+            }`}
         >
-          <div>
-            <p className={`mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ${
-              sidebarCollapsed ? "lg:hidden" : ""
-            }`}>
-              Navegación
-            </p>
-            <ul className="space-y-0.5">
-              {filteredNav.map((item) => <NavLink key={item.href} item={item} />)}
-            </ul>
-          </div>
-
-          <div>
-            <div className={`mb-2 border-t border-border pt-4 ${sidebarCollapsed ? "lg:hidden" : ""}`}>
-              <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
-                Comercial
-              </p>
-            </div>
-            {sidebarCollapsed && <div className="hidden lg:block mb-2" />}
-            <ul className="space-y-0.5">
-              {SUB_ITEMS.filter((item) => role && item.roles.includes(role)).map((item) => (
-                <NavLink key={item.href} item={item} />
-              ))}
-            </ul>
-          </div>
-        </nav>
-
-        {/* Sidebar footer: theme toggle */}
-        <div className={`shrink-0 border-t border-border p-3 flex transition-all duration-300 ease-in-out ${
-          sidebarCollapsed ? "justify-start lg:justify-center" : "justify-start"
-        }`}>
-          <ThemeToggle />
-        </div>
-      </aside>
-
-      {/* ── Main content ── */}
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-card/90 px-5 backdrop-blur-md">
+          {/* Animated hamburger */}
           <button
             onClick={handleHamburgerClick}
             aria-label="Alternar menú lateral"
             aria-controls="admin-sidebar"
-            className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+            aria-expanded={menuIconOpen}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md
+              text-muted-foreground hover:bg-muted hover:text-foreground
+              transition-colors duration-200"
           >
-            <Menu aria-hidden="true" className="h-5 w-5" />
+            <MenuIcon isOpen={menuIconOpen} />
           </button>
 
-          <div className="flex-1" />
-
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex flex-col items-end leading-tight">
-              <span className="text-sm font-semibold text-foreground truncate max-w-[8rem]">
-                {user?.profile?.name ?? user?.email ?? "Sin sesión"}
-              </span>
-              {roleInfo && (
-                <span className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${roleInfo.cls}`}>
-                  {roleInfo.label}
-                </span>
-              )}
+          {/* Logo + brand text — hidden on desktop when collapsed */}
+          <Link
+            href="/admin/dashboard"
+            className={`flex items-center gap-2 min-w-0 overflow-hidden
+              ${sidebarCollapsed ? "lg:hidden" : ""}`}
+          >
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-600 shadow-sm">
+              <span className="text-[10px] font-extrabold tracking-tight text-white">U</span>
             </div>
+            <div className="hidden sm:flex flex-col leading-none min-w-0">
+              <span className="text-[13px] font-extrabold uppercase tracking-tight text-foreground">
+                PAuleam
+              </span>
+              <span className="text-[8px] font-semibold uppercase tracking-widest text-muted-foreground mt-0.5 truncate">
+                ERP · Food Plant
+              </span>
+            </div>
+          </Link>
+        </div>
 
-            {isAuthenticated && (
-              <button
-                onClick={signOut}
-                aria-label="Cerrar sesión"
-                title="Cerrar sesión"
-                className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-900/20 dark:hover:text-brand-300 transition-all duration-150"
+        <div className="flex-1" />
+
+        {/* User info + logout */}
+        <div className="flex items-center gap-2 px-4">
+          <div className="hidden sm:flex flex-col items-end leading-tight">
+            <span className="text-sm font-semibold text-foreground truncate max-w-[9rem]">
+              {user?.profile?.name ?? user?.email ?? "Sin sesión"}
+            </span>
+            {roleInfo && (
+              <span
+                className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${roleInfo.cls}`}
               >
-                <LogOut aria-hidden="true" className="h-4 w-4" />
-              </button>
+                {roleInfo.label}
+              </span>
             )}
           </div>
-        </header>
 
-        {/* Page content */}
-        <main id="main-content" className="flex-1 overflow-y-auto p-6 lg:p-8">{children}</main>
+          {isAuthenticated && (
+            <button
+              onClick={signOut}
+              aria-label="Cerrar sesión"
+              title="Cerrar sesión"
+              className="flex h-8 w-8 items-center justify-center rounded-md
+                text-muted-foreground hover:bg-brand-50 hover:text-brand-700
+                dark:hover:bg-brand-900/20 dark:hover:text-brand-300
+                transition-all duration-150"
+            >
+              <LogOut aria-hidden="true" className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* ══════════════════════════════════════════
+          Body: sidebar + main
+      ══════════════════════════════════════════ */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+
+        {/* Mobile backdrop — starts below header (top: 48px = h-12) */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
+            style={{ top: 48 }}
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* ── Sidebar ── */}
+        <aside
+          id="admin-sidebar"
+          aria-label="Menú de navegación"
+          className={`
+            fixed top-12 left-0 bottom-0 z-50 w-64
+            flex flex-col overflow-hidden
+            bg-card border-r border-border
+            transition-all duration-300 ease-in-out
+            ${sidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
+            lg:static lg:top-auto lg:translate-x-0 lg:shadow-none
+            ${sidebarCollapsed ? "lg:w-16" : "lg:w-64"}
+          `}
+        >
+          {/* ULEAM brand gradient accent */}
+          <div className="h-[2px] w-full bg-linear-to-r from-brand-600 via-brand-500 to-accent-500 shrink-0" />
+
+          {/* Navigation */}
+          <nav
+            aria-label="Principal"
+            className={`flex-1 overflow-y-auto overflow-x-hidden py-3 space-y-3
+              transition-all duration-300 ease-in-out
+              ${sidebarCollapsed ? "lg:px-2" : "px-2.5"}`}
+          >
+            {/* Main nav group */}
+            <div>
+              <p
+                className={`mb-1 px-2 text-[9px] font-bold uppercase tracking-[0.12em]
+                  text-muted-foreground/55
+                  ${sidebarCollapsed ? "lg:hidden" : ""}`}
+              >
+                Navegación
+              </p>
+              <ul className="space-y-0.5">
+                {filteredNav.map((item) => (
+                  <NavLink key={item.href} item={item} />
+                ))}
+              </ul>
+            </div>
+
+            {/* Comercial group */}
+            <div>
+              <div className={`${sidebarCollapsed ? "lg:hidden" : ""}`}>
+                <div className="border-t border-border/60 pt-2.5 mb-1">
+                  <p className="px-2 text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground/55">
+                    Comercial
+                  </p>
+                </div>
+              </div>
+              {sidebarCollapsed && <div className="hidden lg:block h-1" />}
+              <ul className="space-y-0.5">
+                {SUB_ITEMS.filter((item) => role && item.roles.includes(role)).map((item) => (
+                  <NavLink key={item.href} item={item} />
+                ))}
+              </ul>
+            </div>
+          </nav>
+
+          {/* Footer: theme toggle */}
+          <div
+            className={`shrink-0 border-t border-border p-2.5 flex transition-all duration-300
+              ${sidebarCollapsed ? "lg:justify-center" : "justify-start"}`}
+          >
+            <ThemeToggle />
+          </div>
+        </aside>
+
+        {/* ── Main content ── */}
+        <main id="main-content" className="flex-1 overflow-y-auto p-5 lg:p-7">
+          {children}
+        </main>
       </div>
     </div>
   );
