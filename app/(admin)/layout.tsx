@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth, useRole } from "@features/auth/hooks";
 import { useState, useEffect } from "react";
@@ -211,15 +212,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             className={`flex items-center gap-2 min-w-0 overflow-hidden
               ${sidebarCollapsed ? "lg:hidden" : ""}`}
           >
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-600 shadow-sm">
-              <span className="text-[10px] font-extrabold tracking-tight text-white">U</span>
-            </div>
+            <Image
+              src="/logo-pauleam.png"
+              alt="Logo PAuleam"
+              width={24}
+              height={24}
+              className="shrink-0 object-contain"
+            />
             <div className="hidden sm:flex flex-col leading-none min-w-0">
               <span className="text-[13px] font-extrabold uppercase tracking-tight text-foreground">
                 PAuleam
-              </span>
-              <span className="text-[8px] font-semibold uppercase tracking-widest text-muted-foreground mt-0.5 truncate">
-                ERP · Food Plant
               </span>
             </div>
           </Link>
