@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -24,15 +25,16 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 self-start">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm border border-white/20">
-              <span className="text-base font-extrabold text-white">U</span>
-            </div>
+            <Image
+              src="/logo-pauleam.png"
+              alt="Logo PAuleam"
+              width={40}
+              height={40}
+              className="shrink-0 object-contain drop-shadow-md"
+            />
             <div className="flex flex-col leading-tight">
               <span className="text-base font-extrabold text-white uppercase tracking-tight">
                 PAuleam
-              </span>
-              <span className="text-[9px] font-semibold uppercase tracking-widest text-white/60">
-                Planta de Alimentos
               </span>
             </div>
           </Link>
@@ -108,12 +110,15 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             Regresar al inicio
           </Link>
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 shadow-md">
-              <span className="text-xs font-extrabold text-white">U</span>
-            </div>
+            <Image
+              src="/logo-pauleam.png"
+              alt="Logo PAuleam"
+              width={32}
+              height={32}
+              className="shrink-0 object-contain"
+            />
             <div className="flex flex-col leading-tight">
               <span className="text-sm font-extrabold uppercase tracking-tight text-foreground">PAuleam</span>
-              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">Planta de Alimentos</span>
             </div>
           </div>
         </div>

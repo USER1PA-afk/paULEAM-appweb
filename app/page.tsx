@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ThemeToggle } from "@shared/components/theme-toggle";
 import { HomeAuthNav } from "@features/auth/components/home-auth-nav";
 import { Package, Factory, ClipboardList, ShoppingCart } from "lucide-react";
@@ -50,15 +51,16 @@ export default function HomePage() {
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 shadow-md">
-              <span className="text-sm font-extrabold text-white tracking-tight">U</span>
-            </div>
+            <Image
+              src="/logo-pauleam.png"
+              alt="Logo PAuleam"
+              width={36}
+              height={36}
+              className="shrink-0 object-contain"
+            />
             <div className="flex flex-col leading-tight">
               <span className="text-sm font-extrabold tracking-tight text-foreground uppercase">
                 PAuleam
-              </span>
-              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Planta de Alimentos
               </span>
             </div>
           </Link>

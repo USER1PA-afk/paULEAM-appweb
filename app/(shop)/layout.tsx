@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth, useRole } from "@features/auth/hooks";
 import { useCart } from "@features/checkout/hooks";
@@ -33,9 +34,13 @@ export default function ShopLayout({
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-brand-500 to-brand-700 text-sm font-bold text-white shadow-md">
-              P
-            </div>
+            <Image
+              src="/logo-pauleam.png"
+              alt="Logo PAuleam"
+              width={32}
+              height={32}
+              className="shrink-0 object-contain"
+            />
             <span className="text-base font-bold tracking-tight text-foreground">
               PAuleam
             </span>
