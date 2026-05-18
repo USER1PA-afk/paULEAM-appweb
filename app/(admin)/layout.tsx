@@ -50,33 +50,40 @@ const ROLE_LABELS: Record<string, { label: string; cls: string }> = {
 ─────────────────────────────────────────────────────────────────*/
 function MenuIcon({ isOpen }: { isOpen: boolean }) {
   const base = "absolute block transition-all duration-300 ease-in-out";
+  /*
+    Centers aligned in both states (container 20 × 24 px):
+      Element 1: center (x=10, y=3)   → dot top=0  left=7 | line top=2  left=0
+      Element 2: center (x=10, y=12)  → dot top=9  left=7 | line top=11 left=0
+      Element 3: center (x=10, y=21)  → dot top=18 left=7 | line top=20 left=0
+    Each element stretches/shrinks from the same point — no positional jump.
+  */
   return (
-    <div className="relative" style={{ width: 18, height: 20 }}>
-      {/* Top — institutional gray */}
+    <div className="relative" style={{ width: 20, height: 24 }}>
+      {/* Top — gray #4B4B4B */}
       <span
         className={base}
         style={
           isOpen
-            ? { width: 18, height: 3,  top: 0,  left: 0, borderRadius: 3,    backgroundColor: "#4B4B4B" }
-            : { width: 6,  height: 6,  top: 0,  left: 6, borderRadius: "50%", backgroundColor: "#4B4B4B" }
+            ? { width: 20, height: 2, top: 2,  left: 0, borderRadius: 2,     backgroundColor: "#4B4B4B" }
+            : { width: 6,  height: 6, top: 0,  left: 7, borderRadius: "50%", backgroundColor: "#4B4B4B" }
         }
       />
-      {/* Middle — brand red */}
+      {/* Middle — red #D90404 */}
       <span
         className={base}
         style={
           isOpen
-            ? { width: 18, height: 3,  top: 8.5, left: 0, borderRadius: 3,    backgroundColor: "#D90404" }
-            : { width: 6,  height: 6,  top: 7,  left: 6, borderRadius: "50%", backgroundColor: "#D90404" }
+            ? { width: 20, height: 2, top: 11, left: 0, borderRadius: 2,     backgroundColor: "#D90404" }
+            : { width: 6,  height: 6, top: 9,  left: 7, borderRadius: "50%", backgroundColor: "#D90404" }
         }
       />
-      {/* Bottom — institutional green */}
+      {/* Bottom — green #1FA34A */}
       <span
         className={base}
         style={
           isOpen
-            ? { width: 18, height: 3,  top: 17, left: 0, borderRadius: 3,    backgroundColor: "#1FA34A" }
-            : { width: 6,  height: 6,  top: 14, left: 6, borderRadius: "50%", backgroundColor: "#1FA34A" }
+            ? { width: 20, height: 2, top: 20, left: 0, borderRadius: 2,     backgroundColor: "#1FA34A" }
+            : { width: 6,  height: 6, top: 18, left: 7, borderRadius: "50%", backgroundColor: "#1FA34A" }
         }
       />
     </div>
@@ -88,7 +95,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router   = useRouter();
 
   const { user, signOut, isAuthenticated, loading: authLoading } = useAuth();
-  const { role, isStaff, loading: roleLoading } = useRole();
+  const { role, loading: roleLoading } = useRole();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen,      setSidebarOpen]      = useState(false);
@@ -149,7 +156,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           aria-current={isActive ? "page" : undefined}
           title={item.label}
           onClick={() => setSidebarOpen(false)}
-          className={`flex items-center gap-3 rounded-lg py-2 px-3 text-sm font-medium
+          className={`flex items-center gap-3 rounded-lg py-2 px-3 text-sm font-medium min-h-9
             transition-all duration-200 ease-out
             ${sidebarCollapsed ? "lg:justify-center lg:px-0 lg:gap-0" : ""}
             ${
@@ -179,58 +186,42 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           Left:  hamburger + brand (width tracks sidebar)
           Right: user name / role badge / logout
       ══════════════════════════════════════════ */}
-      <header className="shrink-0 z-50 h-12 flex items-center border-b border-border bg-card/95 backdrop-blur-md shadow-sm">
+      <header className="shrink-0 z-50 h-12 flex items-center gap-3 px-3 bg-card/95 backdrop-blur-md shadow-sm relative">
 
-        {/* Brand section — mirrors sidebar width on desktop */}
-        <div
-          className={`flex items-center h-full shrink-0 border-r border-border/60
-            transition-all duration-300 ease-in-out px-3 gap-3
-            ${sidebarCollapsed
-              ? "lg:w-16 lg:px-0 lg:justify-center lg:gap-0"
-              : "lg:w-64"
-            }`}
+        {/* ── Hamburger — posición fija, nunca se mueve ── */}
+        <button
+          onClick={handleHamburgerClick}
+          aria-label="Alternar menú lateral"
+          aria-controls="admin-sidebar"
+          aria-expanded={menuIconOpen}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md
+            text-muted-foreground hover:bg-muted hover:text-foreground
+            transition-colors duration-200"
         >
-          {/* Animated hamburger */}
-          <button
-            onClick={handleHamburgerClick}
-            aria-label="Alternar menú lateral"
-            aria-controls="admin-sidebar"
-            aria-expanded={menuIconOpen}
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md
-              transition-all duration-200 ease-out
-              ${menuIconOpen 
-                ? "bg-transparent text-foreground hover:bg-muted" 
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-          >
-            <MenuIcon isOpen={menuIconOpen} />
-          </button>
+          <MenuIcon isOpen={menuIconOpen} />
+        </button>
 
-          {/* Logo + brand text — hidden on desktop when collapsed */}
-          <Link
-            href="/admin/dashboard"
-            className={`flex items-center gap-2 min-w-0 overflow-hidden
-              ${sidebarCollapsed ? "lg:hidden" : ""}`}
-          >
-            <Image
-              src="/logo-pauleam.png"
-              alt="Logo PAuleam"
-              width={24}
-              height={24}
-              className="shrink-0 object-contain"
-            />
-            <div className="hidden sm:flex flex-col leading-none min-w-0">
-              <span className="text-[13px] font-extrabold uppercase tracking-tight text-foreground">
-                PAuleam
-              </span>
-            </div>
-          </Link>
-        </div>
+        {/* Separador vertical */}
+        <div className="h-5 w-px bg-border shrink-0" />
+
+        {/* ── Brand: logo + nombre ── */}
+        <Link href="/admin/dashboard" className="flex items-center gap-2 min-w-0">
+          <Image
+            src="/logo-pauleam.png"
+            alt="Logo PAuleam"
+            width={26}
+            height={26}
+            className="shrink-0 object-contain"
+          />
+          <span className="hidden sm:block text-[13px] font-extrabold uppercase tracking-tight text-foreground">
+            PAuleam
+          </span>
+        </Link>
 
         <div className="flex-1" />
 
-        {/* User info + logout */}
-        <div className="flex items-center gap-2 px-4">
+        {/* ── User info + logout ── */}
+        <div className="flex items-center gap-2 pr-1">
           <div className="hidden sm:flex flex-col items-end leading-tight">
             <span className="text-sm font-semibold text-foreground truncate max-w-[9rem]">
               {user?.profile?.name ?? user?.email ?? "Sin sesión"}
@@ -258,6 +249,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </button>
           )}
         </div>
+
+        {/* Línea degradada a todo ancho — reemplaza border-b */}
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-linear-to-r from-brand-600 via-brand-500 to-accent-500" />
       </header>
 
       {/* ══════════════════════════════════════════
@@ -288,9 +282,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             ${sidebarCollapsed ? "lg:w-16" : "lg:w-64"}
           `}
         >
-          {/* ULEAM brand gradient accent */}
-          <div className="h-[2px] w-full bg-linear-to-r from-brand-600 via-brand-500 to-accent-500 shrink-0" />
-
           {/* Navigation */}
           <nav
             aria-label="Principal"
@@ -302,8 +293,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div>
               <p
                 className={`mb-1 px-2 text-[9px] font-bold uppercase tracking-[0.12em]
-                  text-muted-foreground/55
-                  ${sidebarCollapsed ? "lg:hidden" : ""}`}
+                  text-muted-foreground/55 transition-opacity duration-300
+                  ${sidebarCollapsed ? "lg:invisible lg:opacity-0" : ""}`}
               >
                 Navegación
               </p>
@@ -316,14 +307,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             {/* Comercial group */}
             <div>
-              <div className={`${sidebarCollapsed ? "lg:hidden" : ""}`}>
+              <div
+                className={`transition-opacity duration-300
+                  ${sidebarCollapsed ? "lg:invisible lg:opacity-0" : ""}`}
+              >
                 <div className="border-t border-border/60 pt-2.5 mb-1">
                   <p className="px-2 text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground/55">
                     Comercial
                   </p>
                 </div>
               </div>
-              {sidebarCollapsed && <div className="hidden lg:block h-1" />}
               <ul className="space-y-0.5">
                 {SUB_ITEMS.filter((item) => role && item.roles.includes(role)).map((item) => (
                   <NavLink key={item.href} item={item} />
