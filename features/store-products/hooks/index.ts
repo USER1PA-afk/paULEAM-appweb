@@ -233,7 +233,7 @@ export function useStoreProductDetail(id: string | null) {
       .eq("product_id", id);
 
     type SaleRow = { quantity: number; subtotal: number; order: { status: string } };
-    const approved = ((salesRows as SaleRow[]) ?? []).filter((r) =>
+    const approved = ((salesRows as unknown as SaleRow[]) ?? []).filter((r) =>
       ["APROBADO", "COMPLETADO", "ENVIADO"].includes(r.order?.status ?? "")
     );
 
@@ -376,7 +376,7 @@ export function useProductImages(productId: string | null) {
 
   async function deleteImage(img: ProductImage): Promise<void> {
     const db = getInsforge();
-    await db.storage.from("product-images").remove([img.storage_path]);
+    await db.storage.from("product-images").remove(img.storage_path);
     await db.database.from("product_images").delete().eq("id", img.id);
 
     if (img.is_primary && productId) {
