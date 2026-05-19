@@ -3,7 +3,7 @@
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback } from "react";
 
-interface CartItem {
+export interface CartItem {
   product_id: string;
   name: string;
   sku: string;
@@ -20,8 +20,55 @@ interface Order {
   status: string;
   total: number;
   payment_receipt_url: string | null;
+  shipping_address: string | null;
+  notes: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface OrderItemDetail {
+  id: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  products: {
+    name: string;
+    sku: string;
+    unit: string;
+  } | null;
+}
+
+export interface OrderWithDetails extends Order {
+  order_items?: OrderItemDetail[];
+}
+
+const ORDER_ITEMS_SELECT = `
+  id,
+  quantity,
+  unit_price,
+  subtotal,
+  products(name, sku, unit)
+`;
+
+/**
+ * Genera el código de retiro a partir del UUID de la orden.
+ * Formato: PAU-XXXXXXXX (8 hex chars del UUID sin guiones)
+ */
+export function pickupCode(orderId: string): string {
+  return "PAU-" + orderId.replace(/-/g, "").substring(0, 8).toUpperCase();
+}
+
+let globalCartItems: CartItem[] = [];
+let isCartInitialized = false;
+const cartListeners = new Set<() => void>();
+
+function notifyCart() {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("pauleam_cart", JSON.stringify(globalCartItems));
+  }
+  cartListeners.forEach((l) => l());
 }
 
 /**
@@ -33,22 +80,28 @@ export function useCart() {
   const [loading, setLoading] = useState(false);
   const insforge = getInsforge();
 
-  // Cargar carrito desde localStorage al montar
   useEffect(() => {
-    const saved = localStorage.getItem("pauleam_cart");
-    if (saved) {
-      try {
-        setItems(JSON.parse(saved));
-      } catch {
-        localStorage.removeItem("pauleam_cart");
+    if (!isCartInitialized) {
+      if (typeof window !== "undefined") {
+        const saved = localStorage.getItem("pauleam_cart");
+        if (saved) {
+          try {
+            globalCartItems = JSON.parse(saved);
+          } catch {
+            globalCartItems = [];
+          }
+        }
       }
+      isCartInitialized = true;
     }
-  }, []);
+    setItems([...globalCartItems]);
 
-  // Persistir en localStorage
-  useEffect(() => {
-    localStorage.setItem("pauleam_cart", JSON.stringify(items));
-  }, [items]);
+    const listener = () => setItems([...globalCartItems]);
+    cartListeners.add(listener);
+    return () => {
+      cartListeners.delete(listener);
+    };
+  }, []);
 
   const addItem = useCallback(
     async (
@@ -64,7 +117,6 @@ export function useCart() {
     ) => {
       setLoading(true);
       try {
-        // Reservar stock vía función RPC
         const { data: userData } = await insforge.auth.getCurrentUser();
         if (!userData?.user?.id) throw new Error("No autenticado");
 
@@ -76,59 +128,57 @@ export function useCart() {
 
         if (error) throw error;
 
-        const existing = items.find((i) => i.product_id === product.id);
+        const existing = globalCartItems.find((i) => i.product_id === product.id);
         if (existing) {
-          setItems((prev) =>
-            prev.map((i) =>
-              i.product_id === product.id
-                ? { ...i, quantity: i.quantity + quantity, reservation_id: data }
-                : i
-            )
+          globalCartItems = globalCartItems.map((i) =>
+            i.product_id === product.id
+              ? { ...i, quantity: i.quantity + quantity, reservation_id: data as string }
+              : i
           );
         } else {
-          setItems((prev) => [
-            ...prev,
+          globalCartItems = [
+            ...globalCartItems,
             {
               product_id: product.id,
               name: product.name,
               sku: product.sku,
               unit: product.unit,
               price: product.price,
-              quantity: quantity,
+              quantity,
               image_url: product.image_url,
               reservation_id: data as string,
             },
-          ]);
+          ];
         }
+        notifyCart();
         return { error: null };
       } catch (err: unknown) {
         return {
-          error:
-            err instanceof Error ? err.message : "Error al agregar al carrito",
+          error: err instanceof Error ? err.message : "Error al agregar al carrito",
         };
       } finally {
         setLoading(false);
       }
     },
-    [items, insforge]
+    [insforge]
   );
 
   const removeItem = useCallback(
     async (productId: string) => {
-      const item = items.find((i) => i.product_id === productId);
+      const item = globalCartItems.find((i) => i.product_id === productId);
       if (item?.reservation_id) {
         await insforge.database
           .from("stock_reservations")
           .delete()
           .eq("id", item.reservation_id);
       }
-      setItems((prev) => prev.filter((i) => i.product_id !== productId));
+      globalCartItems = globalCartItems.filter((i) => i.product_id !== productId);
+      notifyCart();
     },
-    [items, insforge]
+    [insforge]
   );
 
   const clearCart = useCallback(async () => {
-    // Liberar todas las reservas
     const { data: userData } = await insforge.auth.getCurrentUser();
     if (userData?.user?.id) {
       await insforge.database
@@ -136,14 +186,11 @@ export function useCart() {
         .delete()
         .eq("user_id", userData.user.id);
     }
-    setItems([]);
-    localStorage.removeItem("pauleam_cart");
+    globalCartItems = [];
+    notifyCart();
   }, [insforge]);
 
-  const total = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return {
@@ -160,7 +207,6 @@ export function useCart() {
 
 /**
  * Hook para el proceso de checkout.
- * Sube el comprobante de pago a Insforge Storage y crea la orden.
  */
 export function useCheckout() {
   const [loading, setLoading] = useState(false);
@@ -191,7 +237,7 @@ export function useCheckout() {
 
         if (uploadError) throw uploadError;
 
-        // 2. Obtener URL pública del comprobante
+        // 2. URL pública del comprobante
         const publicUrl = insforge.storage
           .from("payment-receipts")
           .getPublicUrl(filePath);
@@ -205,16 +251,18 @@ export function useCheckout() {
             total: params.total,
             payment_receipt_url: publicUrl,
             shipping_address: params.shippingAddress,
-            notes: params.notes,
+            notes: params.notes ?? null,
           })
           .select()
           .single();
 
         if (orderError) throw orderError;
 
-        // 4. Crear los items de la orden
+        const orderId = (order as Order).id;
+
+        // 4. Crear los items
         const orderItems = params.items.map((item) => ({
-          order_id: (order as Order).id,
+          order_id: orderId,
           product_id: item.product_id,
           quantity: item.quantity,
           unit_price: item.price,
@@ -234,8 +282,8 @@ export function useCheckout() {
             movement_type: "EGRESO",
             quantity: item.quantity,
             reference_type: "VENTA",
-            reference_id: (order as Order).id,
-            notes: `Venta #${((order as Order).id).substring(0, 8)}`,
+            reference_id: orderId,
+            notes: `Venta #${orderId.substring(0, 8)}`,
           });
         }
 
@@ -247,8 +295,7 @@ export function useCheckout() {
 
         return { data: order as Order, error: null };
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Error en el checkout";
+        const message = err instanceof Error ? err.message : "Error en el checkout";
         setError(message);
         return { data: null, error: message };
       } finally {
@@ -263,9 +310,10 @@ export function useCheckout() {
 
 /**
  * Hook para que el admin gestione órdenes de venta.
+ * Incluye items de cada orden con detalles del producto.
  */
 export function useOrderManagement() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const insforge = getInsforge();
 
@@ -274,10 +322,10 @@ export function useOrderManagement() {
     try {
       const { data } = await insforge.database
         .from("orders")
-        .select("*")
+        .select(`*, order_items(${ORDER_ITEMS_SELECT})`)
         .order("created_at", { ascending: false });
 
-      setOrders((data as Order[]) ?? []);
+      setOrders((data as OrderWithDetails[]) ?? []);
     } catch {
       setOrders([]);
     } finally {
@@ -307,8 +355,7 @@ export function useOrderManagement() {
         return { error: null };
       } catch (err: unknown) {
         return {
-          error:
-            err instanceof Error ? err.message : "Error al aprobar orden",
+          error: err instanceof Error ? err.message : "Error al aprobar orden",
         };
       }
     },
@@ -328,8 +375,7 @@ export function useOrderManagement() {
         return { error: null };
       } catch (err: unknown) {
         return {
-          error:
-            err instanceof Error ? err.message : "Error al rechazar orden",
+          error: err instanceof Error ? err.message : "Error al rechazar orden",
         };
       }
     },
@@ -337,4 +383,43 @@ export function useOrderManagement() {
   );
 
   return { orders, loading, approveOrder, rejectOrder, refetch: fetchOrders };
+}
+
+/**
+ * Hook para que el usuario vea su historial de órdenes.
+ */
+export function useUserOrders() {
+  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const insforge = getInsforge();
+
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: userData } = await insforge.auth.getCurrentUser();
+      if (!userData?.user?.id) {
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data } = await insforge.database
+        .from("orders")
+        .select(`*, order_items(${ORDER_ITEMS_SELECT})`)
+        .eq("user_id", userData.user.id)
+        .order("created_at", { ascending: false });
+
+      setOrders((data as OrderWithDetails[]) ?? []);
+    } catch {
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [insforge]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  return { orders, loading, refetch: fetchOrders };
 }

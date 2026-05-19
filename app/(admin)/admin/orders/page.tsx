@@ -1,30 +1,55 @@
 "use client";
 
-import { useOrderManagement } from "@features/checkout/hooks";
+import { useOrderManagement, pickupCode } from "@features/checkout/hooks";
 import { formatDate, formatCurrency } from "@shared/lib/utils";
+import { useState } from "react";
+import { ChevronDown, ChevronUp, ExternalLink, Receipt } from "lucide-react";
 
-const STATUS_LABELS: Record<string, { label: string; dot: string }> = {
-  PENDIENTE: { label: "Pendiente", dot: "bg-yellow-500" },
-  PAGADO: { label: "Pagado", dot: "bg-blue-500" },
-  APROBADO: { label: "Aprobado", dot: "bg-accent-500" },
-  ENVIADO: { label: "Enviado", dot: "bg-violet-500" },
-  COMPLETADO: { label: "Completado", dot: "bg-accent-500" },
-  CANCELADO: { label: "Cancelado", dot: "bg-red-500" },
+const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
+  PENDIENTE:  { label: "Pendiente",  dot: "bg-yellow-500",  bg: "bg-yellow-100 dark:bg-yellow-900/20",  text: "text-yellow-700 dark:text-yellow-300"  },
+  PAGADO:     { label: "Pagado",     dot: "bg-blue-500",    bg: "bg-blue-100 dark:bg-blue-900/20",      text: "text-blue-700 dark:text-blue-300"      },
+  APROBADO:   { label: "Aprobado",   dot: "bg-green-500",   bg: "bg-green-100 dark:bg-green-900/20",    text: "text-green-700 dark:text-green-300"    },
+  ENVIADO:    { label: "Enviado",    dot: "bg-violet-500",  bg: "bg-violet-100 dark:bg-violet-900/20",  text: "text-violet-700 dark:text-violet-300"  },
+  COMPLETADO: { label: "Completado", dot: "bg-emerald-500", bg: "bg-emerald-100 dark:bg-emerald-900/20",text: "text-emerald-700 dark:text-emerald-300" },
+  CANCELADO:  { label: "Cancelado",  dot: "bg-red-500",     bg: "bg-red-100 dark:bg-red-900/20",        text: "text-red-700 dark:text-red-300"        },
 };
 
 export default function AdminOrdersPage() {
   const { orders, loading, approveOrder, rejectOrder } = useOrderManagement();
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [acting, setActing] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function handleApprove(orderId: string) {
+    setActing(orderId);
+    setActionError(null);
+    const { error } = await approveOrder(orderId);
+    if (error) setActionError(error);
+    setActing(null);
+  }
+
+  async function handleReject(orderId: string) {
+    setActing(orderId);
+    setActionError(null);
+    const { error } = await rejectOrder(orderId);
+    if (error) setActionError(error);
+    setActing(null);
+  }
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Órdenes de Venta
-        </h1>
-        <p className="mt-1 text-muted-foreground">
+        <h1 className="text-2xl font-bold tracking-tight">Órdenes de Venta</h1>
+        <p className="mt-1 text-muted-foreground text-sm">
           Validación de pagos y gestión de pedidos del E-Commerce.
         </p>
       </div>
+
+      {actionError && (
+        <div role="alert" className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+          {actionError}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
@@ -32,110 +57,195 @@ export default function AdminOrdersPage() {
             <span className="sr-only">Cargando órdenes...</span>
           </div>
         </div>
+      ) : orders.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-16 text-muted-foreground">
+          <Receipt aria-hidden="true" className="h-10 w-10 mb-3 opacity-25" />
+          <p className="font-medium">No hay órdenes de venta</p>
+        </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table aria-label="Órdenes de venta" className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  ID
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  Fecha
-                </th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                  Total
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  Estado
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  Comprobante
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-4 py-8 text-center text-muted-foreground"
-                  >
-                    No hay órdenes de venta
-                  </td>
-                </tr>
-              ) : (
-                orders.map((order) => {
-                  const status = STATUS_LABELS[order.status] ?? {
-                    label: order.status,
-                    dot: "bg-gray-400",
-                  };
-                  return (
-                    <tr
-                      key={order.id}
-                      className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
-                    >
-                      <td className="px-4 py-3 font-mono text-xs">
-                        {order.id.substring(0, 8)}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                        {formatDate(order.created_at)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold tabular-nums">
-                        {formatCurrency(order.total)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5">
-                          <span aria-hidden="true" className={`h-2 w-2 rounded-full ${status.dot}`} />
-                          <span className="text-xs font-medium text-foreground">{status.label}</span>
+        <div className="space-y-3">
+          {orders.map((order) => {
+            const status = STATUS_CONFIG[order.status] ?? {
+              label: order.status,
+              dot: "bg-gray-400",
+              bg: "bg-gray-100",
+              text: "text-gray-700",
+            };
+            const isOpen = expanded === order.id;
+            const code = pickupCode(order.id);
+            const isActing = acting === order.id;
+            const itemCount = order.order_items?.length ?? 0;
+
+            return (
+              <div
+                key={order.id}
+                className="rounded-xl border border-border bg-card shadow-sm overflow-hidden"
+              >
+                {/* Main row */}
+                <div className="flex items-center gap-3 p-4 flex-wrap">
+                  {/* Pickup code */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-bold text-brand-700 dark:text-brand-300 text-sm">
+                        {code}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.bg} ${status.text}`}
+                      >
+                        <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+                        {status.label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {formatDate(order.created_at)}
+                      {itemCount > 0 && (
+                        <span className="ml-2">
+                          · {itemCount} producto{itemCount !== 1 ? "s" : ""}
                         </span>
-                      </td>
-                      <td className="px-4 py-3">
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Total */}
+                  <span className="font-bold tabular-nums text-foreground">
+                    {formatCurrency(order.total)}
+                  </span>
+
+                  {/* Approve / Reject (solo PAGADO) */}
+                  {order.status === "PAGADO" && (
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        onClick={() => handleApprove(order.id)}
+                        disabled={isActing}
+                        aria-label={`Aprobar orden ${code}`}
+                        className="rounded-md bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
+                      >
+                        {isActing ? "..." : "Aprobar"}
+                      </button>
+                      <button
+                        onClick={() => handleReject(order.id)}
+                        disabled={isActing}
+                        aria-label={`Rechazar orden ${code}`}
+                        className="rounded-md bg-destructive px-3 py-1.5 text-xs font-semibold text-white hover:bg-destructive/90 disabled:opacity-50 transition-colors"
+                      >
+                        {isActing ? "..." : "Rechazar"}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Expand toggle */}
+                  <button
+                    onClick={() => setExpanded(isOpen ? null : order.id)}
+                    aria-label={isOpen ? "Ocultar detalles" : "Ver detalles"}
+                    className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors shrink-0"
+                  >
+                    {isOpen
+                      ? <ChevronUp aria-hidden="true" className="h-4 w-4" />
+                      : <ChevronDown aria-hidden="true" className="h-4 w-4" />
+                    }
+                  </button>
+                </div>
+
+                {/* Expanded detail */}
+                {isOpen && (
+                  <div className="border-t border-border bg-muted/20 p-5 space-y-4">
+                    {/* Order items */}
+                    {(order.order_items ?? []).length > 0 ? (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                          Productos del Pedido
+                        </p>
+                        <div className="rounded-lg border border-border bg-background divide-y divide-border">
+                          {order.order_items!.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex justify-between items-center px-4 py-2.5 text-sm"
+                            >
+                              <div>
+                                <span className="font-medium text-foreground">
+                                  {item.products?.name ?? "Producto eliminado"}
+                                </span>
+                                {item.products?.sku && (
+                                  <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">
+                                    {item.products.sku}
+                                  </span>
+                                )}
+                                <span className="text-muted-foreground ml-1.5">
+                                  × {item.quantity} {item.products?.unit}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <p className="tabular-nums font-medium">{formatCurrency(item.subtotal)}</p>
+                                <p className="text-[10px] text-muted-foreground tabular-nums">
+                                  {formatCurrency(item.unit_price)} c/u
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                          <div className="flex justify-between px-4 py-2.5 font-bold text-sm bg-muted/30">
+                            <span>Total</span>
+                            <span className="tabular-nums">{formatCurrency(order.total)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Sin detalle de productos.</p>
+                    )}
+
+                    {/* Meta info row */}
+                    <div className="grid sm:grid-cols-2 gap-4 text-sm">
+                      {/* Payment receipt */}
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                          Comprobante
+                        </p>
                         {order.payment_receipt_url ? (
                           <a
                             href={order.payment_receipt_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            aria-label={`Ver recibo de la orden ${order.id.substring(0, 8)} (abre en nueva pestaña)`}
-                            className="text-xs text-brand-600 hover:text-brand-700 underline transition-colors"
+                            className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 underline text-xs transition-colors"
                           >
-                            Ver recibo
+                            <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+                            Ver comprobante de pago
                           </a>
                         ) : (
-                          <span className="text-xs text-muted-foreground">
-                            Sin comprobante
-                          </span>
+                          <span className="text-muted-foreground text-xs">Sin comprobante</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {order.status === "PAGADO" && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => approveOrder(order.id)}
-                              aria-label={`Aprobar orden ${order.id.substring(0, 8)}`}
-                              className="rounded-md bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700 transition-colors"
-                            >
-                              Aprobar
-                            </button>
-                            <button
-                              onClick={() => rejectOrder(order.id)}
-                              aria-label={`Rechazar orden ${order.id.substring(0, 8)}`}
-                              className="rounded-md bg-destructive px-2 py-1 text-xs font-medium text-white hover:bg-destructive/90 transition-colors"
-                            >
-                              Rechazar
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                      </div>
+
+                      {/* Shipping address */}
+                      {order.shipping_address && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                            Dirección
+                          </p>
+                          <p className="text-xs text-foreground">{order.shipping_address}</p>
+                        </div>
+                      )}
+
+                      {/* Notes */}
+                      {order.notes && (
+                        <div className="sm:col-span-2">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                            Notas
+                          </p>
+                          <p className="text-xs text-foreground">{order.notes}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Approved info */}
+                    {order.approved_at && (
+                      <p className="text-xs text-muted-foreground">
+                        Aprobado el {formatDate(order.approved_at)}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

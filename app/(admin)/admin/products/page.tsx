@@ -1,11 +1,12 @@
 "use client";
 
 import { getInsforge } from "@shared/lib/insforge/client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { SupplierSelect } from "@features/suppliers/components";
 import { useSupplierActions } from "@features/suppliers/hooks";
 import { useRole } from "@features/auth/hooks";
-import { Tag, AlertTriangle, Pencil, Trash2, Star } from "lucide-react";
+import { Tag, AlertTriangle, Pencil, Trash2, Star, ImagePlus, X as XIcon } from "lucide-react";
+import Image from "next/image";
 
 interface Product {
   id: string;
@@ -40,17 +41,19 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductWithSuppliers[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Form state
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("create");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ ...EMPTY_FORM });
 
-  // Supplier state — solo para MATERIA_PRIMA
   const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
   const [primarySupplierId, setPrimarySupplierId] = useState<string>("");
 
-  // Delete confirm
+  // Image upload state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<ProductWithSuppliers | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -104,6 +107,8 @@ export default function AdminProductsPage() {
     setFormData({ ...EMPTY_FORM });
     setSelectedSupplierIds([]);
     setPrimarySupplierId("");
+    setImageFile(null);
+    setImagePreview(null);
     setError(null);
     setEditingId(null);
     setFormMode("create");
@@ -123,13 +128,9 @@ export default function AdminProductsPage() {
       price: p.price ? String(p.price) : "",
       description: p.description ?? "",
     });
-    // Pre-load suppliers
-    const ids = p.suppliers.map((s, i) => {
-      // Need actual supplier IDs — fetched via join. We don't have IDs here.
-      // supplier cards only have name/company. We'll clear and let user re-select.
-      void i;
-      return "";
-    }).filter(Boolean);
+    setImageFile(null);
+    setImagePreview(p.image_url);
+    const ids = p.suppliers.map((_, i) => { void i; return ""; }).filter(Boolean);
     setSelectedSupplierIds(ids);
     setPrimarySupplierId("");
     setEditingId(p.id);
@@ -141,6 +142,21 @@ export default function AdminProductsPage() {
   function handleSupplierChange(ids: string[], primary: string) {
     setSelectedSupplierIds(ids);
     setPrimarySupplierId(primary);
+  }
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setImageFile(file);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
+    }
+  }
+
+  function clearImage() {
+    setImageFile(null);
+    setImagePreview(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -160,18 +176,38 @@ export default function AdminProductsPage() {
     setSaving(true);
     setError(null);
 
+    // Upload image if selected (admin only)
+    let uploadedImageUrl: string | undefined;
+    if (isAdmin && imageFile) {
+      const ext = imageFile.name.split(".").pop() ?? "jpg";
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await insforge.storage
+        .from("product-images")
+        .upload(path, imageFile);
+      if (upErr) {
+        setError("Error al subir imagen: " + (upErr as Error).message);
+        setSaving(false);
+        return;
+      }
+      uploadedImageUrl = insforge.storage.from("product-images").getPublicUrl(path);
+    }
+
     if (formMode === "edit" && editingId) {
-      // UPDATE
+      const updatePayload: Record<string, unknown> = {
+        name: formData.name,
+        sku: formData.sku,
+        type: formData.type,
+        unit: formData.unit,
+        price: Number(formData.price) || 0,
+        description: formData.description || null,
+      };
+      if (uploadedImageUrl !== undefined) {
+        updatePayload.image_url = uploadedImageUrl;
+      }
+
       const { error: updErr } = await insforge.database
         .from("products")
-        .update({
-          name: formData.name,
-          sku: formData.sku,
-          type: formData.type,
-          unit: formData.unit,
-          price: Number(formData.price) || 0,
-          description: formData.description || null,
-        })
+        .update(updatePayload)
         .eq("id", editingId);
 
       if (updErr) {
@@ -180,14 +216,12 @@ export default function AdminProductsPage() {
         return;
       }
 
-      // Re-link suppliers if MATERIA_PRIMA and user selected some
       if (formData.type === "MATERIA_PRIMA" && selectedSupplierIds.length > 0) {
         const effective =
           selectedSupplierIds.length === 1 ? selectedSupplierIds[0] : primarySupplierId;
         await linkSuppliersToProduct(editingId, selectedSupplierIds, effective);
       }
     } else {
-      // INSERT
       const { data: newProduct, error: insertErr } = await insforge.database
         .from("products")
         .insert({
@@ -197,6 +231,7 @@ export default function AdminProductsPage() {
           unit: formData.unit,
           price: Number(formData.price) || 0,
           description: formData.description || null,
+          image_url: uploadedImageUrl ?? null,
         })
         .select()
         .single();
@@ -230,7 +265,6 @@ export default function AdminProductsPage() {
     fetchProducts();
   }
 
-  /** Open delete confirmation — check ledger entries first */
   async function openDeleteConfirm(p: ProductWithSuppliers) {
     setDeletingId(p.id);
     setDeletingProduct(p);
@@ -253,7 +287,6 @@ export default function AdminProductsPage() {
     setDeleteLedgerCount(0);
   }
 
-  /** Hard DELETE — only for products with zero ledger entries */
   async function handleHardDelete() {
     if (!deletingId) return;
     setSaving(true);
@@ -271,7 +304,6 @@ export default function AdminProductsPage() {
     }
   }
 
-  /** Soft DELETE — set is_active = false for products with ledger history */
   async function handleDeactivate() {
     if (!deletingId) return;
     setSaving(true);
@@ -310,14 +342,13 @@ export default function AdminProductsPage() {
         </button>
       </div>
 
-      {/* ─── Global error ─── */}
       {error && !showForm && (
         <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
           {error}
         </div>
       )}
 
-      {/* ─── Delete confirmation dialog ─── */}
+      {/* ─── Delete confirmation ─── */}
       {deleteConfirm && deletingId && (
         <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-5 space-y-3">
           {deleteChecking ? (
@@ -326,7 +357,6 @@ export default function AdminProductsPage() {
               Verificando movimientos de inventario...
             </div>
           ) : deleteLedgerCount > 0 ? (
-            // HAS ledger entries — can only deactivate
             <>
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
@@ -335,7 +365,7 @@ export default function AdminProductsPage() {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Este producto tiene <strong>{deleteLedgerCount}</strong> movimiento{deleteLedgerCount !== 1 ? "s" : ""} en el libro de inventario.
-                  Eliminarlo rompería la trazabilidad contable. Puedes <strong>desactivarlo</strong> para que no aparezca en formularios ni en el catálogo, conservando el historial.
+                  Eliminarlo rompería la trazabilidad contable. Puedes <strong>desactivarlo</strong> para que no aparezca en formularios ni en el catálogo.
                 </p>
               </div>
               <div className="flex gap-3 flex-wrap">
@@ -355,7 +385,6 @@ export default function AdminProductsPage() {
               </div>
             </>
           ) : (
-            // ZERO ledger entries — safe to hard delete
             <>
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-destructive flex items-center gap-1.5">
@@ -505,13 +534,81 @@ export default function AdminProductsPage() {
             </div>
           </div>
 
+          {/* ─── Imagen del Producto (solo admin) ─── */}
+          {isAdmin && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                Imagen del Producto
+              </p>
+              <div className="flex items-start gap-4 flex-wrap">
+                {/* Preview */}
+                {imagePreview ? (
+                  <div className="relative h-24 w-24 shrink-0 rounded-lg overflow-hidden border border-border bg-muted">
+                    <Image
+                      src={imagePreview}
+                      alt="Vista previa"
+                      fill
+                      className="object-cover"
+                      unoptimized={imagePreview.startsWith("blob:")}
+                    />
+                    <button
+                      type="button"
+                      onClick={clearImage}
+                      aria-label="Quitar imagen"
+                      className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80 transition-colors"
+                    >
+                      <XIcon className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 text-muted-foreground">
+                    <ImagePlus className="h-7 w-7 opacity-40" />
+                  </div>
+                )}
+
+                {/* Upload button */}
+                <div className="flex flex-col gap-2">
+                  <label
+                    htmlFor="prod-image"
+                    className="cursor-pointer rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors inline-flex items-center gap-2"
+                  >
+                    <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                    {imageFile ? "Cambiar imagen" : imagePreview ? "Reemplazar imagen" : "Subir imagen"}
+                    <input
+                      ref={imageInputRef}
+                      id="prod-image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                  {imageFile && (
+                    <p className="text-xs text-muted-foreground">
+                      {imageFile.name} — {(imageFile.size / 1024).toFixed(1)} KB
+                    </p>
+                  )}
+                  {!imageFile && !imagePreview && (
+                    <p className="text-xs text-muted-foreground">
+                      JPG, PNG o WebP. Recomendado: 500×500 px.
+                    </p>
+                  )}
+                  {formMode === "edit" && !imageFile && imagePreview && (
+                    <p className="text-xs text-muted-foreground">
+                      Imagen actual. Sube una nueva para reemplazarla.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ─── Proveedores (solo MATERIA_PRIMA) ─── */}
           {formData.type === "MATERIA_PRIMA" && (
             <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
               {formMode === "edit" && (
                 <p className="text-[10px] text-muted-foreground bg-amber-50 border border-amber-200 rounded-md px-3 py-1.5 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300">
                   Al editar, selecciona nuevamente los proveedores para actualizar la vinculación.
-                  Si no seleccionas ninguno, los vínculos actuales se mantienen.
                 </p>
               )}
               <SupplierSelect
@@ -557,6 +654,7 @@ export default function AdminProductsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-16">Img</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">SKU</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nombre</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tipo</th>
@@ -570,7 +668,7 @@ export default function AdminProductsPage() {
             <tbody>
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
                     <Tag className="h-8 w-8 mx-auto mb-2 opacity-25" />
                     No hay productos. Crea el primero con el botón de arriba.
                   </td>
@@ -581,6 +679,24 @@ export default function AdminProductsPage() {
                     key={p.id}
                     className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
                   >
+                    {/* Thumbnail */}
+                    <td className="px-4 py-3">
+                      {p.image_url ? (
+                        <div className="relative h-10 w-10 rounded-md overflow-hidden border border-border bg-muted shrink-0">
+                          <Image
+                            src={p.image_url}
+                            alt={p.name}
+                            fill
+                            sizes="40px"
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground">
+                          <ImagePlus className="h-4 w-4 opacity-30" />
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
                     <td className="px-4 py-3 font-medium">{p.name}</td>
                     <td className="px-4 py-3">
@@ -596,7 +712,6 @@ export default function AdminProductsPage() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{p.unit}</td>
 
-                    {/* Proveedores */}
                     <td className="px-4 py-3 hidden md:table-cell">
                       {p.type === "MATERIA_PRIMA" ? (
                         p.suppliers.length === 0 ? (
@@ -639,7 +754,6 @@ export default function AdminProductsPage() {
                       />
                     </td>
 
-                    {/* Acciones: Editar (todos staff) + Eliminar (solo admin) */}
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
                         <button

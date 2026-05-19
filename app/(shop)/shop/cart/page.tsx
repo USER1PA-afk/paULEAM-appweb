@@ -2,7 +2,9 @@
 
 import { useCart } from "@features/checkout/hooks";
 import Link from "next/link";
+import Image from "next/image";
 import { ShoppingCart, Package, X } from "lucide-react";
+import { formatCurrency } from "@shared/lib/utils";
 
 export default function CartPage() {
   const { items, total, itemCount, removeItem, clearCart, isEmpty } = useCart();
@@ -11,9 +13,7 @@ export default function CartPage() {
     return (
       <div className="mx-auto max-w-2xl px-6 py-24 text-center">
         <ShoppingCart aria-hidden="true" className="h-16 w-16 mx-auto mb-4 opacity-25" />
-        <h1 className="text-2xl font-bold text-foreground">
-          Tu carrito está vacío
-        </h1>
+        <h1 className="text-2xl font-bold text-foreground">Tu carrito está vacío</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Explora nuestro catálogo para agregar productos.
         </p>
@@ -44,30 +44,45 @@ export default function CartPage() {
               key={item.product_id}
               className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm"
             >
-              <div aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                <Package className="h-7 w-7 opacity-40" />
+              {/* Thumbnail */}
+              <div
+                aria-hidden="true"
+                className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted overflow-hidden"
+              >
+                {item.image_url ? (
+                  <Image
+                    src={item.image_url}
+                    alt={item.name}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <Package className="h-7 w-7 text-muted-foreground opacity-40" />
+                )}
               </div>
+
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-foreground truncate">
-                  {item.name}
-                </h3>
+                <h3 className="font-semibold text-foreground truncate">{item.name}</h3>
                 <p className="text-xs text-muted-foreground">
                   {item.sku} · {item.unit}
                 </p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-bold tabular-nums">{item.quantity}</p>
-                <p className="text-[10px] text-muted-foreground">und</p>
-              </div>
-              <div className="text-right w-28">
-                <p className="font-semibold tabular-nums">
-                  {(item.price * item.quantity).toLocaleString("es-EC", {
-                    style: "currency",
-                    currency: "USD",
-                    minimumFractionDigits: 2,
-                  })}
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {formatCurrency(item.price)} / {item.unit}
                 </p>
               </div>
+
+              <div className="text-center">
+                <p className="text-sm font-bold tabular-nums">{item.quantity}</p>
+                <p className="text-[10px] text-muted-foreground">{item.unit}</p>
+              </div>
+
+              <div className="text-right w-28">
+                <p className="font-semibold tabular-nums">
+                  {formatCurrency(item.price * item.quantity)}
+                </p>
+              </div>
+
               <button
                 onClick={() => removeItem(item.product_id)}
                 aria-label={`Eliminar ${item.name} del carrito`}
@@ -93,13 +108,7 @@ export default function CartPage() {
             <div className="mt-4 space-y-2 border-t border-border pt-4">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium tabular-nums">
-                  {total.toLocaleString("es-EC", {
-                    style: "currency",
-                    currency: "USD",
-                    minimumFractionDigits: 2,
-                  })}
-                </span>
+                <span className="font-medium tabular-nums">{formatCurrency(total)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Envío</span>
@@ -108,13 +117,7 @@ export default function CartPage() {
             </div>
             <div className="mt-4 flex justify-between border-t border-border pt-4 text-base font-bold">
               <span>Total</span>
-              <span className="tabular-nums">
-                {total.toLocaleString("es-EC", {
-                  style: "currency",
-                  currency: "USD",
-                  minimumFractionDigits: 2,
-                })}
-              </span>
+              <span className="tabular-nums">{formatCurrency(total)}</span>
             </div>
 
             <Link

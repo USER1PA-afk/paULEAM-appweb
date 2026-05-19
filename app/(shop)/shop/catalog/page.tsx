@@ -2,9 +2,11 @@
 
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useCart } from "@features/checkout/hooks";
+import { useAuth } from "@features/auth/hooks";
 import { useState, useEffect, useCallback } from "react";
-import { Leaf, ImageOff, ShoppingCart as CartIcon } from "lucide-react";
+import { Leaf, ImageOff, ShoppingCart as CartIcon, LogIn } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 interface CatalogProduct {
   id: string;
@@ -20,9 +22,10 @@ export default function CatalogPage() {
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const { addItem, loading: cartLoading } = useCart();
+  const { isAuthenticated } = useAuth();
   const [addingId, setAddingId] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" | "auth" } | null>(null);
   const insforge = getInsforge();
 
   const fetchProducts = useCallback(async () => {
@@ -43,21 +46,31 @@ export default function CatalogPage() {
   async function handleAddToCart(product: CatalogProduct) {
     const qty = quantities[product.id] || 1;
     if (qty <= 0) return;
-    
+
+    // Verificar autenticación antes de intentar agregar
+    if (!isAuthenticated) {
+      setMessage({ text: "Debes iniciar sesión para agregar productos al carrito.", type: "auth" });
+      setTimeout(() => setMessage(null), 4000);
+      return;
+    }
+
     setAddingId(product.id);
     setMessage(null);
-    const result = await addItem({
-      id: product.id,
-      name: product.name,
-      sku: product.sku,
-      unit: product.unit,
-      price: product.price,
-      image_url: product.image_url,
-    }, qty);
+    const result = await addItem(
+      {
+        id: product.id,
+        name: product.name,
+        sku: product.sku,
+        unit: product.unit,
+        price: product.price,
+        image_url: product.image_url,
+      },
+      qty
+    );
     if (result.error) {
-      setMessage(`Error: ${result.error}`);
+      setMessage({ text: result.error, type: "error" });
     } else {
-      setMessage(`${product.name} agregado al carrito`);
+      setMessage({ text: `${product.name} agregado al carrito`, type: "success" });
     }
     setAddingId(null);
     setTimeout(() => setMessage(null), 3000);
@@ -80,19 +93,33 @@ export default function CatalogPage() {
         <div
           role="alert"
           aria-live="assertive"
-          className={`fixed bottom-6 right-6 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg transition-all duration-300 ${
-            message.startsWith("Error")
+          className={`fixed bottom-6 right-6 z-50 max-w-xs rounded-lg px-4 py-3 text-sm font-medium shadow-lg transition-all duration-300 ${
+            message.type === "auth"
+              ? "bg-amber-600 text-white"
+              : message.type === "error"
               ? "bg-destructive text-white"
               : "bg-brand-600 text-white"
           }`}
         >
-          {message}
+          {message.type === "auth" ? (
+            <span className="flex items-center gap-2">
+              {message.text}{" "}
+              <Link href="/login" className="underline font-semibold whitespace-nowrap">
+                Ingresar →
+              </Link>
+            </span>
+          ) : (
+            message.text
+          )}
         </div>
       )}
 
       {loading ? (
         <div className="flex items-center justify-center py-24">
-          <div role="status" className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
+          <div
+            role="status"
+            className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600"
+          >
             <span className="sr-only">Cargando productos...</span>
           </div>
         </div>
@@ -100,9 +127,7 @@ export default function CatalogPage() {
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-24 text-muted-foreground">
           <Leaf aria-hidden="true" className="h-12 w-12 mb-4 opacity-30" />
           <p className="text-lg font-medium">Próximamente</p>
-          <p className="text-sm mt-1">
-            No hay productos disponibles en este momento.
-          </p>
+          <p className="text-sm mt-1">No hay productos disponibles en este momento.</p>
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -111,7 +136,7 @@ export default function CatalogPage() {
               key={product.id}
               className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:border-brand-200 hover:-translate-y-0.5"
             >
-              {/* Image placeholder */}
+              {/* Image */}
               <div className="relative aspect-square bg-linear-to-br from-brand-50 to-muted flex items-center justify-center overflow-hidden">
                 {product.image_url ? (
                   <Image
@@ -135,9 +160,7 @@ export default function CatalogPage() {
 
               {/* Info */}
               <div className="flex flex-1 flex-col p-4">
-                <p className="text-[10px] font-mono text-muted-foreground">
-                  {product.sku}
-                </p>
+                <p className="text-[10px] font-mono text-muted-foreground">{product.sku}</p>
                 <h3 className="mt-1 font-semibold text-foreground leading-tight">
                   {product.name}
                 </h3>
@@ -157,37 +180,47 @@ export default function CatalogPage() {
                           minimumFractionDigits: 2,
                         })}
                       </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        por {product.unit}
-                      </p>
+                      <p className="text-[10px] text-muted-foreground">por {product.unit}</p>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={product.unit === "und" ? "1" : "0.01"}
-                      step={product.unit === "und" ? "1" : "0.01"}
-                      value={quantities[product.id] || 1}
-                      onChange={(e) => setQuantities({ ...quantities, [product.id]: Number(e.target.value) })}
-                      aria-label={`Cantidad de ${product.name} (${product.unit})`}
-                      className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                    <button
-                      onClick={() => handleAddToCart(product)}
-                      disabled={cartLoading || addingId === product.id}
-                      className="flex-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 transition-all text-center"
+
+                  {isAuthenticated ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={product.unit === "und" || product.unit === "unidades" ? "1" : "0.01"}
+                        step={product.unit === "und" || product.unit === "unidades" ? "1" : "0.01"}
+                        value={quantities[product.id] || 1}
+                        onChange={(e) =>
+                          setQuantities({ ...quantities, [product.id]: Number(e.target.value) })
+                        }
+                        aria-label={`Cantidad de ${product.name} (${product.unit})`}
+                        className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                      <button
+                        onClick={() => handleAddToCart(product)}
+                        disabled={cartLoading || addingId === product.id}
+                        className="flex-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 transition-all text-center"
+                      >
+                        {addingId === product.id ? (
+                          "Agregando..."
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5">
+                            <CartIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                            Agregar
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  ) : (
+                    <Link
+                      href="/login"
+                      className="flex items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 dark:bg-brand-900/20 dark:border-brand-800 px-3 py-1.5 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/40 transition-colors"
                     >
-                      {addingId === product.id ? (
-                        "Agregando..."
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5">
-                          <CartIcon aria-hidden="true" className="h-3.5 w-3.5" />
-                          Agregar
-                        </span>
-                      )}
-                    </button>
-                  </div>
+                      <LogIn aria-hidden="true" className="h-3.5 w-3.5" />
+                      Inicia sesión para comprar
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>

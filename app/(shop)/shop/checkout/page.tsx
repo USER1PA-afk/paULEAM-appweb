@@ -1,19 +1,40 @@
 "use client";
 
-import { useCart, useCheckout } from "@features/checkout/hooks";
+import { useCart, useCheckout, pickupCode, type CartItem } from "@features/checkout/hooks";
 import { useAuth } from "@features/auth/hooks";
 import { useState } from "react";
 import Link from "next/link";
-import { LockKeyhole, ShoppingCart, CircleCheck, FileText, Upload } from "lucide-react";
+import {
+  LockKeyhole,
+  ShoppingCart,
+  CircleCheck,
+  FileText,
+  Upload,
+  Receipt,
+  CalendarDays,
+  Tag,
+  ExternalLink,
+} from "lucide-react";
+import { formatDate, formatCurrency } from "@shared/lib/utils";
+
+interface ReceiptSnapshot {
+  orderId: string;
+  date: string;
+  total: number;
+  items: CartItem[];
+  receiptUrl?: string | null;
+}
 
 export default function CheckoutPage() {
   const { items, total, isEmpty, clearCart } = useCart();
   const { submitOrder, loading, error } = useCheckout();
   const { isAuthenticated } = useAuth();
+
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
   const [success, setSuccess] = useState(false);
+  const [receiptData, setReceiptData] = useState<ReceiptSnapshot | null>(null);
 
   if (!isAuthenticated) {
     return (
@@ -48,21 +69,128 @@ export default function CheckoutPage() {
     );
   }
 
-  if (success) {
+  if (success && receiptData) {
+    const code = pickupCode(receiptData.orderId);
     return (
-      <div className="mx-auto max-w-lg px-6 py-24 text-center">
-        <CircleCheck aria-hidden="true" className="h-16 w-16 mx-auto mb-4 text-accent-500" />
-        <h1 className="text-2xl font-bold text-foreground">¡Orden Enviada!</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Tu comprobante de pago ha sido recibido. Un administrador revisará y
-          aprobará tu orden pronto.
-        </p>
-        <Link
-          href="/shop/catalog"
-          className="mt-8 inline-block rounded-lg bg-brand-600 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-700 transition-colors"
-        >
-          Seguir Comprando
-        </Link>
+      <div className="mx-auto max-w-lg px-6 py-10">
+        {/* Success header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-accent-50 dark:bg-accent-900/20 mb-4">
+            <CircleCheck aria-hidden="true" className="h-10 w-10 text-accent-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">¡Orden Registrada!</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Tu comprobante fue recibido. Un administrador revisará y aprobará tu orden en breve.
+          </p>
+        </div>
+
+        {/* Receipt card */}
+        <div className="rounded-xl border-2 border-brand-200 dark:border-brand-800 bg-card shadow-lg overflow-hidden">
+          {/* Card header */}
+          <div className="bg-brand-600 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-white">
+              <Receipt aria-hidden="true" className="h-5 w-5" />
+              <span className="font-bold text-sm uppercase tracking-wide">Comprobante de Pedido</span>
+            </div>
+            <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white">
+              PAGADO
+            </span>
+          </div>
+
+          <div className="p-6 space-y-5">
+            {/* Pickup code */}
+            <div className="rounded-lg border-2 border-brand-500 bg-white dark:bg-card shadow-sm px-4 py-5 text-center">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <Tag aria-hidden="true" className="h-5 w-5 text-brand-600" />
+                <p className="text-xs font-bold text-brand-600 uppercase tracking-wide">
+                  Código de Retiro
+                </p>
+              </div>
+              <p className="font-mono text-3xl font-bold text-brand-700 tracking-widest">
+                {code}
+              </p>
+              <p className="mt-1 text-xs font-medium text-brand-600/80">
+                Presenta este código al retirar tu pedido
+              </p>
+            </div>
+
+            {/* Date */}
+            <div className="flex items-center justify-between text-sm border-b border-border pb-4">
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <CalendarDays aria-hidden="true" className="h-3.5 w-3.5" />
+                Fecha del pedido
+              </span>
+              <span className="font-medium">
+                {formatDate(receiptData.date)}
+              </span>
+            </div>
+
+            {/* Items */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Productos
+              </p>
+              {receiptData.items.map((item) => (
+                <div key={item.product_id} className="flex justify-between text-sm">
+                  <span className="text-foreground">
+                    {item.name}{" "}
+                    <span className="text-muted-foreground">
+                      × {item.quantity} {item.unit}
+                    </span>
+                  </span>
+                  <span className="tabular-nums font-medium">
+                    {formatCurrency(item.price * item.quantity)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Total */}
+            <div className="flex justify-between items-center pt-4 border-t border-border">
+              <span className="text-base font-bold text-foreground">Total a Pagar</span>
+              <span className="text-xl font-bold tabular-nums text-foreground">
+                {formatCurrency(receiptData.total)}
+              </span>
+            </div>
+
+            {/* Status note */}
+            <div className="rounded-lg bg-muted/60 px-4 py-3 text-xs text-muted-foreground">
+              <strong>Estado:</strong> Pendiente de aprobación.
+              Recibirás confirmación una vez que el administrador valide tu pago.
+            </div>
+
+            {/* Payment receipt link */}
+            {receiptData.receiptUrl && (
+              <div className="flex justify-center pt-2">
+                <a
+                  href={receiptData.receiptUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700 underline transition-colors"
+                >
+                  <ExternalLink aria-hidden="true" className="h-4 w-4" />
+                  Ver Comprobante Subido
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="mt-6 flex gap-3">
+          <Link
+            href="/shop/orders"
+            className="flex-1 rounded-lg border border-border bg-background px-4 py-3 text-center text-sm font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            Ver Mis Pedidos
+          </Link>
+          <Link
+            href="/shop/catalog"
+            className="flex-1 rounded-lg bg-brand-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-brand-700 transition-colors"
+          >
+            Seguir Comprando
+          </Link>
+        </div>
       </div>
     );
   }
@@ -70,6 +198,9 @@ export default function CheckoutPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!receipt) return;
+    if (!address.trim()) return;
+
+    const snapshot = [...items];
 
     const result = await submitOrder({
       items,
@@ -79,7 +210,14 @@ export default function CheckoutPage() {
       notes,
     });
 
-    if (!result.error) {
+    if (!result.error && result.data) {
+      setReceiptData({
+        orderId: result.data.id,
+        date: result.data.created_at ?? new Date().toISOString(),
+        total: result.data.total,
+        items: snapshot,
+        receiptUrl: result.data.payment_receipt_url,
+      });
       setSuccess(true);
       clearCart();
     }
@@ -87,11 +225,9 @@ export default function CheckoutPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">
-      <h1 className="text-2xl font-bold tracking-tight text-foreground">
-        Checkout
-      </h1>
+      <h1 className="text-2xl font-bold tracking-tight text-foreground">Checkout</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Completa tu orden subiendo el comprobante de transferencia.
+        Completa tu orden subiendo el comprobante de transferencia bancaria.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
@@ -102,34 +238,24 @@ export default function CheckoutPage() {
             {items.map((item) => (
               <div key={item.product_id} className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {item.name} × {item.quantity}
+                  {item.name} × {item.quantity} {item.unit}
                 </span>
                 <span className="font-medium tabular-nums">
-                  {(item.price * item.quantity).toLocaleString("es-EC", {
-                    style: "currency",
-                    currency: "USD",
-                    minimumFractionDigits: 2,
-                  })}
+                  {formatCurrency(item.price * item.quantity)}
                 </span>
               </div>
             ))}
           </div>
           <div className="mt-3 flex justify-between border-t border-border pt-3 font-bold">
             <span>Total</span>
-            <span className="tabular-nums">
-              {total.toLocaleString("es-EC", {
-                style: "currency",
-                currency: "USD",
-                minimumFractionDigits: 2,
-              })}
-            </span>
+            <span className="tabular-nums">{formatCurrency(total)}</span>
           </div>
         </div>
 
         {/* Shipping address */}
         <div className="space-y-1.5">
           <label htmlFor="checkout-address" className="text-sm font-medium text-foreground">
-            Dirección de Envío *
+            Dirección de Envío <span className="text-destructive">*</span>
           </label>
           <textarea
             id="checkout-address"
@@ -146,7 +272,7 @@ export default function CheckoutPage() {
         {/* Payment receipt upload */}
         <div className="space-y-1.5">
           <label htmlFor="checkout-receipt" className="text-sm font-medium text-foreground">
-            Comprobante de Transferencia *
+            Comprobante de Transferencia <span className="text-destructive">*</span>
           </label>
           <div className="rounded-xl border-2 border-dashed border-border bg-muted/30 p-6 text-center hover:border-brand-300 transition-colors">
             <input
@@ -157,18 +283,13 @@ export default function CheckoutPage() {
               onChange={(e) => setReceipt(e.target.files?.[0] ?? null)}
               className="hidden"
             />
-            <label
-              htmlFor="checkout-receipt"
-              className="cursor-pointer space-y-2"
-            >
+            <label htmlFor="checkout-receipt" className="cursor-pointer space-y-2 block">
               {receipt ? (
                 <>
                   <FileText aria-hidden="true" className="h-8 w-8 mx-auto text-brand-500" />
-                  <p className="text-sm font-medium text-foreground">
-                    {receipt.name}
-                  </p>
+                  <p className="text-sm font-medium text-foreground">{receipt.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {(receipt.size / 1024).toFixed(1)} KB — Click para cambiar
+                    {(receipt.size / 1024).toFixed(1)} KB — Clic para cambiar
                   </p>
                 </>
               ) : (
@@ -208,7 +329,7 @@ export default function CheckoutPage() {
 
         <button
           type="submit"
-          disabled={loading || !receipt}
+          disabled={loading || !receipt || !address.trim()}
           className="w-full rounded-lg bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-brand-700 disabled:opacity-50 transition-all"
         >
           {loading ? "Procesando..." : "Confirmar Orden"}

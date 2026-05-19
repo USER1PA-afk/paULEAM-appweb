@@ -59,6 +59,20 @@ export default function ShopLayout({
               Catálogo
             </Link>
 
+            {isAuthenticated && (
+              <Link
+                href="/shop/orders"
+                aria-current={pathname === "/shop/orders" ? "page" : undefined}
+                className={`hidden sm:block text-sm font-medium transition-colors ${
+                  pathname === "/shop/orders"
+                    ? "text-brand-600"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Mis Pedidos
+              </Link>
+            )}
+
             <Link
               href="/shop/cart"
               aria-current={pathname === "/shop/cart" ? "page" : undefined}

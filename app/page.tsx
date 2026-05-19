@@ -108,7 +108,7 @@ export default function HomePage() {
             {/* Copy */}
             <div className="space-y-5">
               {/* Institution badge */}
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 dark:border-brand-800 dark:bg-brand-900/20">
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 px-3 py-1 dark:border-brand-800">
                 <span className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" aria-hidden="true" />
                 <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">
                   ULEAM · Planta de Alimentos · ERP
