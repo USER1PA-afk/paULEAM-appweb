@@ -19,6 +19,7 @@ import {
   Store,
   Handshake,
   LogOut,
+  ShoppingBag,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -32,8 +33,9 @@ const NAV_ITEMS = [
 ];
 
 const SUB_ITEMS = [
-  { label: "Ver E-Commerce",   href: "/shop/catalog",  icon: Store,        roles: ["admin", "operario"] },
-  { label: "Órdenes de Venta", href: "/admin/orders",  icon: ShoppingCart, roles: ["admin"] },
+  { label: "Tienda Online",    href: "/admin/store/products", icon: ShoppingBag,  roles: ["admin"] },
+  { label: "Ver E-Commerce",   href: "/shop/catalog",         icon: Store,        roles: ["admin", "operario"] },
+  { label: "Órdenes de Venta", href: "/admin/orders",         icon: ShoppingCart, roles: ["admin"] },
 ];
 
 const ROLE_LABELS: Record<string, { label: string; cls: string }> = {
@@ -148,7 +150,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const NavLink = ({ item }: { item: typeof NAV_ITEMS[0] }) => {
-    const isActive = pathname === item.href;
+    const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
     return (
       <li>
         <Link

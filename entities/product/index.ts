@@ -1,12 +1,5 @@
 import { z } from "zod";
 
-/**
- * Entity: Product
- *
- * Producto de la planta de alimentos.
- * Puede ser materia prima o producto terminado.
- */
-
 export const ProductTypeEnum = z.enum(["MATERIA_PRIMA", "PRODUCTO_TERMINADO"]);
 export type ProductType = z.infer<typeof ProductTypeEnum>;
 
@@ -15,10 +8,20 @@ export const ProductSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
   sku: z.string().min(1, "El SKU es requerido"),
   type: ProductTypeEnum,
-  unit: z.string().min(1, "La unidad de medida es requerida"), // kg, lt, unidades
-  description: z.string().optional(),
-  price: z.number().nonnegative().optional(), // Solo para productos terminados (e-commerce)
+  unit: z.string().min(1, "La unidad de medida es requerida"),
+  category_id: z.string().uuid().nullable().optional(),
+  description: z.string().nullable().optional(),
+  short_description: z.string().nullable().optional(),
+  long_description: z.string().nullable().optional(),
+  specifications: z.record(z.string()).default({}),
+  ingredients: z.string().nullable().optional(),
+  nutritional_info: z.record(z.string()).default({}),
+  weight: z.number().positive().nullable().optional(),
+  commercial_details: z.string().nullable().optional(),
+  price: z.number().nonnegative().optional(),
+  image_url: z.string().nullable().optional(),
   is_active: z.boolean().default(true),
+  featured: z.boolean().default(false),
   created_at: z.string().datetime().optional(),
   updated_at: z.string().datetime().optional(),
 });
@@ -32,3 +35,15 @@ export const CreateProductSchema = ProductSchema.omit({
 });
 
 export type CreateProduct = z.infer<typeof CreateProductSchema>;
+
+export const ProductImageSchema = z.object({
+  id: z.string().uuid(),
+  product_id: z.string().uuid(),
+  storage_path: z.string(),
+  alt_text: z.string().nullable().optional(),
+  position: z.number().int(),
+  is_primary: z.boolean(),
+  created_at: z.string().datetime().optional(),
+});
+
+export type ProductImage = z.infer<typeof ProductImageSchema>;

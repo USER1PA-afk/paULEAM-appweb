@@ -13,9 +13,12 @@ interface CatalogProduct {
   name: string;
   sku: string;
   description: string | null;
+  short_description: string | null;
   price: number;
   unit: string;
   image_url: string | null;
+  is_active: boolean;
+  featured: boolean;
 }
 
 export default function CatalogPage() {
@@ -31,7 +34,7 @@ export default function CatalogPage() {
   const fetchProducts = useCallback(async () => {
     const { data } = await insforge.database
       .from("products")
-      .select("id, name, sku, description, price, unit, image_url")
+      .select("id, name, sku, description, short_description, price, unit, image_url, is_active, featured")
       .eq("type", "PRODUCTO_TERMINADO")
       .eq("is_active", true)
       .order("name");
@@ -164,10 +167,15 @@ export default function CatalogPage() {
                 <h3 className="mt-1 font-semibold text-foreground leading-tight">
                   {product.name}
                 </h3>
-                {product.description && (
+                {(product.short_description || product.description) && (
                   <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                    {product.description}
+                    {product.short_description || product.description}
                   </p>
+                )}
+                {product.featured && (
+                  <span className="inline-flex items-center gap-1 mt-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-400">
+                    ✦ Destacado
+                  </span>
                 )}
 
                 <div className="mt-auto pt-4 flex flex-col gap-3">
