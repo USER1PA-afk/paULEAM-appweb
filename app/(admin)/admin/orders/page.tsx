@@ -4,7 +4,7 @@ import { useOrderManagement, pickupCode, receiptProxyUrl } from "@features/check
 import { formatDate, formatCurrency } from "@shared/lib/utils";
 import { useState } from "react";
 import { getInsforge } from "@shared/lib/insforge/client";
-import { ChevronDown, ChevronUp, Receipt, X, Download } from "lucide-react";
+import { ChevronDown, ChevronUp, Receipt, X, Download, Eye, Loader2 } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
   PENDIENTE:  { label: "Pendiente",  dot: "bg-yellow-500",  bg: "bg-yellow-100 dark:bg-yellow-900/20",  text: "text-yellow-700 dark:text-yellow-300"  },
@@ -260,6 +260,22 @@ export default function AdminOrdersPage() {
                     </div>
                   )}
 
+                  {/* Receipt preview button — visible on card row when url exists */}
+                  {order.payment_receipt_url && (
+                    <button
+                      onClick={() => openPreview(order.payment_receipt_url!, code)}
+                      disabled={previewLoading}
+                      aria-label="Ver comprobante de pago"
+                      title="Ver comprobante de pago"
+                      className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-brand-600 hover:bg-brand-100 hover:border-brand-400 transition-colors disabled:opacity-50 dark:bg-brand-900/20 dark:border-brand-800 dark:hover:bg-brand-800/40"
+                    >
+                      {previewLoading
+                        ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+                        : <Eye aria-hidden="true" className="h-4 w-4" />
+                      }
+                    </button>
+                  )}
+
                   {/* Expand toggle */}
                   <button
                     onClick={() => setExpanded(isOpen ? null : order.id)}
@@ -329,9 +345,11 @@ export default function AdminOrdersPage() {
                         {order.payment_receipt_url ? (
                           <button
                             onClick={() => openPreview(order.payment_receipt_url!, code)}
-                            className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 underline text-xs transition-colors"
+                            disabled={previewLoading}
+                            className="inline-flex items-center gap-1.5 rounded-md border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100 hover:border-brand-400 transition-colors disabled:opacity-50 dark:bg-brand-900/20 dark:border-brand-800 dark:text-brand-300"
                           >
-                            Ver comprobante de pago
+                            <Eye aria-hidden="true" className="h-3.5 w-3.5" />
+                            Ver comprobante
                           </button>
                         ) : (
                           <span className="text-muted-foreground text-xs">Sin comprobante</span>

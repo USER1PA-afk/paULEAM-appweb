@@ -13,7 +13,8 @@ import {
   Receipt,
   Tag,
   CalendarDays,
-  ExternalLink,
+  Eye,
+  Loader2,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@shared/lib/utils";
 
@@ -166,51 +167,73 @@ export default function MyOrdersPage() {
                 className="rounded-xl border border-border bg-card shadow-sm overflow-hidden"
               >
                 {/* Order row */}
-                <button
-                  onClick={() => setExpanded(isOpen ? null : order.id)}
-                  aria-expanded={isOpen}
-                  className="w-full text-left p-4 flex items-center gap-3 flex-wrap hover:bg-muted/30 transition-colors"
-                >
-                  {/* Receipt icon */}
-                  <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-900/20">
-                    <Receipt aria-hidden="true" className="h-5 w-5 text-brand-600" />
-                  </div>
-
-                  {/* Code + date */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono font-bold text-brand-700 dark:text-brand-300 text-sm">
-                        {code}
-                      </span>
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.bg} ${status.text}`}>
-                        <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
-                        {status.label}
-                      </span>
+                <div className="flex items-center gap-2 pr-2">
+                  <button
+                    onClick={() => setExpanded(isOpen ? null : order.id)}
+                    aria-expanded={isOpen}
+                    className="flex-1 text-left p-4 flex items-center gap-3 flex-wrap hover:bg-muted/30 transition-colors min-w-0"
+                  >
+                    {/* Receipt icon */}
+                    <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-900/20">
+                      <Receipt aria-hidden="true" className="h-5 w-5 text-brand-600" />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                      <CalendarDays aria-hidden="true" className="h-3 w-3" />
-                      {formatDate(order.created_at)}
-                      {itemCount > 0 && (
-                        <span className="ml-2">· {itemCount} artículo{itemCount !== 1 ? "s" : ""}</span>
-                      )}
-                    </p>
-                  </div>
 
-                  {/* Total */}
-                  <div className="text-right">
-                    <p className="font-bold tabular-nums text-foreground">
-                      {formatCurrency(order.total)}
-                    </p>
-                  </div>
+                    {/* Code + date */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono font-bold text-brand-700 dark:text-brand-300 text-sm">
+                          {code}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.bg} ${status.text}`}>
+                          <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+                          {status.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                        <CalendarDays aria-hidden="true" className="h-3 w-3" />
+                        {formatDate(order.created_at)}
+                        {itemCount > 0 && (
+                          <span className="ml-2">· {itemCount} artículo{itemCount !== 1 ? "s" : ""}</span>
+                        )}
+                      </p>
+                    </div>
 
-                  {/* Expand icon */}
-                  <div className="text-muted-foreground shrink-0">
+                    {/* Total */}
+                    <div className="text-right shrink-0">
+                      <p className="font-bold tabular-nums text-foreground">
+                        {formatCurrency(order.total)}
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Receipt preview button — visible always when url exists */}
+                  {order.payment_receipt_url && (
+                    <button
+                      onClick={() => openReceipt(order.payment_receipt_url!)}
+                      disabled={receiptLoading}
+                      aria-label="Ver comprobante de pago"
+                      title="Ver comprobante de pago"
+                      className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-brand-600 hover:bg-brand-100 hover:border-brand-400 transition-colors disabled:opacity-50 dark:bg-brand-900/20 dark:border-brand-800 dark:hover:bg-brand-800/40"
+                    >
+                      {receiptLoading
+                        ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+                        : <Eye aria-hidden="true" className="h-4 w-4" />
+                      }
+                    </button>
+                  )}
+
+                  {/* Expand chevron */}
+                  <button
+                    onClick={() => setExpanded(isOpen ? null : order.id)}
+                    aria-label={isOpen ? "Contraer pedido" : "Expandir pedido"}
+                    className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/50 transition-colors"
+                  >
                     {isOpen
                       ? <ChevronUp aria-hidden="true" className="h-4 w-4" />
                       : <ChevronDown aria-hidden="true" className="h-4 w-4" />
                     }
-                  </div>
-                </button>
+                  </button>
+                </div>
 
                 {/* Expanded detail */}
                 {isOpen && (
@@ -263,18 +286,6 @@ export default function MyOrdersPage() {
                           </div>
                         </div>
                       </div>
-                    )}
-
-                    {/* Payment receipt link */}
-                    {order.payment_receipt_url && (
-                      <button
-                        onClick={() => openReceipt(order.payment_receipt_url!)}
-                        disabled={receiptLoading}
-                        className="inline-flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 underline transition-colors disabled:opacity-50"
-                      >
-                        <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
-                        {receiptLoading ? "Cargando..." : "Ver comprobante de pago"}
-                      </button>
                     )}
 
                     {/* Shipping address */}
