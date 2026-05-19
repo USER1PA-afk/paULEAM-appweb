@@ -25,6 +25,8 @@ export default function AdminProductionPage() {
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [filterDate, setFilterDate] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
   // Per-row error state: orderId -> error message
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
@@ -79,6 +81,15 @@ export default function AdminProductionPage() {
   }
 
   const completedOrders = orders.filter((o) => o.status === "COMPLETADA");
+
+  const filteredOrders = orders.filter((o) => {
+    if (filterStatus && o.status !== filterStatus) return false;
+    if (filterDate) {
+      const orderDate = o.created_at ? o.created_at.substring(0, 10) : "";
+      if (orderDate !== filterDate) return false;
+    }
+    return true;
+  });
 
   // Validamos si hay suficientes datos para el preview
   const showPreview = form.recipe_id !== "" && Number(form.target_yield) > 0;
@@ -239,6 +250,42 @@ export default function AdminProductionPage() {
           ))}
         </div>
 
+        {/* Filtros */}
+        <div className="flex flex-wrap gap-3 print:hidden">
+          <div className="flex items-center gap-2">
+            <label htmlFor="filter-date" className="text-xs font-medium text-muted-foreground whitespace-nowrap">Fecha</label>
+            <input
+              id="filter-date"
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="filter-status" className="text-xs font-medium text-muted-foreground whitespace-nowrap">Estado</label>
+            <select
+              id="filter-status"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Todos</option>
+              {Object.entries(STATUS_LABELS).map(([key, { label }]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
+          {(filterDate || filterStatus) && (
+            <button
+              onClick={() => { setFilterDate(""); setFilterStatus(""); }}
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+
         {/* Tabla de órdenes */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -249,22 +296,22 @@ export default function AdminProductionPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                     ID
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                     Fecha
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                     Receta
                   </th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                     Rendimiento
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                     Estado
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground print:hidden">
+                  <th className="px-4 py-3 text-center font-medium text-muted-foreground print:hidden">
                     Acciones
                   </th>
                 </tr>
@@ -280,7 +327,7 @@ export default function AdminProductionPage() {
                     </td>
                   </tr>
                 ) : (
-                  orders.map((order) => {
+                  filteredOrders.map((order) => {
                     const status = STATUS_LABELS[order.status] ?? {
                       label: order.status,
                       dot: "bg-gray-400",
@@ -293,28 +340,28 @@ export default function AdminProductionPage() {
                     return (
                       <React.Fragment key={order.id}>
                         <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 font-mono text-xs">
+                          <td className="px-4 py-3 text-center font-mono text-xs">
                             {order.id.substring(0, 8)}
                           </td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                          <td className="px-4 py-3 text-center text-xs text-muted-foreground whitespace-nowrap">
                             {order.created_at ? formatDate(order.created_at) : "—"}
                           </td>
-                          <td className="px-4 py-3 text-sm font-medium">
+                          <td className="px-4 py-3 text-center text-sm font-medium">
                             {recipe?.name ?? <span className="text-muted-foreground text-xs">—</span>}
                           </td>
-                          <td className="px-4 py-3 text-right font-semibold tabular-nums">
+                          <td className="px-4 py-3 text-center font-semibold tabular-nums">
                             {Number(order.target_yield).toLocaleString("es-EC")} {recipe?.yield_unit}
                           </td>
-                          <td className="px-4 py-3">
-                            <span className="inline-flex items-center gap-1.5">
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex items-center justify-center gap-1.5">
                               <span aria-hidden="true" className={`h-2 w-2 rounded-full ${status.dot}`} />
                               <span className="text-xs font-medium text-foreground">{status.label}</span>
                             </span>
                           </td>
-                          <td className="px-4 py-3 print:hidden">
+                          <td className="px-4 py-3 text-center print:hidden">
                             {/* Actions for BORRADOR */}
                             {order.status === "BORRADOR" && (
-                              <div className="flex gap-2">
+                              <div className="flex justify-center gap-2">
                                 <button
                                   onClick={() =>
                                     updateStatus(order.id, "EN_PROCESO")
@@ -335,8 +382,8 @@ export default function AdminProductionPage() {
                             )}
                             {/* Actions for EN_PROCESO */}
                             {order.status === "EN_PROCESO" && (
-                              <div className="flex flex-col gap-2">
-                                <div className="flex gap-2">
+                              <div className="flex flex-col items-center gap-2">
+                                <div className="flex justify-center gap-2">
                                   <button
                                     onClick={() => handleComplete(order.id)}
                                     className="rounded-md bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700 transition-colors"
@@ -362,7 +409,7 @@ export default function AdminProductionPage() {
                             )}
                             {/* Actions for COMPLETADA */}
                             {order.status === "COMPLETADA" && (
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center justify-center gap-2">
                                 <button
                                   onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
                                   className="rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"

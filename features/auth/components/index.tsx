@@ -5,10 +5,12 @@ import { useAuth } from "@features/auth/hooks";
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const { signIn, loading, error } = useAuth();
   const [redirecting, setRedirecting] = useState(false);
   const router = useRouter();
@@ -79,16 +81,29 @@ export function LoginForm() {
         >
           Contraseña
         </label>
-        <input
-          id="login-password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          placeholder="Ingresa tu contraseña"
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-        />
+        <div className="relative">
+          <input
+            id="login-password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            placeholder="Ingresa tu contraseña"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            aria-pressed={showPassword}
+            className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showPassword
+              ? <EyeOff aria-hidden="true" className="h-4 w-4" />
+              : <Eye aria-hidden="true" className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -123,6 +138,8 @@ export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [phone, setPhone] = useState("");
   const { signUp, loading, error } = useAuth();
   const router = useRouter();
@@ -262,17 +279,30 @@ export function RegisterForm() {
         >
           Contraseña
         </label>
-        <input
-          id="register-password"
-          type="password"
-          autoComplete="new-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={6}
-          placeholder="Mínimo 6 caracteres"
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-        />
+        <div className="relative">
+          <input
+            id="register-password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+            placeholder="Mínimo 6 caracteres"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            aria-pressed={showPassword}
+            className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showPassword
+              ? <EyeOff aria-hidden="true" className="h-4 w-4" />
+              : <Eye aria-hidden="true" className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -282,16 +312,29 @@ export function RegisterForm() {
         >
           Confirmar Contraseña
         </label>
-        <input
-          id="register-confirm"
-          type="password"
-          autoComplete="new-password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-          placeholder="Repite tu contraseña"
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-        />
+        <div className="relative">
+          <input
+            id="register-confirm"
+            type={showConfirm ? "text" : "password"}
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            placeholder="Repite tu contraseña"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirm((v) => !v)}
+            aria-label={showConfirm ? "Ocultar confirmación" : "Mostrar confirmación"}
+            aria-pressed={showConfirm}
+            className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showConfirm
+              ? <EyeOff aria-hidden="true" className="h-4 w-4" />
+              : <Eye aria-hidden="true" className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       {displayError && (

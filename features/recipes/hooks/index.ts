@@ -179,6 +179,7 @@ export function useProducts() {
       const { data } = await insforge.database
         .from("products")
         .select("id, name, sku, type, unit")
+        .eq("is_active", true)
         .order("name");
       setProducts((data as Product[]) ?? []);
     } catch {

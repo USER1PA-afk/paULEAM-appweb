@@ -62,6 +62,20 @@ export default function AdminProductsPage() {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Archived products (loaded on demand)
+  const [archivedProducts, setArchivedProducts] = useState<ProductWithSuppliers[]>([]);
+  const [archivedCount, setArchivedCount] = useState(0);
+  const [loadingArchived, setLoadingArchived] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedLoaded, setArchivedLoaded] = useState(false);
+
+  // Recipe conflict modal
+  const [recipeConflicts, setRecipeConflicts] = useState<{ id: string; name: string }[]>([]);
+  const [showRecipeModal, setShowRecipeModal] = useState(false);
+  const [replacementProductId, setReplacementProductId] = useState("");
+  const [conflictSaving, setConflictSaving] = useState(false);
+
   const insforge = getInsforge();
   const { linkSuppliersToProduct } = useSupplierActions();
   const { role } = useRole();
@@ -78,6 +92,7 @@ export default function AdminProductsPage() {
           supplier:suppliers(name, company)
         )
       `)
+      .eq("is_active", true)
       .order("name");
 
     const mapped: ProductWithSuppliers[] = ((data as unknown[]) ?? []).map(
@@ -97,11 +112,69 @@ export default function AdminProductsPage() {
     );
     setProducts(mapped);
     setLoading(false);
+    setArchivedLoaded(false);
+
+    const { count } = await insforge.database
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", false);
+    setArchivedCount(count ?? 0);
+  }, [insforge]);
+
+  const fetchArchivedProducts = useCallback(async () => {
+    setLoadingArchived(true);
+    const { data } = await insforge.database
+      .from("products")
+      .select(`
+        *,
+        suppliers:product_suppliers(
+          is_primary,
+          supplier:suppliers(name, company)
+        )
+      `)
+      .eq("is_active", false)
+      .order("name");
+
+    const mapped: ProductWithSuppliers[] = ((data as unknown[]) ?? []).map(
+      (p: unknown) => {
+        const prod = p as Product & {
+          suppliers: { is_primary: boolean; supplier: { name: string; company: string | null } }[];
+        };
+        return {
+          ...prod,
+          suppliers: (prod.suppliers ?? []).map((ps) => ({
+            name: ps.supplier.name,
+            company: ps.supplier.company,
+            is_primary: ps.is_primary,
+          })),
+        };
+      }
+    );
+    setArchivedProducts(mapped);
+    setArchivedLoaded(true);
+    setLoadingArchived(false);
   }, [insforge]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  async function handleReactivate(id: string) {
+    setSaving(true);
+    await insforge.database.from("products").update({ is_active: true }).eq("id", id);
+    setSaving(false);
+    fetchProducts();
+    if (archivedLoaded) fetchArchivedProducts();
+  }
+
+  async function handleToggleArchived() {
+    if (!showArchived) {
+      setShowArchived(true);
+      if (!archivedLoaded) fetchArchivedProducts();
+    } else {
+      setShowArchived(false);
+    }
+  }
 
   function resetForm() {
     setFormData({ ...EMPTY_FORM });
@@ -304,21 +377,68 @@ export default function AdminProductsPage() {
     }
   }
 
+  /** Soft DELETE — check recipe links first, then deactivate or show conflict modal */
   async function handleDeactivate() {
+    if (!deletingId) return;
+    setDeleteChecking(true);
+
+    const { data: ingRows } = await insforge.database
+      .from("recipe_ingredients")
+      .select("recipe_id")
+      .eq("product_id", deletingId);
+
+    const recipeIds = [
+      ...new Set(((ingRows as { recipe_id: string }[]) ?? []).map((r) => r.recipe_id)),
+    ];
+
+    if (recipeIds.length > 0) {
+      const { data: recipesData } = await insforge.database
+        .from("recipes")
+        .select("id, name")
+        .in("id", recipeIds);
+      setRecipeConflicts((recipesData as { id: string; name: string }[]) ?? []);
+      setDeleteChecking(false);
+      setShowRecipeModal(true);
+      return;
+    }
+
+    setDeleteChecking(false);
+    await archiveProductRpc(null);
+  }
+
+  async function archiveProductRpc(replacementId: string | null) {
     if (!deletingId) return;
     setSaving(true);
     setError(null);
-    const { error: updErr } = await insforge.database
-      .from("products")
-      .update({ is_active: false })
-      .eq("id", deletingId);
+    const { error: rpcErr } = await insforge.database.rpc(
+      "archive_product_with_replacement",
+      {
+        p_product_id_to_archive: deletingId,
+        p_replacement_product_id: replacementId ?? null,
+      }
+    );
     setSaving(false);
-    cancelDelete();
-    if (updErr) {
-      setError((updErr as Error).message);
-    } else {
-      fetchProducts();
+    if (rpcErr) {
+      setError((rpcErr as Error).message);
+      return;
     }
+    cancelDelete();
+    setShowRecipeModal(false);
+    setRecipeConflicts([]);
+    setReplacementProductId("");
+    fetchProducts();
+    if (archivedLoaded) fetchArchivedProducts();
+  }
+
+  async function handleReplaceAndDeactivate() {
+    if (!replacementProductId) return;
+    setConflictSaving(true);
+    await archiveProductRpc(replacementProductId);
+    setConflictSaving(false);
+  }
+
+  async function handleSkipAndDeactivate() {
+    await archiveProductRpc(null);
   }
 
   return (
@@ -412,6 +532,76 @@ export default function AdminProductsPage() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* ─── Recipe conflict modal ─── */}
+      {showRecipeModal && deletingProduct && (
+        <div className="rounded-xl border border-amber-400/50 bg-amber-50/60 dark:bg-amber-900/10 dark:border-amber-600/40 p-5 space-y-4">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              &ldquo;{deletingProduct.name}&rdquo; está vinculado a {recipeConflicts.length} receta{recipeConflicts.length !== 1 ? "s" : ""}
+            </p>
+            <ul className="mt-1 flex flex-wrap gap-1.5">
+              {recipeConflicts.map((r) => (
+                <li key={r.id} className="text-[11px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-md px-2 py-0.5 font-medium">
+                  {r.name}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground mt-1">
+              Las recetas existentes conservan la referencia histórica. Elige cómo proceder:
+            </p>
+          </div>
+
+          {/* Option A: Replace */}
+          <div className="rounded-lg border border-border bg-background p-4 space-y-3">
+            <p className="text-xs font-semibold text-foreground">A. Reemplazar en todas las recetas afectadas</p>
+            <select
+              value={replacementProductId}
+              onChange={(e) => setReplacementProductId(e.target.value)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Seleccionar materia prima activa...</option>
+              {products
+                .filter((p) => p.type === "MATERIA_PRIMA" && p.id !== deletingId)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.sku})
+                  </option>
+                ))}
+            </select>
+            <button
+              onClick={handleReplaceAndDeactivate}
+              disabled={!replacementProductId || conflictSaving}
+              className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
+            >
+              {conflictSaving ? "Reemplazando..." : "Reemplazar y archivar"}
+            </button>
+          </div>
+
+          {/* Option B: Skip */}
+          <div className="rounded-lg border border-border bg-background p-4 space-y-3">
+            <p className="text-xs font-semibold text-foreground">B. Archivar sin reemplazar</p>
+            <p className="text-xs text-muted-foreground">
+              Las recetas ya creadas conservan la referencia histórica. El ingrediente no aparecerá al crear nuevas recetas.
+            </p>
+            <button
+              onClick={handleSkipAndDeactivate}
+              disabled={conflictSaving}
+              className="rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 transition-colors"
+            >
+              Confirmar archivo
+            </button>
+          </div>
+
+          <button
+            onClick={() => { setShowRecipeModal(false); setRecipeConflicts([]); setReplacementProductId(""); }}
+            className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            Cancelar
+          </button>
         </div>
       )}
 
@@ -644,139 +834,273 @@ export default function AdminProductsPage() {
         </form>
       )}
 
-      {/* ─── Table ─── */}
+      {/* ─── Archived toggle ─── */}
+      {archivedCount > 0 && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleToggleArchived}
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+          >
+            {showArchived ? "Ocultar archivados" : `Mostrar archivados (${archivedCount})`}
+          </button>
+        </div>
+      )}
+
+      {/* ─── Tables ─── */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-16">Img</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">SKU</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nombre</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tipo</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">Unidad</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Proveedores</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden lg:table-cell">Precio</th>
-                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
-                    <Tag className="h-8 w-8 mx-auto mb-2 opacity-25" />
-                    No hay productos. Crea el primero con el botón de arriba.
-                  </td>
-                </tr>
-              ) : (
-                products.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
-                  >
-                    {/* Thumbnail */}
-                    <td className="px-4 py-3">
-                      {p.image_url ? (
-                        <div className="relative h-10 w-10 rounded-md overflow-hidden border border-border bg-muted shrink-0">
-                          <Image
-                            src={p.image_url}
-                            alt={p.name}
-                            fill
-                            sizes="40px"
-                            className="object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground">
-                          <ImagePlus className="h-4 w-4 opacity-30" />
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
-                    <td className="px-4 py-3 font-medium">{p.name}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          p.type === "MATERIA_PRIMA"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-brand-100 text-brand-700"
-                        }`}
-                      >
-                        {p.type === "MATERIA_PRIMA" ? "Materia Prima" : "Producto Terminado"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{p.unit}</td>
-
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      {p.type === "MATERIA_PRIMA" ? (
-                        p.suppliers.length === 0 ? (
-                          <span className="text-xs text-destructive/70">Sin proveedor</span>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {p.suppliers.map((s, i) => (
-                              <span
-                                key={i}
-                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                                  s.is_primary
-                                    ? "bg-brand-100 text-brand-700"
-                                    : "bg-muted text-muted-foreground"
-                                }`}
-                              >
-                                {s.is_primary && <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />}
-                                {s.company ?? s.name}
-                              </span>
-                            ))}
-                          </div>
-                        )
-                      ) : (
-                        <span className="text-xs text-muted-foreground/50">—</span>
-                      )}
-                    </td>
-
-                    <td className="px-4 py-3 text-right tabular-nums font-medium hidden lg:table-cell">
-                      {Number(p.price).toLocaleString("es-EC", {
-                        style: "currency",
-                        currency: "USD",
-                        minimumFractionDigits: 2,
-                      })}
-                    </td>
-
-                    <td className="px-4 py-3 text-center">
-                      <span
-                        className={`inline-flex h-2 w-2 rounded-full ${
-                          p.is_active ? "bg-brand-500" : "bg-red-500"
-                        }`}
-                      />
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openEdit(p)}
-                          className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors whitespace-nowrap"
-                        >
-                          <Pencil className="h-3 w-3" /> Editar
-                        </button>
-                        {isAdmin && (
-                          <button
-                            onClick={() => openDeleteConfirm(p)}
-                            className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors whitespace-nowrap"
-                          >
-                            <Trash2 className="h-3 w-3" /> Eliminar
-                          </button>
-                        )}
-                      </div>
-                    </td>
+        <div className="space-y-8">
+          {/* ─── Materias Primas ─── */}
+          <div className="space-y-3">
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-500" />
+              Materias Primas
+            </h2>
+            <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">SKU</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nombre</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">Unidad</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Proveedores</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Acciones</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {products.filter((p) => p.type === "MATERIA_PRIMA").length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
+                        <Tag className="h-7 w-7 mx-auto mb-2 opacity-25" />
+                        No hay materias primas registradas.
+                      </td>
+                    </tr>
+                  ) : (
+                    products
+                      .filter((p) => p.type === "MATERIA_PRIMA")
+                      .map((p) => (
+                        <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
+                          <td className="px-4 py-3 font-medium">{p.name}</td>
+                          <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{p.unit}</td>
+                          <td className="px-4 py-3 hidden md:table-cell">
+                            {p.suppliers.length === 0 ? (
+                              <span className="text-xs text-destructive/70">Sin proveedor</span>
+                            ) : (
+                              <div className="flex flex-wrap gap-1">
+                                {p.suppliers.map((s, i) => (
+                                  <span
+                                    key={i}
+                                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                      s.is_primary ? "bg-brand-100 text-brand-700" : "bg-muted text-muted-foreground"
+                                    }`}
+                                  >
+                                    {s.is_primary && <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />}
+                                    {s.company ?? s.name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`inline-flex h-2 w-2 rounded-full ${p.is_active ? "bg-brand-500" : "bg-red-500"}`} />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => openEdit(p)}
+                                className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors whitespace-nowrap"
+                              >
+                                <Pencil className="h-3 w-3" /> Editar
+                              </button>
+                              {isAdmin && (
+                                <button
+                                  onClick={() => openDeleteConfirm(p)}
+                                  className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors whitespace-nowrap"
+                                >
+                                  <Trash2 className="h-3 w-3" /> Eliminar
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ─── Materias Primas Archivadas ─── */}
+          {showArchived && (
+            <div className="space-y-2">
+              {loadingArchived ? (
+                <div className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
+                  Cargando archivados...
+                </div>
+              ) : archivedProducts.filter((p) => p.type === "MATERIA_PRIMA").length > 0 ? (
+                <div className="overflow-x-auto rounded-xl border border-amber-200/60 dark:border-amber-800/40 bg-muted/20 shadow-sm">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-amber-50/60 dark:bg-amber-900/10">
+                        <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 dark:text-amber-400">SKU</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 dark:text-amber-400">Nombre</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 dark:text-amber-400 hidden sm:table-cell">Unidad</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Estado</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-amber-700 dark:text-amber-400">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {archivedProducts
+                        .filter((p) => p.type === "MATERIA_PRIMA")
+                        .map((p) => (
+                          <tr key={p.id} className="border-b border-border/30 last:border-0 opacity-60">
+                            <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{p.sku}</td>
+                            <td className="px-4 py-2.5 text-sm font-medium text-foreground">{p.name}</td>
+                            <td className="px-4 py-2.5 text-xs text-muted-foreground hidden sm:table-cell">{p.unit}</td>
+                            <td className="px-4 py-2.5 text-center">
+                              <span className="inline-flex rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                                Archivado
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-right">
+                              <button
+                                onClick={() => handleReactivate(p.id)}
+                                disabled={saving}
+                                className="inline-flex items-center gap-1 rounded-md bg-accent-600 px-2 py-1 text-xs font-medium text-white hover:bg-accent-700 disabled:opacity-50 transition-colors"
+                              >
+                                Reactivar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {/* ─── Productos Terminados ─── */}
+          <div className="space-y-3">
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-brand-500" />
+              Productos Terminados
+            </h2>
+            <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">SKU</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nombre</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">Unidad</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden lg:table-cell">Precio</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.filter((p) => p.type === "PRODUCTO_TERMINADO").length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
+                        <Tag className="h-7 w-7 mx-auto mb-2 opacity-25" />
+                        No hay productos terminados registrados.
+                      </td>
+                    </tr>
+                  ) : (
+                    products
+                      .filter((p) => p.type === "PRODUCTO_TERMINADO")
+                      .map((p) => (
+                        <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
+                          <td className="px-4 py-3 font-medium">{p.name}</td>
+                          <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{p.unit}</td>
+                          <td className="px-4 py-3 text-right tabular-nums font-medium hidden lg:table-cell">
+                            {Number(p.price).toLocaleString("es-EC", {
+                              style: "currency",
+                              currency: "USD",
+                              minimumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`inline-flex h-2 w-2 rounded-full ${p.is_active ? "bg-brand-500" : "bg-red-500"}`} />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => openEdit(p)}
+                                className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors whitespace-nowrap"
+                              >
+                                <Pencil className="h-3 w-3" /> Editar
+                              </button>
+                              {isAdmin && (
+                                <button
+                                  onClick={() => openDeleteConfirm(p)}
+                                  className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors whitespace-nowrap"
+                                >
+                                  <Trash2 className="h-3 w-3" /> Eliminar
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ─── Productos Terminados Archivados ─── */}
+          {showArchived && (
+            <div className="space-y-2">
+              {loadingArchived ? null : archivedProducts.filter((p) => p.type === "PRODUCTO_TERMINADO").length > 0 ? (
+                <div className="overflow-x-auto rounded-xl border border-amber-200/60 dark:border-amber-800/40 bg-muted/20 shadow-sm">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-amber-50/60 dark:bg-amber-900/10">
+                        <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 dark:text-amber-400">SKU</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 dark:text-amber-400">Nombre</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 dark:text-amber-400 hidden sm:table-cell">Unidad</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Estado</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-amber-700 dark:text-amber-400">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {archivedProducts
+                        .filter((p) => p.type === "PRODUCTO_TERMINADO")
+                        .map((p) => (
+                          <tr key={p.id} className="border-b border-border/30 last:border-0 opacity-60">
+                            <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{p.sku}</td>
+                            <td className="px-4 py-2.5 text-sm font-medium text-foreground">{p.name}</td>
+                            <td className="px-4 py-2.5 text-xs text-muted-foreground hidden sm:table-cell">{p.unit}</td>
+                            <td className="px-4 py-2.5 text-center">
+                              <span className="inline-flex rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                                Archivado
+              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-right">
+                              <button
+                                onClick={() => handleReactivate(p.id)}
+                                disabled={saving}
+                                className="inline-flex items-center gap-1 rounded-md bg-accent-600 px-2 py-1 text-xs font-medium text-white hover:bg-accent-700 disabled:opacity-50 transition-colors"
+                              >
+                                Reactivar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       )}
     </div>

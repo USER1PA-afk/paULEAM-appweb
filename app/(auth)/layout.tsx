@@ -115,7 +115,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               alt="Logo PAuleam"
               width={32}
               height={32}
-              className="shrink-0 object-contain"
+              className="shrink-0 object-contain dark:invert"
             />
             <div className="flex flex-col leading-tight">
               <span className="text-sm font-extrabold uppercase tracking-tight text-foreground">PAuleam</span>

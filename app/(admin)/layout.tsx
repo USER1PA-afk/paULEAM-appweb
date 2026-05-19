@@ -211,7 +211,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             alt="Logo PAuleam"
             width={26}
             height={26}
-            className="shrink-0 object-contain"
+            style={{ width: 26, height: 26 }}
+            className="shrink-0 object-contain dark:invert"
           />
           <span className="hidden sm:block text-[13px] font-extrabold uppercase tracking-tight text-foreground">
             PAuleam
@@ -222,8 +223,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* ── User info + logout ── */}
         <div className="flex items-center gap-2 pr-1">
+          <ThemeToggle />
           <div className="hidden sm:flex flex-col items-end leading-tight">
-            <span className="text-sm font-semibold text-foreground truncate max-w-[9rem]">
+            <span className="text-sm font-semibold text-foreground truncate max-w-36">
               {user?.profile?.name ?? user?.email ?? "Sin sesión"}
             </span>
             {roleInfo && (
@@ -325,13 +327,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </nav>
 
-          {/* Footer: theme toggle */}
-          <div
-            className={`shrink-0 border-t border-border p-2.5 flex transition-all duration-300
-              ${sidebarCollapsed ? "lg:justify-center" : "justify-start"}`}
-          >
-            <ThemeToggle />
-          </div>
         </aside>
 
         {/* ── Main content ── */}

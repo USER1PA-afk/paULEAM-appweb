@@ -60,6 +60,33 @@ export function pickupCode(orderId: string): string {
   return "PAU-" + orderId.replace(/-/g, "").substring(0, 8).toUpperCase();
 }
 
+/**
+ * Convierte el valor almacenado en `payment_receipt_url` en la ruta del
+ * proxy autenticado `/api/receipts/<path>`.
+ *
+ * Soporta dos formatos:
+ *  - Nuevo (path):   "userId/1234567890.pdf"  → "/api/receipts/userId/1234567890.pdf"
+ *  - Legacy (URL):   "https://…/objects/userId%2F…" → extrae el path y construye la ruta
+ */
+export function receiptProxyUrl(value: string): string {
+  if (!value) return "";
+  // Ya es una ruta relativa (nuevo formato)
+  if (!value.startsWith("http")) {
+    return `/api/receipts/${value}`;
+  }
+  // Legacy: URL pública de Insforge — extraer el path del segmento /objects/
+  try {
+    const url = new URL(value);
+    const match = url.pathname.match(/\/objects\/(.+)$/);
+    if (match) {
+      const storagePath = decodeURIComponent(match[1]);
+      return `/api/receipts/${storagePath}`;
+    }
+  } catch { /* ignorar URL inválida */ }
+  // Fallback: devolver la URL original (bucket público aún)
+  return value;
+}
+
 let globalCartItems: CartItem[] = [];
 let isCartInitialized = false;
 const cartListeners = new Set<() => void>();
@@ -237,10 +264,9 @@ export function useCheckout() {
 
         if (uploadError) throw uploadError;
 
-        // 2. URL pública del comprobante
-        const publicUrl = insforge.storage
-          .from("payment-receipts")
-          .getPublicUrl(filePath);
+        // 2. Guardar la ruta del archivo (no la URL pública).
+        //    El bucket es privado — el acceso se hace a través del proxy /api/receipts/*.
+        const publicUrl = filePath;
 
         // 3. Crear la orden
         const { data: order, error: orderError } = await insforge.database

@@ -1,9 +1,10 @@
 "use client";
 
-import { useUserOrders, pickupCode } from "@features/checkout/hooks";
+import { useUserOrders, pickupCode, receiptProxyUrl } from "@features/checkout/hooks";
 import { useAuth } from "@features/auth/hooks";
 import { useState } from "react";
 import Link from "next/link";
+import { getInsforge } from "@shared/lib/insforge/client";
 import {
   Package,
   LockKeyhole,
@@ -68,6 +69,33 @@ export default function MyOrdersPage() {
   const { isAuthenticated } = useAuth();
   const { orders, loading } = useUserOrders();
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [receiptLoading, setReceiptLoading] = useState(false);
+
+  /** Abre el comprobante en una nueva pestaña via el proxy autenticado */
+  async function openReceipt(rawUrl: string) {
+    setReceiptLoading(true);
+    try {
+      const proxyUrl = receiptProxyUrl(rawUrl);
+      const insforge = getInsforge();
+      const token = insforge.getHttpClient().getHeaders()["Authorization"]?.replace("Bearer ", "");
+
+      const res = await fetch(proxyUrl, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank", "noopener");
+      // Revocar el blob URL después de un momento para liberar memoria
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+    } catch (err) {
+      console.error("[openReceipt]", err);
+    } finally {
+      setReceiptLoading(false);
+    }
+  }
 
   if (!isAuthenticated) {
     return (
@@ -239,15 +267,14 @@ export default function MyOrdersPage() {
 
                     {/* Payment receipt link */}
                     {order.payment_receipt_url && (
-                      <a
-                        href={order.payment_receipt_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 underline transition-colors"
+                      <button
+                        onClick={() => openReceipt(order.payment_receipt_url!)}
+                        disabled={receiptLoading}
+                        className="inline-flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 underline transition-colors disabled:opacity-50"
                       >
                         <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
-                        Ver comprobante de pago
-                      </a>
+                        {receiptLoading ? "Cargando..." : "Ver comprobante de pago"}
+                      </button>
                     )}
 
                     {/* Shipping address */}

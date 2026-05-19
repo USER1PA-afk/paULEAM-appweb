@@ -39,7 +39,7 @@ export default function ShopLayout({
               alt="Logo PAuleam"
               width={32}
               height={32}
-              className="shrink-0 object-contain"
+              className="shrink-0 object-contain dark:invert"
             />
             <span className="text-base font-bold tracking-tight text-foreground">
               PAuleam
@@ -98,6 +98,14 @@ export default function ShopLayout({
                 <span className="hidden text-xs text-muted-foreground sm:block">
                   {user?.email}
                 </span>
+                {(role === "admin" || role === "operario") && (
+                  <Link
+                    href="/admin/dashboard"
+                    className="rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 transition-colors"
+                  >
+                    Panel Admin
+                  </Link>
+                )}
                 <button
                   onClick={signOut}
                   className="rounded-md bg-zinc-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"

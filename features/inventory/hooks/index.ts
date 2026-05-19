@@ -147,8 +147,12 @@ export function useInventoryActions() {
 
 /**
  * Hook para suscripción Realtime al canal de inventario.
- * Degrada silenciosamente si el plan no soporta WebSockets:
- * intenta conectar durante 3 s y aborta sin errores de consola.
+ * Degrada silenciosamente si el plan no soporta WebSockets.
+ *
+ * Previene el warning "WebSocket is closed before the connection is
+ * established" mediante un flag `cancelled` que impide llamar a
+ * `disconnect()` si el handshake aún no completó, y mediante
+ * `didConnect` que asegura que solo se desconecta lo que ya conectó.
  *
  * @param onUpdate - Callback que se llama con la entrada actualizada
  */
@@ -157,65 +161,72 @@ export function useRealtimeStock(onUpdate: (entry: LedgerEntry) => void) {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
-    let subscribed = false;
-    let rt: typeof insforge.realtime | null = null;
-
     // Si el SDK no expone realtime, salir silenciosamente
     if (!insforge.realtime) return;
-    rt = insforge.realtime;
 
-    const handleConnect = () => { if (mounted) setConnected(true); };
-    const handleDisconnect = () => { if (mounted) setConnected(false); };
-    const handleUpdate = (msg: unknown) => {
-      if (!mounted) return;
+    const rt = insforge.realtime;
+    let cancelled = false;   // true cuando el efecto se limpia antes de conectar
+    let didConnect = false;  // true solo si connect() completó con éxito
+    let subscribed = false;
+
+    const handleConnect    = () => { if (!cancelled) setConnected(true); };
+    const handleDisconnect = () => { if (!cancelled) setConnected(false); };
+    const handleUpdate     = (msg: unknown) => {
+      if (cancelled) return;
       const payload = (msg as { payload?: LedgerEntry })?.payload;
       if (payload) onUpdate(payload);
     };
 
-    const setup = async () => {
-      if (!rt) return;
-      try {
-        rt.on("connect", handleConnect);
-        rt.on("disconnect", handleDisconnect);
-        rt.on("stock_updated", handleUpdate);
-        rt.on("inventory_ledger:INSERT", handleUpdate);
+    rt.on("connect",                 handleConnect);
+    rt.on("disconnect",              handleDisconnect);
+    rt.on("stock_updated",           handleUpdate);
+    rt.on("inventory_ledger:INSERT", handleUpdate);
 
-        // Timeout: si no conecta en 3 s, abortar silenciosamente
-        const connectResult = await Promise.race([
-          rt.connect(),
-          new Promise<"timeout">((res) => setTimeout(() => res("timeout"), 3000)),
+    const setup = async () => {
+      try {
+        const result = await Promise.race([
+          rt.connect().then(() => "ok" as const),
+          new Promise<"timeout">((res) => setTimeout(() => res("timeout"), 4000)),
         ]);
 
-        if (!mounted || connectResult === "timeout") return;
+        // Si el componente se desmontó o llegamos al timeout, no continuar
+        if (cancelled || result === "timeout") return;
 
+        didConnect = true;
         await rt.subscribe("inventory");
         subscribed = true;
       } catch {
         // Realtime no disponible en este plan — modo estático sin errores
-        if (mounted) setConnected(false);
+        if (!cancelled) setConnected(false);
       }
     };
 
     setup();
 
     return () => {
-      mounted = false;
-      if (!rt) return;
+      cancelled = true;
+      setConnected(false);
+
+      // Desregistrar listeners siempre
+      try {
+        rt.off?.("connect",                 handleConnect);
+        rt.off?.("disconnect",              handleDisconnect);
+        rt.off?.("stock_updated",           handleUpdate);
+        rt.off?.("inventory_ledger:INSERT", handleUpdate);
+      } catch { /* ignorar */ }
+
+      // Solo desconectar si el handshake ya completó; de lo contrario
+      // el socket está en mid-handshake y llamar disconnect() genera el warning.
+      if (!didConnect) return;
       try {
         if (subscribed) rt.unsubscribe("inventory");
-        rt.off?.("connect", handleConnect);
-        rt.off?.("disconnect", handleDisconnect);
-        rt.off?.("stock_updated", handleUpdate);
-        rt.off?.("inventory_ledger:INSERT", handleUpdate);
         rt.disconnect();
-      } catch {
-        // Socket ya cerrado — ignorar
-      }
+      } catch { /* socket ya cerrado */ }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [insforge]);
 
   return { connected };
 }
+
 

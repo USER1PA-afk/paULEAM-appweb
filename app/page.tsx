@@ -56,7 +56,7 @@ export default function HomePage() {
               alt="Logo PAuleam"
               width={36}
               height={36}
-              className="shrink-0 object-contain"
+              className="shrink-0 object-contain dark:invert"
             />
             <div className="flex flex-col leading-tight">
               <span className="text-sm font-extrabold tracking-tight text-foreground uppercase">

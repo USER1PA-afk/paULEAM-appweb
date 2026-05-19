@@ -1,9 +1,10 @@
 "use client";
 
-import { useOrderManagement, pickupCode } from "@features/checkout/hooks";
+import { useOrderManagement, pickupCode, receiptProxyUrl } from "@features/checkout/hooks";
 import { formatDate, formatCurrency } from "@shared/lib/utils";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, ExternalLink, Receipt } from "lucide-react";
+import { getInsforge } from "@shared/lib/insforge/client";
+import { ChevronDown, ChevronUp, Receipt, X, Download } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
   PENDIENTE:  { label: "Pendiente",  dot: "bg-yellow-500",  bg: "bg-yellow-100 dark:bg-yellow-900/20",  text: "text-yellow-700 dark:text-yellow-300"  },
@@ -19,6 +20,59 @@ export default function AdminOrdersPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [acting, setActing] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [preview, setPreview] = useState<{
+    blobUrl: string;
+    mimeType: string;
+    originalUrl: string;
+    orderCode: string;
+  } | null>(null);
+
+  async function openPreview(rawUrl: string, orderCode: string) {
+    setPreviewLoading(true);
+    try {
+      // Build the authenticated proxy URL (handles both new paths and legacy full URLs)
+      const proxyUrl = receiptProxyUrl(rawUrl);
+
+      // Obtain the current user's Bearer token to forward to the server proxy
+      const insforge = getInsforge();
+      const token = insforge.getHttpClient().getHeaders()["Authorization"]?.replace("Bearer ", "");
+
+      const res = await fetch(proxyUrl, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!res.ok) throw new Error(`Error ${res.status} al obtener comprobante`);
+
+      const contentType = res.headers.get("content-type")?.split(";")[0].trim() ?? "";
+      const blob = await res.blob();
+      setPreview({ blobUrl: URL.createObjectURL(blob), mimeType: contentType || blob.type, originalUrl: proxyUrl, orderCode });
+    } catch (err) {
+      console.error("[openPreview]", err);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  function closePreview() {
+    if (preview) URL.revokeObjectURL(preview.blobUrl);
+    setPreview(null);
+  }
+
+  function downloadPreview() {
+    if (!preview) return;
+    const mimeExt: Record<string, string> = {
+      "image/jpeg": ".jpg", "image/jpg": ".jpg", "image/png": ".png",
+      "image/webp": ".webp", "image/gif": ".gif", "application/pdf": ".pdf",
+    };
+    const urlExt = preview.originalUrl.split("?")[0].match(/\.[a-zA-Z0-9]{2,5}$/)?.[0]?.toLowerCase() ?? "";
+    const ext = urlExt || mimeExt[preview.mimeType] || "";
+    const a = document.createElement("a");
+    a.href = preview.blobUrl;
+    a.download = `comprobante-${preview.orderCode}${ext}`;
+    a.click();
+  }
 
   async function handleApprove(orderId: string) {
     setActing(orderId);
@@ -38,6 +92,79 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="space-y-8">
+
+      {/* ─── Receipt preview modal ─── */}
+      {(previewLoading || preview) && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Vista previa del comprobante"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={closePreview}
+        >
+          <div
+            className="relative flex flex-col w-full max-w-2xl max-h-[90vh] rounded-xl bg-card shadow-2xl border border-border overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+              <span className="text-sm font-semibold text-foreground">Comprobante de pago</span>
+              <button
+                onClick={closePreview}
+                aria-label="Cerrar vista previa"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Preview body */}
+            <div
+              className="flex-1 min-h-0 overflow-auto bg-muted/30"
+              style={{ height: "65vh" }}
+            >
+              {previewLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div role="status" className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
+                    <span className="sr-only">Cargando comprobante...</span>
+                  </div>
+                </div>
+              ) : preview?.mimeType === "application/pdf" ? (
+                <iframe
+                  src={preview.blobUrl}
+                  title="Comprobante de pago"
+                  className="w-full border-0"
+                  style={{ height: "65vh" }}
+                />
+              ) : (
+                <img
+                  src={preview!.blobUrl}
+                  alt="Comprobante de pago"
+                  style={{ width: "100%", height: "auto", display: "block" }}
+                />
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border shrink-0">
+              <button
+                onClick={closePreview}
+                className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                Cerrar
+              </button>
+              {preview && (
+                <button
+                  onClick={downloadPreview}
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
+                >
+                  <Download className="h-4 w-4" /> Descargar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Órdenes de Venta</h1>
         <p className="mt-1 text-muted-foreground text-sm">
@@ -200,15 +327,12 @@ export default function AdminOrdersPage() {
                           Comprobante
                         </p>
                         {order.payment_receipt_url ? (
-                          <a
-                            href={order.payment_receipt_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={() => openPreview(order.payment_receipt_url!, code)}
                             className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 underline text-xs transition-colors"
                           >
-                            <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
                             Ver comprobante de pago
-                          </a>
+                          </button>
                         ) : (
                           <span className="text-muted-foreground text-xs">Sin comprobante</span>
                         )}
