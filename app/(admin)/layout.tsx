@@ -116,9 +116,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     document.cookie = `pauleam-role=${role}; path=/; max-age=3600; SameSite=Lax`;
     if (role === "cliente") router.replace("/shop/catalog");
   }, [role, router, authLoading, isAuthenticated]);
-
-  useSessionGuard(signOut);
-
+  useSessionGuard(() => signOut(false));
   const filteredNav  = NAV_ITEMS.filter((item) => role && item.roles.includes(role));
   const roleInfo     = role ? ROLE_LABELS[role] : null;
 
@@ -241,7 +239,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {isAuthenticated && (
             <button
-              onClick={signOut}
+              onClick={() => signOut()}
               aria-label="Cerrar sesión"
               title="Cerrar sesión"
               className="flex h-8 w-8 items-center justify-center rounded-md

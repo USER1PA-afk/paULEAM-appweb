@@ -724,8 +724,8 @@ export default function AdminProductsPage() {
             </div>
           </div>
 
-          {/* ─── Imagen del Producto (solo admin) ─── */}
-          {isAdmin && (
+          {/* ─── Imagen del Producto (solo admin, solo producto terminado) ─── */}
+          {isAdmin && formData.type === "PRODUCTO_TERMINADO" && (
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground">
                 Imagen del Producto
