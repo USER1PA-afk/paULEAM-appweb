@@ -6,7 +6,8 @@ export function Footer() {
     <footer className="border-t border-border bg-card py-3">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-4 px-6 sm:flex-row sm:justify-between">
         <div className="flex items-center gap-4">
-          <img 
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={logoBase64}
             alt="Logo ULEAM" 
             className="h-10 w-auto object-contain invert opacity-80 dark:invert-0 dark:opacity-100 transition-all"

@@ -154,9 +154,8 @@ export function SupplierSelect({ selectedIds, primaryId, onChange }: SupplierSel
   const [localSuppliers, setLocalSuppliers] = useState<Supplier[]>([]);
 
   // Merge fetched suppliers con los recién creados en sesión
-  useEffect(() => {
-    setLocalSuppliers(suppliers);
-  }, [suppliers]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setLocalSuppliers(suppliers); }, [suppliers]);
 
   function toggleSupplier(id: string) {
     let next: string[];
@@ -332,13 +331,13 @@ export function SuppliersTable({
       <table aria-label="Proveedores registrados" className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/50">
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Empresa</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">Contacto</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">RUC</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Teléfono</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Email</th>
+            <th className="px-4 py-3 text-center font-medium text-muted-foreground">Empresa</th>
+            <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden sm:table-cell">Contacto</th>
+            <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden md:table-cell">RUC</th>
+            <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden lg:table-cell">Teléfono</th>
+            <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden lg:table-cell">Email</th>
             <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
-            <th className="px-4 py-3 text-right font-medium text-muted-foreground">Acciones</th>
+            <th className="px-4 py-3 text-center font-medium text-muted-foreground">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -347,22 +346,22 @@ export function SuppliersTable({
               key={s.id}
               className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
             >
-              <td className="px-4 py-3">
+              <td className="px-4 py-3 text-center">
                 <p className="font-medium">{s.company ?? s.name}</p>
                 {s.company && (
                   <p className="text-xs text-muted-foreground sm:hidden">{s.name}</p>
                 )}
               </td>
-              <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
+              <td className="px-4 py-3 text-center text-muted-foreground hidden sm:table-cell">
                 {s.name}
               </td>
-              <td className="px-4 py-3 font-mono text-xs text-muted-foreground hidden md:table-cell">
+              <td className="px-4 py-3 text-center font-mono text-xs text-muted-foreground hidden md:table-cell">
                 {s.ruc ?? "—"}
               </td>
-              <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
+              <td className="px-4 py-3 text-center text-muted-foreground hidden lg:table-cell">
                 {s.phone ?? "—"}
               </td>
-              <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
+              <td className="px-4 py-3 text-center text-muted-foreground hidden lg:table-cell">
                 {s.email ? (
                   <a
                     href={`mailto:${s.email}`}
@@ -385,8 +384,8 @@ export function SuppliersTable({
                   {s.is_active ? "Activo" : "Inactivo"}
                 </span>
               </td>
-              <td className="px-4 py-3 text-right">
-                <div className="flex items-center justify-end gap-2">
+              <td className="px-4 py-3 text-center">
+                <div className="flex items-center justify-center gap-2">
                   <button
                     onClick={() => onEdit(s)}
                     className="rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"

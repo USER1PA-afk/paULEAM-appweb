@@ -124,7 +124,11 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
               Rendimiento Base
             </p>
             <p className="text-sm font-bold text-brand-700 tabular-nums">
-              {Number(recipe.yield_base).toLocaleString("es-EC")} {recipe.yield_unit}
+              {Number(recipe.yield_base).toLocaleString("es-EC", {
+                minimumFractionDigits: ["kg", "lt"].includes(recipe.yield_unit?.toLowerCase() || "") ? 2 : 0,
+                maximumFractionDigits: ["kg", "lt"].includes(recipe.yield_unit?.toLowerCase() || "") ? 2 : 2,
+                useGrouping: false
+              })} {recipe.yield_unit}
             </p>
           </div>
           <div>
@@ -168,12 +172,12 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-xs text-muted-foreground">
-                  <th className="text-left font-semibold pb-3 pr-4 w-12">#</th>
-                  <th className="text-left font-semibold pb-3 pr-4">Ingrediente</th>
-                  <th className="text-left font-semibold pb-3 pr-4">SKU</th>
-                  <th className="text-right font-semibold pb-3 pr-4">Cantidad</th>
-                  <th className="text-left font-semibold pb-3 pr-4">Unidad</th>
-                  <th className="text-left font-semibold pb-3">Tipo</th>
+                  <th className="text-center font-semibold pb-3 pr-4 w-12">#</th>
+                  <th className="text-center font-semibold pb-3 pr-4">Ingrediente</th>
+                  <th className="text-center font-semibold pb-3 pr-4">SKU</th>
+                  <th className="text-center font-semibold pb-3 pr-4">Cantidad</th>
+                  <th className="text-center font-semibold pb-3 pr-4">Unidad</th>
+                  <th className="text-center font-semibold pb-3">Tipo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -181,20 +185,24 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
                   const prod = ingredientProducts[ing.product_id];
                   return (
                     <tr key={ing.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-3 pr-4 text-xs font-bold text-muted-foreground tabular-nums">
+                      <td className="py-3 pr-4 text-center text-xs font-bold text-muted-foreground tabular-nums">
                         {idx + 1}
                       </td>
-                      <td className="py-3 pr-4 font-medium text-foreground">
+                      <td className="py-3 pr-4 text-center font-medium text-foreground">
                         {prod?.name ?? ing.product_id}
                       </td>
-                      <td className="py-3 pr-4 text-xs text-muted-foreground font-mono">
+                      <td className="py-3 pr-4 text-center text-xs text-muted-foreground font-mono">
                         {prod?.sku ?? "—"}
                       </td>
-                      <td className="py-3 pr-4 text-right font-semibold tabular-nums">
-                        {Number(ing.quantity).toLocaleString("es-EC")}
+                      <td className="py-3 pr-4 text-center font-semibold tabular-nums">
+                        {Number(ing.quantity).toLocaleString("es-EC", {
+                          minimumFractionDigits: ["kg", "lt"].includes(ing.unit?.toLowerCase() || "") ? 2 : 0,
+                          maximumFractionDigits: ["kg", "lt"].includes(ing.unit?.toLowerCase() || "") ? 2 : 2,
+                          useGrouping: false
+                        })}
                       </td>
-                      <td className="py-3 pr-4 text-muted-foreground">{ing.unit}</td>
-                      <td className="py-3">
+                      <td className="py-3 pr-4 text-center text-muted-foreground">{ing.unit}</td>
+                      <td className="py-3 text-center">
                         <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                           Materia Prima
                         </span>

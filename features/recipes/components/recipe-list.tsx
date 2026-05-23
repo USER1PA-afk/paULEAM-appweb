@@ -45,19 +45,19 @@ export function RecipeList() {
         <table aria-label="Lista de recetas" className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40">
-              <th className="px-5 py-3.5 text-left font-semibold text-muted-foreground text-xs uppercase tracking-wider">
+              <th className="px-5 py-3.5 text-center font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                 Receta
               </th>
-              <th className="px-5 py-3.5 text-left font-semibold text-muted-foreground text-xs uppercase tracking-wider">
+              <th className="px-5 py-3.5 text-center font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                 Producto Final
               </th>
-              <th className="px-5 py-3.5 text-right font-semibold text-muted-foreground text-xs uppercase tracking-wider">
+              <th className="px-5 py-3.5 text-center font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                 Rendimiento Base
               </th>
               <th className="px-5 py-3.5 text-center font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                 Estado
               </th>
-              <th className="px-5 py-3.5 text-right font-semibold text-muted-foreground text-xs uppercase tracking-wider">
+              <th className="px-5 py-3.5 text-center font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                 Acciones
               </th>
             </tr>
@@ -65,7 +65,7 @@ export function RecipeList() {
           <tbody className="divide-y divide-border/50">
             {recipes.map((r) => (
               <tr key={r.id} className="group hover:bg-muted/20 transition-colors">
-                <td className="px-5 py-4">
+                <td className="px-5 py-4 text-center">
                   <div>
                     <p className="font-semibold text-foreground">{r.name}</p>
                     {r.description && (
@@ -75,12 +75,16 @@ export function RecipeList() {
                     )}
                   </div>
                 </td>
-                <td className="px-5 py-4 text-sm text-muted-foreground">
+                <td className="px-5 py-4 text-center text-sm text-muted-foreground">
                   {getProductName(r.output_product_id)}
                 </td>
-                <td className="px-5 py-4 text-right">
+                <td className="px-5 py-4 text-center">
                   <span className="font-bold text-foreground tabular-nums">
-                    {Number(r.yield_base).toLocaleString("es-EC")}
+                    {Number(r.yield_base).toLocaleString("es-EC", {
+                      minimumFractionDigits: ["kg", "lt"].includes(r.yield_unit?.toLowerCase() || "") ? 2 : 0,
+                      maximumFractionDigits: ["kg", "lt"].includes(r.yield_unit?.toLowerCase() || "") ? 2 : 2,
+                      useGrouping: false
+                    })}
                   </span>
                   <span className="text-xs text-muted-foreground ml-1">{r.yield_unit}</span>
                 </td>
@@ -89,8 +93,8 @@ export function RecipeList() {
                     Activa
                   </span>
                 </td>
-                <td className="px-5 py-4">
-                  <div className="flex items-center justify-end gap-2">
+                <td className="px-5 py-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
                     <button
                       onClick={() => router.push(`/admin/recipes/${r.id}`)}
                       aria-label={`Ver ingredientes de ${r.name}`}
@@ -143,7 +147,11 @@ export function RecipeList() {
             <div className="flex items-center justify-between border-t border-border/50 pt-3">
               <div>
                 <p className="text-lg font-bold tabular-nums text-foreground">
-                  {Number(r.yield_base).toLocaleString("es-EC")}
+                  {Number(r.yield_base).toLocaleString("es-EC", {
+                    minimumFractionDigits: ["kg", "lt"].includes(r.yield_unit?.toLowerCase() || "") ? 2 : 0,
+                    maximumFractionDigits: ["kg", "lt"].includes(r.yield_unit?.toLowerCase() || "") ? 2 : 2,
+                    useGrouping: false
+                  })}
                 </p>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   {r.yield_unit} base

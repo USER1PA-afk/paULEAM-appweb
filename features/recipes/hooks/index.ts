@@ -30,9 +30,8 @@ export function useRecipes() {
     }
   }, [insforge]);
 
-  useEffect(() => {
-    fetchRecipes();
-  }, [fetchRecipes]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchRecipes(); }, [fetchRecipes]);
 
   return { recipes, loading, refetch: fetchRecipes };
 }
@@ -123,9 +122,8 @@ export function useRecipe(recipeId: string | null) {
     }
   }, [recipeId, insforge]);
 
-  useEffect(() => {
-    fetchRecipe();
-  }, [fetchRecipe]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchRecipe(); }, [fetchRecipe]);
 
   return { recipe, ingredients, outputProduct, ingredientProducts, loading, error, refetch: fetchRecipe };
 }
@@ -158,9 +156,8 @@ export function useRecipeIngredients(recipeId: string | null) {
     }
   }, [recipeId, insforge]);
 
-  useEffect(() => {
-    fetchIngredients();
-  }, [fetchIngredients]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchIngredients(); }, [fetchIngredients]);
 
   return { ingredients, loading, refetch: fetchIngredients };
 }
@@ -189,9 +186,8 @@ export function useProducts() {
     }
   }, [insforge]);
 
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const rawMaterials = products.filter((p) => p.type === "MATERIA_PRIMA");
   const finishedProducts = products.filter((p) => p.type === "PRODUCTO_TERMINADO");

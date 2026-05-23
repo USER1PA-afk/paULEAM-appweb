@@ -25,10 +25,12 @@ CREATE INDEX IF NOT EXISTS idx_product_images_position ON public.product_images(
 
 ALTER TABLE public.product_images ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "product_images_public_read" ON public.product_images;
 CREATE POLICY "product_images_public_read"
   ON public.product_images FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "product_images_staff_all" ON public.product_images;
 CREATE POLICY "product_images_staff_all"
   ON public.product_images FOR ALL
   USING  (public.get_user_role() IN ('admin', 'operario'))

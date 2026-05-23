@@ -235,10 +235,10 @@ export default function NewStoreProductPage() {
                     <input
                       type="number"
                       min="0"
-                      step="0.001"
+                      step="0.01"
                       value={weight}
                       onChange={(e) => setWeight(e.target.value)}
-                      placeholder="0.500"
+                      placeholder="0.50"
                       className={inputCls}
                     />
                   </Field>

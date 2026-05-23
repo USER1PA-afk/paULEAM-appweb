@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import {
   StockSummaryTable,
   InventoryLedgerTable,
@@ -6,6 +9,12 @@ import {
 } from "@features/inventory/components";
 
 export default function AdminInventoryPage() {
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleRefresh = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   return (
     <>
       {/* Print header — solo visible al imprimir */}
@@ -34,14 +43,14 @@ export default function AdminInventoryPage() {
 
         {/* Formulario ingreso de stock */}
         <div className="print:hidden">
-          <StockEntryForm />
+          <StockEntryForm onSuccess={handleRefresh} />
         </div>
 
         {/* Tabla de stock */}
-        <StockSummaryTable />
+        <StockSummaryTable refreshTrigger={refreshTrigger} onRefresh={handleRefresh} />
 
         {/* Ledger de movimientos */}
-        <InventoryLedgerTable />
+        <InventoryLedgerTable refreshTrigger={refreshTrigger} />
       </div>
     </>
   );

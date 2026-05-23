@@ -38,11 +38,10 @@ export function LoginForm() {
         role = (profile as { role: string } | null)?.role ?? "cliente";
       }
 
-      // Persistir el rol en cookie para el proxy
-      document.cookie = `pauleam-role=${role}; path=/; max-age=3600; SameSite=Lax`;
-
       // Redirigir según rol
-      if (role === "admin" || role === "operario") {
+      if (role === "sales_kiosk") {
+        router.push("/pos");
+      } else if (role === "admin" || role === "operario") {
         router.push("/admin/dashboard");
       } else {
         router.push("/shop/catalog");
@@ -165,8 +164,6 @@ export function RegisterForm() {
     if (!result.error) {
       // Registro exitoso — el usuario queda autenticado automáticamente.
       // El trigger SQL handle_new_user() crea el perfil con rol 'cliente' por defecto.
-      // Persistir el rol en cookie para el proxy
-      document.cookie = `pauleam-role=cliente; path=/; max-age=3600; SameSite=Lax`;
       
       setSuccess(true);
       // Redirigir a la tienda después de un breve mensaje de éxito

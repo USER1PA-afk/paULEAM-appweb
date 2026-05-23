@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { getInsforge } from "@shared/lib/insforge/client";
-import { Recipe } from "@entities/recipe";
-import { Product } from "@entities/product";
-import { useScalePreview, useRecipeIngredients } from "../hooks";
-import { formatScaledQuantity, MEASUREMENT_UNITS } from "../lib";
+import { useScalePreview } from "../hooks";
+import { formatScaledQuantity } from "../lib";
 import { Check, X, ArrowDown, ArrowUp } from "lucide-react";
 
 /**
@@ -53,10 +51,10 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
         <table aria-label="Ingredientes requeridos para producción" className="w-full text-sm">
           <thead>
             <tr className="border-b text-xs text-muted-foreground">
-              <th className="text-left font-medium pb-2 pr-4">Ingrediente</th>
-              <th className="text-right font-medium pb-2 px-2">Base</th>
-              <th className="text-right font-medium pb-2 px-2">Requerido</th>
-              <th className="text-right font-medium pb-2 px-2">Stock Disponible</th>
+              <th className="text-center font-medium pb-2 pr-4">Ingrediente</th>
+              <th className="text-center font-medium pb-2 px-2">Base</th>
+              <th className="text-center font-medium pb-2 px-2">Requerido</th>
+              <th className="text-center font-medium pb-2 px-2">Stock Disponible</th>
               <th className="text-center font-medium pb-2 pl-4">Estado</th>
             </tr>
           </thead>
@@ -70,7 +68,7 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
             ) : (
               scaledIngredients.map((ing) => (
                 <tr key={ing.id} className="group">
-                  <td className="py-2.5 pr-4">
+                  <td className="py-2.5 pr-4 text-center">
                     <div className="font-medium text-foreground text-xs">{ing.product_name}</div>
                     <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                       {ing.product_sku}
@@ -81,14 +79,22 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
                       )}
                     </div>
                   </td>
-                  <td className="py-2.5 px-2 text-right text-xs text-muted-foreground tabular-nums">
-                    {ing.base_quantity} {ing.unit}
+                  <td className="py-2.5 px-2 text-center text-xs text-muted-foreground tabular-nums">
+                    {Number(ing.base_quantity).toLocaleString("es-EC", {
+                      minimumFractionDigits: ["kg", "lt"].includes(ing.unit?.toLowerCase() || "") ? 2 : 0,
+                      maximumFractionDigits: ["kg", "lt"].includes(ing.unit?.toLowerCase() || "") ? 2 : 2,
+                      useGrouping: false
+                    })} {ing.unit}
                   </td>
-                  <td className="py-2.5 px-2 text-right font-medium text-foreground tabular-nums">
+                  <td className="py-2.5 px-2 text-center font-medium text-foreground tabular-nums">
                     {formatScaledQuantity(ing.scaled_quantity, ing.unit)}
                   </td>
-                  <td className="py-2.5 px-2 text-right text-xs text-muted-foreground tabular-nums">
-                    {Number(ing.stock_available).toLocaleString("es-EC")} {ing.inventory_unit}
+                  <td className="py-2.5 px-2 text-center text-xs text-muted-foreground tabular-nums">
+                    {Number(ing.stock_available).toLocaleString("es-EC", {
+                      minimumFractionDigits: ["kg", "lt"].includes(ing.inventory_unit?.toLowerCase() || "") ? 2 : 0,
+                      maximumFractionDigits: ["kg", "lt"].includes(ing.inventory_unit?.toLowerCase() || "") ? 2 : 2,
+                      useGrouping: false
+                    })} {ing.inventory_unit}
                   </td>
                   <td className="py-2.5 pl-4 text-center">
                     {ing.stock_sufficient ? (
@@ -124,13 +130,22 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
  */
 export function ProductionOrderDetail({ orderId, completedAt }: { orderId: string, completedAt: string | null }) {
   // Obtenemos los movimientos del ledger que referencian a esta orden
-  const [entries, setEntries] = useState<any[]>([]);
+  const [entries, setEntries] = useState<{ id: string; movement_type: string; product_name: string; quantity: number; product_unit: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const insforge = getInsforge();
 
+  const fmtQty = (q: number, unit: string) => {
+    const isPhysical = ["kg", "lt"].includes(unit?.toLowerCase() || "");
+    return Number(q).toLocaleString("es-EC", {
+      minimumFractionDigits: isPhysical ? 2 : 0,
+      maximumFractionDigits: isPhysical ? 2 : 2,
+      useGrouping: false,
+    });
+  };
+
   useEffect(() => {
     if (!orderId || !completedAt) return;
-    
+    /* eslint-disable react-hooks/set-state-in-effect */
     setLoading(true);
     insforge.database
       .from("inventory_ledger_view")
@@ -141,6 +156,7 @@ export function ProductionOrderDetail({ orderId, completedAt }: { orderId: strin
         setEntries(data || []);
         setLoading(false);
       });
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [orderId, completedAt, insforge]);
 
   if (!completedAt) return null;
@@ -164,14 +180,14 @@ export function ProductionOrderDetail({ orderId, completedAt }: { orderId: strin
         {egresos.map(e => (
           <li key={e.id} className="flex justify-between items-center text-xs">
             <span className="inline-flex items-center gap-1 text-red-600 font-medium"><ArrowDown aria-hidden="true" className="h-3 w-3 shrink-0" /> {e.product_name}</span>
-            <span className="tabular-nums text-muted-foreground">{e.quantity} {e.product_unit}</span>
+            <span className="tabular-nums text-muted-foreground">{fmtQty(e.quantity, e.product_unit)} {e.product_unit}</span>
           </li>
         ))}
         {egresos.length > 0 && ingresos.length > 0 && <div aria-hidden="true" className="h-px bg-border/50 my-1" />}
         {ingresos.map(e => (
           <li key={e.id} className="flex justify-between items-center text-xs">
             <span className="inline-flex items-center gap-1 text-green-600 font-medium"><ArrowUp aria-hidden="true" className="h-3 w-3 shrink-0" /> {e.product_name}</span>
-            <span className="tabular-nums text-muted-foreground font-semibold">{e.quantity} {e.product_unit}</span>
+            <span className="tabular-nums text-muted-foreground font-semibold">{fmtQty(e.quantity, e.product_unit)} {e.product_unit}</span>
           </li>
         ))}
       </ul>

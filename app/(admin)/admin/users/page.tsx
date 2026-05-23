@@ -36,9 +36,8 @@ export default function AdminUsersPage() {
     setLoading(false);
   }, [insforge]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   async function handleRoleUpdate(userId: string) {
     await insforge.database
@@ -99,11 +98,11 @@ export default function AdminUsersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Usuario</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Rol</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Registrado</th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Usuario</th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Rol</th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Registrado</th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Acciones</th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -119,7 +118,7 @@ export default function AdminUsersPage() {
                     key={u.id}
                     className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-center">
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-brand-400 to-brand-600 text-xs font-bold text-white">
                           {u.full_name.charAt(0).toUpperCase()}
@@ -132,7 +131,7 @@ export default function AdminUsersPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-center">
                       {isEditing ? (
                         <select
                           value={editRole}
@@ -150,7 +149,7 @@ export default function AdminUsersPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                    <td className="px-4 py-3 text-center text-xs text-muted-foreground whitespace-nowrap">
                       {formatDate(u.created_at)}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -160,7 +159,7 @@ export default function AdminUsersPage() {
                         }`}
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-center">
                       {isEditing ? (
                         <div className="flex gap-2">
                           <button

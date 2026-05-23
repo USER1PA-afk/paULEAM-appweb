@@ -272,7 +272,7 @@ export default function MyOrdersPage() {
                                   {item.products?.name ?? "Producto"}
                                 </span>
                                 <span className="text-muted-foreground ml-1.5">
-                                  × {item.quantity} {item.products?.unit}
+                                  × {item.quantity} {item.products?.sales_unit_name || item.products?.unit || 'Unidad'}
                                 </span>
                               </div>
                               <span className="tabular-nums font-medium text-foreground">

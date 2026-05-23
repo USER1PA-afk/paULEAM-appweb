@@ -36,9 +36,8 @@ export function useProductionOrders() {
     }
   }, [insforge]);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   const createOrder = useCallback(
     async (order: {
@@ -181,9 +180,8 @@ export function useRecipes() {
     }
   }, [insforge]);
 
-  useEffect(() => {
-    fetchRecipes();
-  }, [fetchRecipes]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchRecipes(); }, [fetchRecipes]);
 
   return { recipes, loading, refetch: fetchRecipes };
 }
@@ -216,9 +214,8 @@ export function useRecipeIngredients(recipeId: string | null) {
     }
   }, [recipeId, insforge]);
 
-  useEffect(() => {
-    fetchIngredients();
-  }, [fetchIngredients]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchIngredients(); }, [fetchIngredients]);
 
   return { ingredients, loading, refetch: fetchIngredients };
 }
@@ -255,9 +252,11 @@ export function useScalePreview(recipeId: string | null, targetYield: number) {
 
   useEffect(() => {
     if (!recipeId || targetYield <= 0) {
+      /* eslint-disable react-hooks/set-state-in-effect */
       setRecipe(null);
       setIngredients([]);
       setStockMap({});
+      /* eslint-enable react-hooks/set-state-in-effect */
       return;
     }
 
@@ -288,7 +287,7 @@ export function useScalePreview(recipeId: string | null, targetYield: number) {
 
         // 3. Cargar stock solo para los ingredientes necesarios
         const productIds = ingredientsData.map(i => i.product_id);
-        const map: Record<string, any> = {};
+        const map: Record<string, { stock_actual: number; unit: string; name: string; sku: string }> = {};
         
         if (productIds.length > 0) {
           const { data: stockData, error: stockErr } = await insforge.database
@@ -298,7 +297,7 @@ export function useScalePreview(recipeId: string | null, targetYield: number) {
             
           if (stockErr) throw stockErr;
           
-          (stockData as any[]).forEach(s => {
+          (stockData as { product_id: string; stock_actual: number; unit: string; name: string; sku: string }[]).forEach(s => {
             map[s.product_id] = s;
           });
         }

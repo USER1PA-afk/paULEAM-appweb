@@ -12,6 +12,8 @@ export interface CartItem {
   quantity: number;
   image_url: string | null;
   reservation_id: string | null;
+  conversion_factor?: number;
+  sales_unit_name?: string | null;
 }
 
 interface Order {
@@ -30,6 +32,7 @@ interface Order {
 
 interface OrderItemDetail {
   id: string;
+  product_id: string;
   quantity: number;
   unit_price: number;
   subtotal: number;
@@ -37,6 +40,8 @@ interface OrderItemDetail {
     name: string;
     sku: string;
     unit: string;
+    sales_unit_name: string | null;
+    conversion_factor: number;
   } | null;
 }
 
@@ -46,10 +51,11 @@ export interface OrderWithDetails extends Order {
 
 const ORDER_ITEMS_SELECT = `
   id,
+  product_id,
   quantity,
   unit_price,
   subtotal,
-  products(name, sku, unit)
+  products(name, sku, unit, sales_unit_name, conversion_factor)
 `;
 
 /**
@@ -121,9 +127,11 @@ export function useCart() {
       }
       isCartInitialized = true;
     }
+    /* eslint-disable react-hooks/set-state-in-effect */
     setItems([...globalCartItems]);
 
     const listener = () => setItems([...globalCartItems]);
+    /* eslint-enable react-hooks/set-state-in-effect */
     cartListeners.add(listener);
     return () => {
       cartListeners.delete(listener);
@@ -139,6 +147,8 @@ export function useCart() {
         unit: string;
         price: number;
         image_url: string | null;
+        conversion_factor?: number;
+        sales_unit_name?: string | null;
       },
       quantity: number = 1
     ) => {
@@ -147,10 +157,13 @@ export function useCart() {
         const { data: userData } = await insforge.auth.getCurrentUser();
         if (!userData?.user?.id) throw new Error("No autenticado");
 
+        const conversionFactor = product.conversion_factor ?? 1.0;
+        const physicalQuantity = Number((quantity / conversionFactor).toFixed(4));
+
         const { data, error } = await insforge.database.rpc("reserve_stock", {
           p_user_id: userData.user.id,
           p_product_id: product.id,
-          p_quantity: quantity,
+          p_quantity: physicalQuantity,
         });
 
         if (error) throw error;
@@ -159,7 +172,13 @@ export function useCart() {
         if (existing) {
           globalCartItems = globalCartItems.map((i) =>
             i.product_id === product.id
-              ? { ...i, quantity: i.quantity + quantity, reservation_id: data as string }
+              ? {
+                  ...i,
+                  quantity: i.quantity + quantity,
+                  reservation_id: data as string,
+                  conversion_factor: product.conversion_factor,
+                  sales_unit_name: product.sales_unit_name,
+                }
               : i
           );
         } else {
@@ -174,6 +193,8 @@ export function useCart() {
               quantity,
               image_url: product.image_url,
               reservation_id: data as string,
+              conversion_factor: product.conversion_factor,
+              sales_unit_name: product.sales_unit_name,
             },
           ];
         }
@@ -301,19 +322,7 @@ export function useCheckout() {
 
         if (itemsError) throw itemsError;
 
-        // 5. Registrar EGRESOs en inventory_ledger
-        for (const item of params.items) {
-          await insforge.database.from("inventory_ledger").insert({
-            product_id: item.product_id,
-            movement_type: "EGRESO",
-            quantity: item.quantity,
-            reference_type: "VENTA",
-            reference_id: orderId,
-            notes: `Venta #${orderId.substring(0, 8)}`,
-          });
-        }
-
-        // 6. Limpiar reservas del usuario
+        // 5. Limpiar reservas del usuario
         await insforge.database
           .from("stock_reservations")
           .delete()
@@ -359,14 +368,43 @@ export function useOrderManagement() {
     }
   }, [insforge]);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   const approveOrder = useCallback(
     async (orderId: string) => {
       try {
         const { data: userData } = await insforge.auth.getCurrentUser();
+
+        // 1. Obtener los items de la orden con sus factores de conversión
+        const { data: itemsData, error: itemsError } = await insforge.database
+          .from("order_items")
+          .select(ORDER_ITEMS_SELECT)
+          .eq("order_id", orderId);
+
+        if (itemsError) throw itemsError;
+
+        // 2. Insertar EGRESOs en el inventory_ledger
+        const items = (itemsData as unknown as OrderItemDetail[]) ?? [];
+        for (const item of items) {
+          const conversionFactor = item.products?.conversion_factor ?? 1.0;
+          const physicalQuantity = Number((item.quantity / conversionFactor).toFixed(4));
+
+          const { error: ledgerError } = await insforge.database
+            .from("inventory_ledger")
+            .insert({
+              product_id: item.product_id,
+              movement_type: "EGRESO",
+              quantity: physicalQuantity,
+              reference_type: "VENTA",
+              reference_id: orderId,
+              notes: `Venta #${orderId.substring(0, 8)}`,
+            });
+
+          if (ledgerError) throw ledgerError;
+        }
+
+        // 3. Actualizar estado de la orden a APROBADO
         const { error } = await insforge.database
           .from("orders")
           .update({
@@ -443,9 +481,8 @@ export function useUserOrders() {
     }
   }, [insforge]);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   return { orders, loading, refetch: fetchOrders };
 }

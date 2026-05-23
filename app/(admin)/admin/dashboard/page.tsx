@@ -227,7 +227,11 @@ export default function AdminDashboard() {
                     </div>
                     <div className="text-right pl-4">
                       <p className="text-sm font-semibold tabular-nums text-foreground">
-                        {Number(item.stock_actual).toLocaleString("es-EC", { maximumFractionDigits: 2 })}
+                        {Number(item.stock_actual).toLocaleString("es-EC", {
+                          minimumFractionDigits: ["kg", "lt"].includes(item.unit?.toLowerCase() || "") ? 2 : 0,
+                          maximumFractionDigits: 2,
+                          useGrouping: false,
+                        })}
                       </p>
                       <p className="text-xs text-muted-foreground">{item.unit}</p>
                     </div>

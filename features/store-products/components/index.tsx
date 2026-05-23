@@ -52,9 +52,15 @@ export function StockBadge({ stock, unit }: { stock: number; unit: string }) {
     stock <= 0   ? "text-red-600 dark:text-red-400" :
     stock <= 5   ? "text-amber-600 dark:text-amber-400" :
                    "text-brand-700 dark:text-brand-400";
+  const isPhysical = ["kg", "lt"].includes(unit?.toLowerCase());
+  const formatted = Number(stock).toLocaleString("es-EC", {
+    minimumFractionDigits: isPhysical ? 2 : 0,
+    maximumFractionDigits: isPhysical ? 2 : (stock % 1 === 0 ? 0 : 2),
+    useGrouping: false,
+  });
   return (
     <span className={`tabular-nums font-medium text-sm ${color}`}>
-      {Number(stock).toFixed(stock % 1 === 0 ? 0 : 2)} {unit}
+      {formatted} {unit}
     </span>
   );
 }

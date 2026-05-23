@@ -20,6 +20,7 @@ import {
   Handshake,
   LogOut,
   ShoppingBag,
+  Monitor,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -35,13 +36,15 @@ const NAV_ITEMS = [
 const SUB_ITEMS = [
   { label: "Tienda Online",    href: "/admin/store/products", icon: ShoppingBag,  roles: ["admin"] },
   { label: "Ver E-Commerce",   href: "/shop/catalog",         icon: Store,        roles: ["admin", "operario"] },
+  { label: "Punto de Venta",   href: "/pos",                  icon: Monitor,      roles: ["admin", "sales_kiosk"] },
   { label: "Órdenes de Venta", href: "/admin/orders",         icon: ShoppingCart, roles: ["admin"] },
 ];
 
 const ROLE_LABELS: Record<string, { label: string; cls: string }> = {
-  admin:    { label: "Administrador", cls: "bg-brand-600 text-white" },
-  operario: { label: "Operario",      cls: "bg-accent-600 text-white" },
-  cliente:  { label: "Cliente",       cls: "bg-amber-500 text-white" },
+  admin:       { label: "Administrador", cls: "bg-brand-600 text-white" },
+  operario:    { label: "Operario",      cls: "bg-accent-600 text-white" },
+  cliente:     { label: "Cliente",       cls: "bg-amber-500 text-white" },
+  sales_kiosk: { label: "Cajero POS",    cls: "bg-blue-600 text-white" },
 };
 
 /* ── Animated menu icon ──────────────────────────────────────────
@@ -115,6 +118,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (!role) return;
     document.cookie = `pauleam-role=${role}; path=/; max-age=3600; SameSite=Lax`;
     if (role === "cliente") router.replace("/shop/catalog");
+    if (role === "sales_kiosk") router.replace("/pos");
   }, [role, router, authLoading, isAuthenticated]);
 
   useSessionGuard(signOut);
@@ -134,7 +138,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (
     authLoading ||
     (isAuthenticated && roleLoading) ||
-    role === "cliente" ||
     (!authLoading && !isAuthenticated)
   ) {
     return (
@@ -333,7 +336,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* ── Main content ── */}
         <main id="main-content" className="flex-1 overflow-y-auto p-5 lg:p-7">
-          {children}
+          {role === "cliente" || role === "sales_kiosk" ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+              <div
+                role="status"
+                className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600"
+              >
+                <span className="sr-only">Redirigiendo...</span>
+              </div>
+              <p className="text-muted-foreground font-medium text-sm">
+                Redirigiendo a tu sección correspondiente...
+              </p>
+            </div>
+          ) : (
+            children
+          )}
         </main>
       </div>
     </div>

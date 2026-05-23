@@ -22,6 +22,8 @@ export const ProductSchema = z.object({
   image_url: z.string().nullable().optional(),
   is_active: z.boolean().default(true),
   featured: z.boolean().default(false),
+  conversion_factor: z.number().default(1.0).optional(),
+  sales_unit_name: z.string().nullable().optional(),
   created_at: z.string().datetime().optional(),
   updated_at: z.string().datetime().optional(),
 });

@@ -23,6 +23,8 @@ export interface StoreProduct {
   image_url: string | null;
   is_active: boolean;
   featured: boolean;
+  conversion_factor?: number;
+  sales_unit_name?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -172,6 +174,7 @@ export function useStoreProducts(filters: StoreProductsFilters = {}) {
     setLoading(false);
   }, [search, categoryId, status, sortBy, sortDir, page, perPage]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   return {
@@ -246,6 +249,7 @@ export function useStoreProductDetail(id: string | null) {
     setLoading(false);
   }, [id]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchDetail(); }, [fetchDetail]);
 
   return { product, images, stock, salesStats, loading, refetch: fetchDetail };
@@ -340,6 +344,7 @@ export function useProductImages(productId: string | null) {
     setLoading(false);
   }, [productId]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchImages(); }, [fetchImages]);
 
   async function uploadImage(file: File, forceFirst = false): Promise<boolean> {

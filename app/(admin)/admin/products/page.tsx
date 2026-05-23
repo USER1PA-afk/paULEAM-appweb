@@ -155,9 +155,8 @@ export default function AdminProductsPage() {
     setLoadingArchived(false);
   }, [insforge]);
 
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   async function handleReactivate(id: string) {
     setSaving(true);
@@ -863,12 +862,12 @@ export default function AdminProductsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">SKU</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nombre</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">Unidad</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Proveedores</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">SKU</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Nombre</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden sm:table-cell">Unidad</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden md:table-cell">Proveedores</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Acciones</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -884,10 +883,10 @@ export default function AdminProductsPage() {
                       .filter((p) => p.type === "MATERIA_PRIMA")
                       .map((p) => (
                         <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
-                          <td className="px-4 py-3 font-medium">{p.name}</td>
-                          <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{p.unit}</td>
-                          <td className="px-4 py-3 hidden md:table-cell">
+                          <td className="px-4 py-3 text-center font-mono text-xs text-muted-foreground">{p.sku}</td>
+                          <td className="px-4 py-3 text-center font-medium">{p.name}</td>
+                          <td className="px-4 py-3 text-center text-muted-foreground hidden sm:table-cell">{p.unit}</td>
+                          <td className="px-4 py-3 text-center hidden md:table-cell">
                             {p.suppliers.length === 0 ? (
                               <span className="text-xs text-destructive/70">Sin proveedor</span>
                             ) : (
@@ -909,8 +908,8 @@ export default function AdminProductsPage() {
                           <td className="px-4 py-3 text-center">
                             <span className={`inline-flex h-2 w-2 rounded-full ${p.is_active ? "bg-brand-500" : "bg-red-500"}`} />
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-end gap-2">
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex items-center justify-center gap-2">
                               <button
                                 onClick={() => openEdit(p)}
                                 className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors whitespace-nowrap"
@@ -948,11 +947,11 @@ export default function AdminProductsPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border bg-amber-50/60 dark:bg-amber-900/10">
-                        <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 dark:text-amber-400">SKU</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 dark:text-amber-400">Nombre</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 dark:text-amber-400 hidden sm:table-cell">Unidad</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">SKU</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Nombre</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400 hidden sm:table-cell">Unidad</th>
                         <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Estado</th>
-                        <th className="px-4 py-2 text-right text-xs font-medium text-amber-700 dark:text-amber-400">Acciones</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -960,15 +959,15 @@ export default function AdminProductsPage() {
                         .filter((p) => p.type === "MATERIA_PRIMA")
                         .map((p) => (
                           <tr key={p.id} className="border-b border-border/30 last:border-0 opacity-60">
-                            <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{p.sku}</td>
-                            <td className="px-4 py-2.5 text-sm font-medium text-foreground">{p.name}</td>
-                            <td className="px-4 py-2.5 text-xs text-muted-foreground hidden sm:table-cell">{p.unit}</td>
+                            <td className="px-4 py-2.5 text-center font-mono text-xs text-muted-foreground">{p.sku}</td>
+                            <td className="px-4 py-2.5 text-center text-sm font-medium text-foreground">{p.name}</td>
+                            <td className="px-4 py-2.5 text-center text-xs text-muted-foreground hidden sm:table-cell">{p.unit}</td>
                             <td className="px-4 py-2.5 text-center">
                               <span className="inline-flex rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
                                 Archivado
                               </span>
                             </td>
-                            <td className="px-4 py-2.5 text-right">
+                            <td className="px-4 py-2.5 text-center">
                               <button
                                 onClick={() => handleReactivate(p.id)}
                                 disabled={saving}
@@ -996,12 +995,12 @@ export default function AdminProductsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">SKU</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nombre</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">Unidad</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden lg:table-cell">Precio</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">SKU</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Nombre</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden sm:table-cell">Unidad</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden lg:table-cell">Precio</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Acciones</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1017,10 +1016,10 @@ export default function AdminProductsPage() {
                       .filter((p) => p.type === "PRODUCTO_TERMINADO")
                       .map((p) => (
                         <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
-                          <td className="px-4 py-3 font-medium">{p.name}</td>
-                          <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{p.unit}</td>
-                          <td className="px-4 py-3 text-right tabular-nums font-medium hidden lg:table-cell">
+                          <td className="px-4 py-3 text-center font-mono text-xs text-muted-foreground">{p.sku}</td>
+                          <td className="px-4 py-3 text-center font-medium">{p.name}</td>
+                          <td className="px-4 py-3 text-center text-muted-foreground hidden sm:table-cell">{p.unit}</td>
+                          <td className="px-4 py-3 text-center tabular-nums font-medium hidden lg:table-cell">
                             {Number(p.price).toLocaleString("es-EC", {
                               style: "currency",
                               currency: "USD",
@@ -1030,8 +1029,8 @@ export default function AdminProductsPage() {
                           <td className="px-4 py-3 text-center">
                             <span className={`inline-flex h-2 w-2 rounded-full ${p.is_active ? "bg-brand-500" : "bg-red-500"}`} />
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-end gap-2">
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex items-center justify-center gap-2">
                               <button
                                 onClick={() => openEdit(p)}
                                 className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors whitespace-nowrap"
@@ -1064,11 +1063,11 @@ export default function AdminProductsPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border bg-amber-50/60 dark:bg-amber-900/10">
-                        <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 dark:text-amber-400">SKU</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 dark:text-amber-400">Nombre</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 dark:text-amber-400 hidden sm:table-cell">Unidad</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">SKU</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Nombre</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400 hidden sm:table-cell">Unidad</th>
                         <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Estado</th>
-                        <th className="px-4 py-2 text-right text-xs font-medium text-amber-700 dark:text-amber-400">Acciones</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1076,15 +1075,15 @@ export default function AdminProductsPage() {
                         .filter((p) => p.type === "PRODUCTO_TERMINADO")
                         .map((p) => (
                           <tr key={p.id} className="border-b border-border/30 last:border-0 opacity-60">
-                            <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{p.sku}</td>
-                            <td className="px-4 py-2.5 text-sm font-medium text-foreground">{p.name}</td>
-                            <td className="px-4 py-2.5 text-xs text-muted-foreground hidden sm:table-cell">{p.unit}</td>
+                            <td className="px-4 py-2.5 text-center font-mono text-xs text-muted-foreground">{p.sku}</td>
+                            <td className="px-4 py-2.5 text-center text-sm font-medium text-foreground">{p.name}</td>
+                            <td className="px-4 py-2.5 text-center text-xs text-muted-foreground hidden sm:table-cell">{p.unit}</td>
                             <td className="px-4 py-2.5 text-center">
                               <span className="inline-flex rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
                                 Archivado
               </span>
                             </td>
-                            <td className="px-4 py-2.5 text-right">
+                            <td className="px-4 py-2.5 text-center">
                               <button
                                 onClick={() => handleReactivate(p.id)}
                                 disabled={saving}

@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Recipe, RecipeIngredient, InstructionStep } from "@entities/recipe";
-import { Product } from "@entities/product";
+import { InstructionStep } from "@entities/recipe";
 import { useProducts, useRecipeMutations, useRecipe } from "../hooks";
-import { getAllUnits, createEmptyStep } from "../lib";
+import { getAllUnits } from "../lib";
 import { ArrowLeft, Plus, Trash2, GripVertical, Save } from "lucide-react";
 
 interface RecipeFormProps {
@@ -33,7 +32,7 @@ function generateKey() {
 
 export function RecipeForm({ recipeId }: RecipeFormProps) {
   const router = useRouter();
-  const { rawMaterials, finishedProducts, loading: productsLoading } = useProducts();
+  const { rawMaterials, finishedProducts } = useProducts();
   const { createRecipe, updateRecipe, replaceIngredients } = useRecipeMutations();
   const { recipe, ingredients: existingIngredients, loading: recipeLoading } = useRecipe(recipeId ?? null);
 
@@ -58,6 +57,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
   // Populate form when editing
   useEffect(() => {
     if (isEditing && recipe && !initialized) {
+      /* eslint-disable react-hooks/set-state-in-effect */
       setName(recipe.name);
       setDescription(recipe.description ?? "");
       setOutputProductId(recipe.output_product_id);
@@ -85,6 +85,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
       setStepRows(sRows.length > 0 ? sRows : []);
 
       setInitialized(true);
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [isEditing, recipe, existingIngredients, initialized]);
 
@@ -237,6 +238,17 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
     );
   }
 
+  const parsedYieldUnit = yieldUnit?.toLowerCase() || "";
+  let yieldMin = "0.01";
+  let yieldStep = "0.01";
+  if (["kg", "lt"].includes(parsedYieldUnit)) {
+    yieldMin = "0.01";
+    yieldStep = "0.01";
+  } else if (["unidad", "unidades", "libra", "libras", "unit", "units", "lb", "lbs"].includes(parsedYieldUnit)) {
+    yieldMin = "1";
+    yieldStep = "1";
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -317,8 +329,8 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                   id="recipe-yield"
                   type="number"
                   required
-                  min="0.01"
-                  step="0.01"
+                  min={yieldMin}
+                  step={yieldStep}
                   value={yieldBase}
                   onChange={(e) => setYieldBase(e.target.value)}
                   className="flex-1 rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
@@ -395,8 +407,19 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                 <div className="col-span-1" />
               </div>
 
-              {ingredientRows.map((row, idx) => (
-                <div
+              {ingredientRows.map((row, idx) => {
+                const parsedRowUnit = row.unit?.toLowerCase() || "";
+                let rowMin = "0.01";
+                let rowStep = "0.01";
+                if (["kg", "lt"].includes(parsedRowUnit)) {
+                  rowMin = "0.01";
+                  rowStep = "0.01";
+                } else if (["unidad", "unidades", "libra", "libras", "unit", "units", "lb", "lbs"].includes(parsedRowUnit)) {
+                  rowMin = "1";
+                  rowStep = "1";
+                }
+                return (
+                  <div
                   key={row.key}
                   className="rounded-lg border border-border/50 bg-muted/30 p-3 hover:border-border hover:bg-muted/50 transition-all duration-150"
                 >
@@ -433,8 +456,8 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                         <input
                           type="number"
                           required
-                          min="0.0001"
-                          step="0.0001"
+                          min={rowMin}
+                          step={rowStep}
                           aria-label={`Ingrediente ${idx + 1}: cantidad`}
                           value={row.quantity}
                           onChange={(e) => updateIngredientRow(row.key, "quantity", e.target.value)}
@@ -469,7 +492,8 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </section>

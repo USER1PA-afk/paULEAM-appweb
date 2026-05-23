@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
   ChevronLeft, ShoppingBag, Pencil, Save, X as XIcon,
@@ -93,7 +93,6 @@ function ViewField({ label, value }: { label: string; value?: string | number | 
 export default function StoreProductDetailPage() {
   const params       = useParams<{ id: string }>();
   const searchParams = useSearchParams();
-  const router       = useRouter();
   const productId    = params.id;
 
   const justCreated = searchParams.get("created") === "1";
@@ -128,6 +127,7 @@ export default function StoreProductDetailPage() {
   // Populate form when product loads
   useEffect(() => {
     if (!product) return;
+    /* eslint-disable react-hooks/set-state-in-effect */
     setName(product.name);
     setSku(product.sku);
     setUnit(product.unit);
@@ -143,6 +143,7 @@ export default function StoreProductDetailPage() {
     setIngredients(product.ingredients ?? "");
     setNutrition(recordToPairs(product.nutritional_info));
     setCommercial(product.commercial_details ?? "");
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [product]);
 
   function cancelEdit() {
@@ -361,7 +362,7 @@ export default function StoreProductDetailPage() {
                     </select>
                   </Field>
                   <Field label="Peso (kg)">
-                    <input type="number" min="0" step="0.001" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="0.500" className={inputCls} />
+                    <input type="number" min="0" step="0.01" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="0.50" className={inputCls} />
                   </Field>
                   {categories.length > 0 && (
                     <Field label="Categoría">
@@ -538,7 +539,11 @@ export default function StoreProductDetailPage() {
                       <div className="rounded-lg bg-muted/40 p-3 text-center">
                         <Package className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
                         <p className="text-xs text-muted-foreground">Unidades vendidas</p>
-                        <p className="text-sm font-bold tabular-nums">{salesStats.totalUnits.toFixed(1)}</p>
+                        <p className="text-sm font-bold tabular-nums">
+                          {salesStats.totalUnits % 1 === 0
+                            ? salesStats.totalUnits.toFixed(0)
+                            : salesStats.totalUnits.toFixed(2)}
+                        </p>
                       </div>
                       <div className="rounded-lg bg-muted/40 p-3 text-center">
                         <TrendingUp className="h-4 w-4 mx-auto text-brand-600 mb-1" />

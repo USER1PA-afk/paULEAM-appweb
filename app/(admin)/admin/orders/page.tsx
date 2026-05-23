@@ -137,11 +137,14 @@ export default function AdminOrdersPage() {
                   style={{ height: "65vh" }}
                 />
               ) : (
-                <img
-                  src={preview!.blobUrl}
-                  alt="Comprobante de pago"
-                  style={{ width: "100%", height: "auto", display: "block" }}
-                />
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={preview!.blobUrl}
+                    alt="Comprobante de pago"
+                    style={{ width: "100%", height: "auto", display: "block" }}
+                  />
+                </>
               )}
             </div>
 
@@ -314,7 +317,7 @@ export default function AdminOrdersPage() {
                                   </span>
                                 )}
                                 <span className="text-muted-foreground ml-1.5">
-                                  × {item.quantity} {item.products?.unit}
+                                  × {item.quantity} {item.products?.sales_unit_name || item.products?.unit || 'Unidad'}
                                 </span>
                               </div>
                               <div className="text-right">

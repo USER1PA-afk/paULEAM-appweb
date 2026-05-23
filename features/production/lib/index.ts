@@ -40,7 +40,13 @@ export function calculateScaleFactor(yieldBase: number, targetYield: number): nu
  * Ejemplo: 4.5455 lt -> "4.55 lt"
  */
 export function formatScaledQuantity(quantity: number, unit: string): string {
-  return `${Number(quantity.toFixed(4)).toLocaleString("es-EC")} ${unit}`;
+  const isPhysical = ["kg", "lt"].includes(unit?.toLowerCase() || "");
+  const formatted = Number(quantity.toFixed(4)).toLocaleString("es-EC", {
+    minimumFractionDigits: isPhysical ? 2 : 0,
+    maximumFractionDigits: 2,
+    useGrouping: false,
+  });
+  return `${formatted} ${unit}`;
 }
 
 /**

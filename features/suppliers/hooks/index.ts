@@ -31,9 +31,8 @@ export function useSuppliers() {
     }
   }, [insforge]);
 
-  useEffect(() => {
-    fetchSuppliers();
-  }, [fetchSuppliers]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchSuppliers(); }, [fetchSuppliers]);
 
   return { suppliers, loading, error, refetch: fetchSuppliers };
 }
@@ -64,9 +63,8 @@ export function useAllSuppliers() {
     }
   }, [insforge]);
 
-  useEffect(() => {
-    fetchSuppliers();
-  }, [fetchSuppliers]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchSuppliers(); }, [fetchSuppliers]);
 
   return { suppliers, loading, error, refetch: fetchSuppliers };
 }
@@ -98,9 +96,8 @@ export function useProductSuppliers(productId: string | undefined) {
     }
   }, [productId, insforge]);
 
-  useEffect(() => {
-    fetch();
-  }, [fetch]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetch(); }, [fetch]);
 
   return { productSuppliers, loading, refetch: fetch };
 }

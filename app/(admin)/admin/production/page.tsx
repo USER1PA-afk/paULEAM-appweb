@@ -60,6 +60,7 @@ export default function AdminProductionPage() {
   function setRowError(orderId: string, msg: string | null) {
     setRowErrors((prev) => {
       if (msg === null) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [orderId]: _, ...rest } = prev;
         return rest;
       }
@@ -93,6 +94,15 @@ export default function AdminProductionPage() {
 
   // Validamos si hay suficientes datos para el preview
   const showPreview = form.recipe_id !== "" && Number(form.target_yield) > 0;
+
+  const selectedRecipe = recipes.find((r) => r.id === form.recipe_id);
+  const selectedRecipeUnit = selectedRecipe?.yield_unit?.toLowerCase() || "";
+  let targetMin = "0.01";
+  let targetStep = "0.01";
+  if (["unidad", "unidades", "libra", "libras", "unit", "units", "lb", "lbs"].includes(selectedRecipeUnit)) {
+    targetMin = "1";
+    targetStep = "1";
+  }
 
   return (
     <>
@@ -154,11 +164,19 @@ export default function AdminProductionPage() {
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">Seleccionar receta...</option>
-                    {recipes.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name} (base: {r.yield_base} {r.yield_unit})
-                      </option>
-                    ))}
+                    {recipes.map((r) => {
+                      const isPhysical = ["kg", "lt"].includes(r.yield_unit?.toLowerCase() || "");
+                      const formattedYield = Number(r.yield_base).toLocaleString("es-EC", {
+                        minimumFractionDigits: isPhysical ? 2 : 0,
+                        maximumFractionDigits: 2,
+                        useGrouping: false,
+                      });
+                      return (
+                        <option key={r.id} value={r.id}>
+                          {r.name} (base: {formattedYield} {r.yield_unit})
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -169,8 +187,8 @@ export default function AdminProductionPage() {
                     id="prod-yield"
                     type="number"
                     required
-                    min="0.01"
-                    step="0.01"
+                    min={targetMin}
+                    step={targetStep}
                     value={form.target_yield}
                     onChange={(e) =>
                       setForm((p) => ({ ...p, target_yield: e.target.value }))
@@ -350,7 +368,14 @@ export default function AdminProductionPage() {
                             {recipe?.name ?? <span className="text-muted-foreground text-xs">—</span>}
                           </td>
                           <td className="px-4 py-3 text-center font-semibold tabular-nums">
-                            {Number(order.target_yield).toLocaleString("es-EC")} {recipe?.yield_unit}
+                            {(() => {
+                              const isPhysical = ["kg", "lt"].includes(recipe?.yield_unit?.toLowerCase() || "");
+                              return Number(order.target_yield).toLocaleString("es-EC", {
+                                minimumFractionDigits: isPhysical ? 2 : 0,
+                                maximumFractionDigits: 2,
+                                useGrouping: false,
+                              });
+                            })()} {recipe?.yield_unit}
                           </td>
                           <td className="px-4 py-3 text-center">
                             <span className="inline-flex items-center justify-center gap-1.5">

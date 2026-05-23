@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import {
   Search, Plus, ChevronLeft, ChevronRight,
   ChevronUp, ChevronDown, SlidersHorizontal, ShoppingBag,
@@ -27,6 +27,20 @@ const fmt = (n: number) =>
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" });
+
+function SortIcon({ col, sortBy, sortDir }: {
+  col: "name" | "price" | "created_at";
+  sortBy: string;
+  sortDir: "asc" | "desc";
+}) {
+  if (sortBy !== col)
+    return <span className="h-3 w-3 opacity-25 inline-block ml-0.5">↕</span>;
+  return sortDir === "asc" ? (
+    <ChevronUp className="h-3 w-3 inline ml-0.5 text-brand-600" />
+  ) : (
+    <ChevronDown className="h-3 w-3 inline ml-0.5 text-brand-600" />
+  );
+}
 
 export default function StoreProductsPage() {
   const router = useRouter();
@@ -62,19 +76,6 @@ export default function StoreProductsPage() {
     }));
   }
 
-  const SortIcon = useCallback(
-    ({ col }: { col: "name" | "price" | "created_at" }) => {
-      if (filters.sortBy !== col)
-        return <span className="h-3 w-3 opacity-25 inline-block ml-0.5">↕</span>;
-      return filters.sortDir === "asc" ? (
-        <ChevronUp className="h-3 w-3 inline ml-0.5 text-brand-600" />
-      ) : (
-        <ChevronDown className="h-3 w-3 inline ml-0.5 text-brand-600" />
-      );
-    },
-    [filters.sortBy, filters.sortDir]
-  );
-
   async function handleToggleActive(p: StoreProductWithStock) {
     setActionLoading(p.id + "-active");
     await toggleActive(p.id, p.is_active);
@@ -98,12 +99,6 @@ export default function StoreProductsPage() {
     setActionLoading(null);
   }
 
-  const statusCounts = {
-    all:      total,
-    active:   products.filter((p) => p.is_active && !p.featured).length,
-    featured: products.filter((p) => p.featured).length,
-    inactive: products.filter((p) => !p.is_active).length,
-  };
 
   return (
     <div className="space-y-5">
@@ -277,26 +272,26 @@ export default function StoreProductsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-12"></th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground w-12"></th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                   <button onClick={() => toggleSort("name")} className="flex items-center gap-0.5 hover:text-foreground transition-colors">
-                    Producto <SortIcon col="name" />
+                    Producto <SortIcon col="name" sortBy={filters.sortBy ?? "name"} sortDir={filters.sortDir ?? "asc"} />
                   </button>
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Categoría</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden md:table-cell">Categoría</th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                   <button onClick={() => toggleSort("price")} className="flex items-center gap-0.5 ml-auto hover:text-foreground transition-colors">
-                    Precio <SortIcon col="price" />
+                    Precio <SortIcon col="price" sortBy={filters.sortBy ?? "name"} sortDir={filters.sortDir ?? "asc"} />
                   </button>
                 </th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden sm:table-cell">Stock</th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden sm:table-cell">Stock</th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden lg:table-cell">Estado</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden xl:table-cell">
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden xl:table-cell">
                   <button onClick={() => toggleSort("created_at")} className="flex items-center gap-0.5 hover:text-foreground transition-colors">
-                    Creado <SortIcon col="created_at" />
+                    Creado <SortIcon col="created_at" sortBy={filters.sortBy ?? "name"} sortDir={filters.sortDir ?? "asc"} />
                   </button>
                 </th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Acciones</th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -335,12 +330,12 @@ export default function StoreProductsPage() {
                     className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors"
                   >
                     {/* Thumbnail */}
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-center">
                       <StoreProductThumbnail imageUrl={p.image_url} name={p.name} />
                     </td>
 
                     {/* Name + SKU */}
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-center">
                       <Link
                         href={`/admin/store/products/${p.id}`}
                         className="font-medium hover:text-brand-600 transition-colors block"
@@ -351,7 +346,7 @@ export default function StoreProductsPage() {
                     </td>
 
                     {/* Category */}
-                    <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                    <td className="px-4 py-3 text-center text-muted-foreground hidden md:table-cell">
                       {p.category_name ? (
                         <span className="rounded-full bg-muted px-2 py-0.5 text-[11px]">
                           {p.category_name}
@@ -362,12 +357,12 @@ export default function StoreProductsPage() {
                     </td>
 
                     {/* Price */}
-                    <td className="px-4 py-3 text-right tabular-nums font-medium">
+                    <td className="px-4 py-3 text-center tabular-nums font-medium">
                       {fmt(p.price || 0)}
                     </td>
 
                     {/* Stock */}
-                    <td className="px-4 py-3 text-right hidden sm:table-cell">
+                    <td className="px-4 py-3 text-center hidden sm:table-cell">
                       <StockBadge stock={p.stock} unit={p.unit} />
                     </td>
 
@@ -381,12 +376,12 @@ export default function StoreProductsPage() {
                     </td>
 
                     {/* Date */}
-                    <td className="px-4 py-3 text-muted-foreground text-xs hidden xl:table-cell">
+                    <td className="px-4 py-3 text-center text-muted-foreground text-xs hidden xl:table-cell">
                       {fmtDate(p.created_at)}
                     </td>
 
                     {/* Actions */}
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-center">
                       {actionLoading?.startsWith(p.id) ? (
                         <div className="flex justify-end">
                           <div className="h-4 w-4 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />

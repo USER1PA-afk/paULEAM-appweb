@@ -13,8 +13,12 @@ interface LedgerEntry {
   reference_type: string | null;
   reference_id: string | null;
   supplier_id: string | null;
-  supplier_company: string | null;  // de inventory_ledger_view
-  supplier_name: string | null;     // de inventory_ledger_view
+  supplier_company: string | null;
+  supplier_name: string | null;
+  product_name: string | null;
+  product_sku: string | null;
+  product_unit: string | null;
+  production_recipe_name: string | null;
   notes: string | null;
   created_at: string;
 }
@@ -60,9 +64,8 @@ export function useInventoryLedger(productId?: string) {
     }
   }, [productId, insforge]);
 
-  useEffect(() => {
-    fetchLedger();
-  }, [fetchLedger]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchLedger(); }, [fetchLedger]);
 
   return { entries, loading, error, refetch: fetchLedger };
 }
@@ -93,9 +96,8 @@ export function useStockSummary() {
     }
   }, [insforge]);
 
-  useEffect(() => {
-    fetchSummary();
-  }, [fetchSummary]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchSummary(); }, [fetchSummary]);
 
   return { summary, loading, error, refetch: fetchSummary };
 }

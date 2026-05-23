@@ -36,9 +36,21 @@ export function useAuth() {
 
   // Verificar sesión al montar
   useEffect(() => {
+    let active = true;
     async function checkSession() {
+      // Crear una promesa que rechaza después de un timeout de 3 segundos
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), 3000)
+      );
+
       try {
-        const { data, error } = await insforge.auth.getCurrentUser();
+        const { data, error } = await Promise.race([
+          insforge.auth.getCurrentUser(),
+          timeoutPromise,
+        ]);
+
+        if (!active) return;
+
         if (error || !data?.user) {
           setState({ user: null, loading: false, error: null });
           return;
@@ -48,11 +60,16 @@ export function useAuth() {
           loading: false,
           error: null,
         });
-      } catch {
-        setState((prev) => ({ ...prev, loading: false }));
+      } catch (err) {
+        if (!active) return;
+        console.warn("La verificación de sesión falló o expiró:", err);
+        setState({ user: null, loading: false, error: err instanceof Error ? err.message : "Error de sesión" });
       }
     }
     checkSession();
+    return () => {
+      active = false;
+    };
   }, [insforge]);
 
   const signIn = useCallback(
@@ -84,7 +101,7 @@ export function useAuth() {
     async (email: string, password: string, name: string) => {
       setState((prev) => ({ ...prev, loading: true, error: null }));
       try {
-        const { data, error } = await insforge.auth.signUp({
+        const { error } = await insforge.auth.signUp({
           email,
           password,
           name,
@@ -163,27 +180,48 @@ export function useRole() {
   const insforge = getInsforge();
 
   useEffect(() => {
+    let active = true;
     async function fetchRole() {
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), 3000)
+      );
+
       try {
-        const { data: userData } = await insforge.auth.getCurrentUser();
+        const { data: userData } = await Promise.race([
+          insforge.auth.getCurrentUser(),
+          timeoutPromise,
+        ]);
+
+        if (!active) return;
+
         if (!userData?.user?.id) {
           setLoading(false);
           return;
         }
-        const { data } = await insforge.database
-          .from("profiles")
-          .select("role")
-          .eq("id", userData.user.id)
-          .single();
+
+        const { data } = await Promise.race([
+          insforge.database
+            .from("profiles")
+            .select("role")
+            .eq("id", userData.user.id)
+            .single(),
+          timeoutPromise,
+        ]);
+
+        if (!active) return;
 
         setRole((data as { role: string } | null)?.role ?? null);
-      } catch {
-        setRole(null);
+      } catch (err) {
+        console.warn("La carga de rol falló o expiró:", err);
+        if (active) setRole(null);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
     fetchRole();
+    return () => {
+      active = false;
+    };
   }, [insforge]);
 
   return {
