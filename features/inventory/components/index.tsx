@@ -488,6 +488,13 @@ function buildDisplayItems(entries: LedgerEntry[]): DisplayItem[] {
       items.push({ kind: "entry", entry });
     }
   }
+  // Within each production group: EGRESOs (raw materials) first, INGRESOs (finished product) last.
+  for (const group of seenGroups.values()) {
+    group.sort((a, b) => {
+      if (a.movement_type === b.movement_type) return 0;
+      return a.movement_type === "EGRESO" ? -1 : 1;
+    });
+  }
   return items;
 }
 

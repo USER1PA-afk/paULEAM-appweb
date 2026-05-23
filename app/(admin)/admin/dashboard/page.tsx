@@ -101,9 +101,10 @@ export default function AdminDashboard() {
   const { orders: prodOrders } = useProductionOrders();
   const { orders: salesOrders } = useOrderManagement();
 
-  const totalProducts    = summary.length;
-  const lowStock         = summary.filter((s) => Number(s.stock_actual) < 10 && Number(s.stock_actual) > 0).length;
-  const outOfStock       = summary.filter((s) => Number(s.stock_actual) <= 0).length;
+  const finishedGoods    = summary.filter((s) => s.type === "PRODUCTO_TERMINADO");
+  const totalProducts    = finishedGoods.length;
+  const lowStock         = finishedGoods.filter((s) => Number(s.stock_actual) < 10 && Number(s.stock_actual) > 0).length;
+  const outOfStock       = finishedGoods.filter((s) => Number(s.stock_actual) <= 0).length;
   const pendingProduction = prodOrders.filter((o) => o.status === "BORRADOR" || o.status === "EN_PROCESO").length;
   const completedProduction = prodOrders.filter((o) => o.status === "COMPLETADA").length;
   const pendingSales     = salesOrders.filter((o) => o.status === "PAGADO").length;
@@ -190,9 +191,9 @@ export default function AdminDashboard() {
 
         {/* Stock Summary mini */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Stock Actual</h2>
+          <h2 className="text-lg font-semibold text-foreground">Stock — Productos Terminados</h2>
           <div className="rounded-xl border border-border bg-card overflow-hidden">
-            {summary.length === 0 ? (
+            {finishedGoods.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <Package className="h-10 w-10 mb-3 opacity-30" />
                 <p className="text-sm">No hay productos registrados</p>
@@ -205,21 +206,19 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <div className="max-h-80 overflow-y-auto">
-                {summary.slice(0, 8).map((item) => (
+                {finishedGoods.slice(0, 8).map((item) => (
                   <div
                     key={item.product_id}
                     className="flex items-center justify-between border-b border-border/50 px-4 py-3 last:border-0 hover:bg-muted/30 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span
-                        className={`inline-flex h-2 w-2 rounded-full shrink-0 ${
-                          Number(item.stock_actual) <= 0
-                            ? "bg-red-500"
-                            : Number(item.stock_actual) < 10
-                            ? "bg-amber-500"
-                            : "bg-accent-500"
-                        }`}
-                      />
+                      {Number(item.stock_actual) <= 0 ? (
+                        <span aria-label="Sin stock" className="inline-flex h-2 w-2 rounded-full shrink-0 bg-red-500" />
+                      ) : Number(item.stock_actual) < 10 ? (
+                        <AlertTriangle aria-label="Stock bajo" className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                      ) : (
+                        <span aria-label="Stock OK" className="inline-flex h-2 w-2 rounded-full shrink-0 bg-accent-500" />
+                      )}
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
                         <p className="text-xs text-muted-foreground">{item.sku}</p>
@@ -237,12 +236,12 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 ))}
-                {summary.length > 8 && (
+                {finishedGoods.length > 8 && (
                   <Link
                     href="/admin/inventory"
                     className="block border-t border-border bg-muted/30 px-4 py-2.5 text-center text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors"
                   >
-                    Ver todos ({summary.length}) →
+                    Ver todos ({finishedGoods.length}) →
                   </Link>
                 )}
               </div>
