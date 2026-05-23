@@ -105,7 +105,7 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
             </span>
           </div>
           <button
-            onClick={signOut}
+            onClick={() => signOut()}
             aria-label="Cerrar sesión"
             title="Cerrar sesión"
             className="flex h-8 w-8 items-center justify-center rounded-md
