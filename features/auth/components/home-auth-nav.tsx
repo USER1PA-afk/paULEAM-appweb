@@ -21,7 +21,7 @@ export function HomeAuthNav() {
           {role === "cliente" ? "Ir a la Tienda" : "Ir al Panel"}
         </Link>
         <button
-          onClick={signOut}
+          onClick={() => signOut()}
           className="rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
         >
           Cerrar sesión

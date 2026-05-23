@@ -13,7 +13,7 @@ import type { NextRequest } from "next/server";
  * para que el proxy pueda tomar decisiones sin JWT verification.
  * La validación real del JWT ocurre en Insforge Auth (servidor).
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Detectar sesión activa
