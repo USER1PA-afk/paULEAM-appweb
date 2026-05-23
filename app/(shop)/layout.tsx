@@ -107,7 +107,7 @@ export default function ShopLayout({
                   </Link>
                 )}
                 <button
-                  onClick={signOut}
+                  onClick={() => signOut()}
                   className="rounded-md bg-zinc-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
                 >
                   Cerrar sesión

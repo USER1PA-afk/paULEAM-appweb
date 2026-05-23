@@ -133,7 +133,7 @@ export function useAuth() {
     [insforge]
   );
 
-  const signOut = useCallback(async () => {
+  const signOut = useCallback(async (shouldRedirect: boolean = true) => {
     try {
       await insforge.auth.signOut();
     } catch (err) {
@@ -157,8 +157,10 @@ export function useAuth() {
           }
         }
       }
-      // Redirigir al index principal tras cerrar sesión
-      router.push("/");
+      // Redirigir al index principal tras cerrar sesión si se requiere
+      if (shouldRedirect) {
+        router.push("/");
+      }
     }
   }, [insforge, router]);
 

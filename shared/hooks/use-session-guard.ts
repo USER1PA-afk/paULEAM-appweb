@@ -33,8 +33,9 @@ export function useSessionGuard(onExpired: () => Promise<void>) {
 
         if (url.startsWith(insforgeUrl)) {
           handlingRef.current = true;
-          await onExpired();
-          router.replace("/login");
+          // Let the Layout handle the redirect via auth state changes.
+          // We still call onExpired to clean up cookies/state.
+          await onExpired().catch(() => {});
         }
       }
 
