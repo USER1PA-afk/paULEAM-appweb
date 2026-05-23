@@ -2,44 +2,37 @@ import Link from "next/link";
 import Image from "next/image";
 import { ThemeToggle } from "@shared/components/theme-toggle";
 import { HomeAuthNav } from "@features/auth/components/home-auth-nav";
-import { Package, Factory, ClipboardList, ShoppingCart } from "lucide-react";
 import { Footer } from "@shared/components/footer";
+import { ProductCarousel } from "@features/store-products/components/product-carousel";
+import { Leaf, Award, Truck } from "lucide-react";
 
+// ─── Value props ──────────────────────────────────────────────────────────────
 
-const FEATURES = [
+const VALUES = [
   {
-    title: "Inventario",
-    desc: "Ledger de doble entrada inmutable. Sin UPDATE, solo INSERT.",
-    Icon: Package,
-    color: "border-brand-200 dark:border-brand-800",
-    badge: "bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300",
-    iconColor: "text-brand-600 dark:text-brand-400",
-  },
-  {
-    title: "Producción",
-    desc: "Motor de escalado automático con triggers PL/pgSQL.",
-    Icon: Factory,
-    color: "border-accent-200 dark:border-accent-800",
-    badge: "bg-accent-50 text-accent-700 dark:bg-accent-900/30 dark:text-accent-300",
+    Icon: Leaf,
+    title: "100% Natural",
+    desc: "Elaborado con materias primas seleccionadas, sin conservantes artificiales.",
+    iconBg: "bg-accent-50 dark:bg-accent-900/30",
     iconColor: "text-accent-600 dark:text-accent-400",
   },
   {
-    title: "Recetas",
-    desc: "Fórmulas maestras con cálculo de ingredientes proporcional.",
-    Icon: ClipboardList,
-    color: "border-brand-200 dark:border-brand-800",
-    badge: "bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300",
+    Icon: Award,
+    title: "Calidad ULEAM",
+    desc: "Producción supervisada bajo estándares académicos y de inocuidad alimentaria.",
+    iconBg: "bg-brand-50 dark:bg-brand-900/30",
     iconColor: "text-brand-600 dark:text-brand-400",
   },
   {
-    title: "E-Commerce",
-    desc: "Tienda integrada con reservas de stock concurrentes.",
-    Icon: ShoppingCart,
-    color: "border-accent-200 dark:border-accent-800",
-    badge: "bg-accent-50 text-accent-700 dark:bg-accent-900/30 dark:text-accent-300",
+    Icon: Truck,
+    title: "Entrega directa",
+    desc: "Directo de nuestra planta a tu puerta, fresco y con trazabilidad completa.",
+    iconBg: "bg-accent-50 dark:bg-accent-900/30",
     iconColor: "text-accent-600 dark:text-accent-400",
   },
 ];
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   return (
@@ -49,7 +42,6 @@ export default function HomePage() {
       <header className="sticky top-0 z-50 border-b border-border/60 bg-card/90 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
 
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-3">
             <Image
               src="/logo-pauleam.png"
@@ -58,14 +50,11 @@ export default function HomePage() {
               height={36}
               className="shrink-0 object-contain dark:invert"
             />
-            <div className="flex flex-col leading-tight">
-              <span className="text-sm font-extrabold tracking-tight text-foreground uppercase">
-                PAuleam
-              </span>
-            </div>
+            <span className="text-sm font-extrabold tracking-tight text-foreground uppercase">
+              PAuleam
+            </span>
           </Link>
 
-          {/* Nav links */}
           <nav aria-label="Principal" className="hidden items-center gap-6 sm:flex">
             <Link
               href="/shop/catalog"
@@ -79,68 +68,73 @@ export default function HomePage() {
             </div>
           </nav>
 
-          {/* Mobile: solo toggle */}
           <div className="flex sm:hidden">
             <ThemeToggle />
           </div>
         </div>
       </header>
 
-      {/* ── ULEAM accent stripe ── */}
+      {/* ── Brand accent stripe ── */}
       <div className="h-1 w-full bg-linear-to-r from-brand-600 via-brand-500 to-accent-500" />
 
-      {/* ── Hero ── */}
-      <main id="main-content" className="relative flex flex-1 items-center overflow-hidden">
-        {/* Background */}
-        <div aria-hidden="true" className="absolute inset-0 bg-white dark:bg-background" />
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 opacity-[0.025] dark:opacity-[0.04]"
-          style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, var(--color-brand-500) 1px, transparent 0)`,
-            backgroundSize: "44px 44px",
-          }}
-        />
+      <main id="main-content" className="flex flex-1 flex-col">
 
-        <div className="relative z-10 mx-auto max-w-6xl px-6 py-10 lg:py-8">
-          <div className="grid gap-8 lg:gap-12 lg:grid-cols-2 lg:items-center">
+        {/* ── Hero ── */}
+        <section className="relative overflow-hidden bg-white dark:bg-background">
+          {/* Subtle dot grid */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
+            style={{
+              backgroundImage: `radial-gradient(circle at 1px 1px, var(--color-brand-500) 1px, transparent 0)`,
+              backgroundSize: "40px 40px",
+            }}
+          />
+          {/* Warm radial glow */}
+          <div
+            aria-hidden="true"
+            className="absolute -top-32 -right-32 h-[500px] w-[500px] rounded-full bg-brand-100/40 dark:bg-brand-900/10 blur-3xl"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute -bottom-20 -left-20 h-[400px] w-[400px] rounded-full bg-accent-100/40 dark:bg-accent-900/10 blur-3xl"
+          />
 
-            {/* Copy */}
-            <div className="space-y-5">
-              {/* Institution badge */}
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 px-3 py-1 dark:border-brand-800">
-                <span className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" aria-hidden="true" />
-                <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">
-                  ULEAM · Planta de Alimentos · ERP
+          <div className="relative z-10 mx-auto max-w-6xl px-6 py-16 lg:py-24">
+            <div className="max-w-2xl space-y-6">
+              {/* Institution pill */}
+              <div className="inline-flex items-center rounded-full border border-brand-200 dark:border-brand-800 px-3 py-1">
+                <span className="text-xs font-semibold text-brand-700 dark:text-brand-300 uppercase tracking-wide">
+                  Planta de Alimentos · ULEAM Extension Chone
                 </span>
               </div>
 
               <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-                Gestión total de tu{" "}
-                <span className="relative">
+                Sabores que nacen{" "}
+                <span className="relative whitespace-nowrap">
                   <span className="bg-linear-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
-                    planta
+                    de la tierra
                   </span>
-                  <span className="absolute -bottom-1 left-0 h-0.5 w-full bg-linear-to-r from-brand-500 to-accent-500 rounded-full" />
-                </span>{" "}
-                de{" "}
-                <span className="bg-linear-to-r from-accent-600 to-accent-400 bg-clip-text text-transparent">
-                  alimentos
+                  <span
+                    aria-hidden="true"
+                    className="absolute -bottom-1 left-0 h-0.5 w-full rounded-full bg-linear-to-r from-brand-500 to-accent-500"
+                  />
                 </span>
               </h1>
 
-              <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
-                Controla inventario, producción, recetas y ventas desde un solo
-                lugar. Trazabilidad completa con ledger inmutable y
-                automatización inteligente.
+              <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+                Productos alimenticios artesanales elaborados en la Planta de
+                Alimentos de la{" "}
+                <span className="font-semibold text-foreground">ULEAM</span>.
+                Calidad académica, sabor auténtico, directo a tu mesa.
               </p>
 
-              {/* Stats row */}
-              <div className="flex gap-6 pt-1">
+              {/* Metrics */}
+              <div className="flex flex-wrap gap-8 pt-2">
                 {[
-                  { value: "100%", label: "Trazable", color: "text-brand-600 dark:text-brand-400" },
-                  { value: "24/7",  label: "Disponible", color: "text-accent-600 dark:text-accent-400" },
-                  { value: "∞",     label: "Escalable", color: "text-uleam-gray dark:text-muted-foreground" },
+                  { value: "100%", label: "Natural", color: "text-accent-600 dark:text-accent-400" },
+                  { value: "S/A",  label: "Conservantes", color: "text-brand-600 dark:text-brand-400" },
+                  { value: "Local", label: "Producción", color: "text-uleam-gray dark:text-muted-foreground" },
                 ].map((s) => (
                   <div key={s.label}>
                     <div className={`text-2xl font-extrabold ${s.color}`}>{s.value}</div>
@@ -148,50 +142,57 @@ export default function HomePage() {
                   </div>
                 ))}
               </div>
-
-              {/* CTA buttons */}
-              <div className="flex flex-wrap gap-3 pt-1">
-                <Link
-                  href="/shop/catalog"
-                  className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-brand-700 hover:shadow-lg active:scale-[.98] transition-all duration-150"
-                >
-                  Ver Catálogo
-                  <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                  </svg>
-                </Link>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-6 py-3 text-sm font-semibold text-foreground shadow-sm hover:border-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all duration-150"
-                >
-                  Panel Admin
-                </Link>
-              </div>
-            </div>
-
-            {/* Feature grid */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              {FEATURES.map((feat) => (
-                <div
-                  key={feat.title}
-                  className={`group rounded-2xl border-2 ${feat.color} bg-card p-4 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200`}
-                >
-                  <div className="mb-2 flex items-center justify-between">
-                    <feat.Icon aria-hidden="true" className={`h-5 w-5 ${feat.iconColor}`} />
-                  </div>
-                  <h3 className="text-sm font-bold text-foreground">{feat.title}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    {feat.desc}
-                  </p>
-                </div>
-              ))}
             </div>
           </div>
-        </div>
+        </section>
+
+        {/* ── Product Carousel ── */}
+        <section className="bg-muted/40 dark:bg-muted/10 border-y border-border">
+          <div className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
+            <div className="mb-8 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400 mb-1">
+                  Nuestros productos
+                </p>
+                <h2 className="text-2xl font-extrabold text-foreground sm:text-3xl">
+                  Lo más vendido
+                </h2>
+              </div>
+              <Link
+                href="/shop/catalog"
+                className="shrink-0 text-sm font-semibold text-brand-600 dark:text-brand-400 hover:underline underline-offset-4 transition-colors"
+              >
+                Ver todo →
+              </Link>
+            </div>
+
+            <ProductCarousel />
+          </div>
+        </section>
+
+        {/* ── Value props ── */}
+        <section className="mx-auto max-w-6xl px-6 py-12 sm:py-16 w-full">
+          <div className="grid gap-6 sm:grid-cols-3">
+            {VALUES.map((v) => (
+              <div
+                key={v.title}
+                className="rounded-2xl border border-border bg-card p-6 space-y-3 hover:shadow-md transition-shadow duration-200"
+              >
+                <div className={`inline-flex rounded-xl p-3 ${v.iconBg}`}>
+                  <v.Icon aria-hidden="true" className={`h-5 w-5 ${v.iconColor}`} />
+                </div>
+                <h3 className="font-bold text-foreground">{v.title}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {v.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
       </main>
 
       <Footer />
-
     </div>
   );
 }
