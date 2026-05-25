@@ -190,9 +190,14 @@ export function useProducts() {
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const rawMaterials = products.filter((p) => p.type === "MATERIA_PRIMA");
+  const supplies = products.filter((p) => p.type === "INSUMO");
   const finishedProducts = products.filter((p) => p.type === "PRODUCTO_TERMINADO");
+  // Productos válidos como ingredientes de receta
+  const ingredientProducts = products.filter(
+    (p) => p.type === "MATERIA_PRIMA" || p.type === "INSUMO"
+  );
 
-  return { products, rawMaterials, finishedProducts, loading, refetch: fetchProducts };
+  return { products, rawMaterials, supplies, ingredientProducts, finishedProducts, loading, refetch: fetchProducts };
 }
 
 /**
@@ -269,10 +274,17 @@ export function useRecipeMutations() {
 
   /** Agregar ingrediente a una receta */
   const addIngredient = useCallback(
-    async (data: { recipe_id: string; product_id: string; quantity: number; unit: string }) => {
+    async (data: {
+      recipe_id: string;
+      product_id: string;
+      quantity: number;
+      unit: string;
+      ingredient_role?: "MATERIA_PRIMA" | "INSUMO";
+      notes?: string | null;
+    }) => {
       const { error } = await insforge.database
         .from("recipe_ingredients")
-        .insert(data);
+        .insert({ ingredient_role: "MATERIA_PRIMA", ...data });
 
       if (error) throw new Error(error.details ? `${error.message}: ${error.details}` : error.message || "Error al agregar ingrediente");
     },
@@ -294,7 +306,13 @@ export function useRecipeMutations() {
 
   /** Reemplazar todos los ingredientes de una receta (borrar y reinsertar) */
   const replaceIngredients = useCallback(
-    async (recipeId: string, ingredients: { product_id: string; quantity: number; unit: string }[]) => {
+    async (recipeId: string, ingredients: {
+      product_id: string;
+      quantity: number;
+      unit: string;
+      ingredient_role?: "MATERIA_PRIMA" | "INSUMO";
+      notes?: string | null;
+    }[]) => {
       // Eliminar existentes
       const { error: delErr } = await insforge.database
         .from("recipe_ingredients")
@@ -310,6 +328,8 @@ export function useRecipeMutations() {
           product_id: ing.product_id,
           quantity: ing.quantity,
           unit: ing.unit,
+          ingredient_role: ing.ingredient_role ?? "MATERIA_PRIMA",
+          notes: ing.notes ?? null,
         }));
 
         const { error: insErr } = await insforge.database

@@ -8,17 +8,21 @@ import { useRole } from "@features/auth/hooks";
 import { Tag, AlertTriangle, Pencil, Trash2, Star, ImagePlus, X as XIcon } from "lucide-react";
 import Image from "next/image";
 
+type ProductType = "MATERIA_PRIMA" | "INSUMO" | "ENVASE_EMPAQUE" | "PRODUCTO_TERMINADO" | "OTRO";
+
 interface Product {
   id: string;
   name: string;
   sku: string;
-  type: "MATERIA_PRIMA" | "PRODUCTO_TERMINADO";
+  type: ProductType;
   unit: string;
   category_id: string | null;
   description: string | null;
   price: number;
   image_url: string | null;
   is_active: boolean;
+  min_stock_alert: number | null;
+  cost_per_unit: number;
   created_at: string;
 }
 
@@ -28,12 +32,25 @@ interface ProductWithSuppliers extends Product {
 
 type FormMode = "create" | "edit";
 
+const PRODUCT_TYPE_OPTIONS: { value: ProductType; label: string; color: string }[] = [
+  { value: "MATERIA_PRIMA",      label: "Materia Prima",       color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  { value: "INSUMO",             label: "Insumo / Auxiliar",   color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+  { value: "ENVASE_EMPAQUE",     label: "Envase / Empaque",    color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  { value: "PRODUCTO_TERMINADO", label: "Producto Terminado",  color: "bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400" },
+  { value: "OTRO",               label: "Otro",                color: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" },
+];
+
+// Tipos que requieren proveedor y pueden comprarse externamente
+const PURCHASABLE_TYPES: ProductType[] = ["MATERIA_PRIMA", "INSUMO", "ENVASE_EMPAQUE", "OTRO"];
+
 const EMPTY_FORM = {
   name: "",
   sku: "",
-  type: "MATERIA_PRIMA" as "MATERIA_PRIMA" | "PRODUCTO_TERMINADO",
+  type: "MATERIA_PRIMA" as ProductType,
   unit: "kg",
   price: "",
+  cost_per_unit: "",
+  min_stock_alert: "",
   description: "",
 };
 
@@ -44,7 +61,7 @@ export default function AdminProductsPage() {
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("create");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ ...EMPTY_FORM });
+  const [formData, setFormData] = useState<typeof EMPTY_FORM>({ ...EMPTY_FORM });
 
   const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
   const [primarySupplierId, setPrimarySupplierId] = useState<string>("");
@@ -176,7 +193,7 @@ export default function AdminProductsPage() {
   }
 
   function resetForm() {
-    setFormData({ ...EMPTY_FORM });
+    setFormData({ ...EMPTY_FORM } as typeof EMPTY_FORM);
     setSelectedSupplierIds([]);
     setPrimarySupplierId("");
     setImageFile(null);
@@ -198,6 +215,8 @@ export default function AdminProductsPage() {
       type: p.type,
       unit: p.unit,
       price: p.price ? String(p.price) : "",
+      cost_per_unit: p.cost_per_unit ? String(p.cost_per_unit) : "",
+      min_stock_alert: p.min_stock_alert != null ? String(p.min_stock_alert) : "",
       description: p.description ?? "",
     });
     setImageFile(null);
@@ -234,15 +253,10 @@ export default function AdminProductsPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (formData.type === "MATERIA_PRIMA") {
-      if (selectedSupplierIds.length === 0) {
-        setError("Debes seleccionar al menos un proveedor para materia prima.");
-        return;
-      }
-      if (selectedSupplierIds.length > 1 && !primarySupplierId) {
-        setError("Debes seleccionar un proveedor principal.");
-        return;
-      }
+    const isPurchasable = PURCHASABLE_TYPES.includes(formData.type);
+    if (isPurchasable && selectedSupplierIds.length > 1 && !primarySupplierId) {
+      setError("Debes seleccionar un proveedor principal.");
+      return;
     }
 
     setSaving(true);
@@ -271,6 +285,8 @@ export default function AdminProductsPage() {
         type: formData.type,
         unit: formData.unit,
         price: Number(formData.price) || 0,
+        cost_per_unit: Number(formData.cost_per_unit) || 0,
+        min_stock_alert: formData.min_stock_alert ? Number(formData.min_stock_alert) : null,
         description: formData.description || null,
       };
       if (uploadedImageUrl !== undefined) {
@@ -288,7 +304,8 @@ export default function AdminProductsPage() {
         return;
       }
 
-      if (formData.type === "MATERIA_PRIMA" && selectedSupplierIds.length > 0) {
+      const isPurchasableEdit = PURCHASABLE_TYPES.includes(formData.type);
+      if (isPurchasableEdit && selectedSupplierIds.length > 0) {
         const effective =
           selectedSupplierIds.length === 1 ? selectedSupplierIds[0] : primarySupplierId;
         await linkSuppliersToProduct(editingId, selectedSupplierIds, effective);
@@ -302,6 +319,8 @@ export default function AdminProductsPage() {
           type: formData.type,
           unit: formData.unit,
           price: Number(formData.price) || 0,
+          cost_per_unit: Number(formData.cost_per_unit) || 0,
+          min_stock_alert: formData.min_stock_alert ? Number(formData.min_stock_alert) : null,
           description: formData.description || null,
           image_url: uploadedImageUrl ?? null,
         })
@@ -314,7 +333,8 @@ export default function AdminProductsPage() {
         return;
       }
 
-      if (formData.type === "MATERIA_PRIMA" && selectedSupplierIds.length > 0) {
+      const isPurchasableCreate = PURCHASABLE_TYPES.includes(formData.type);
+      if (isPurchasableCreate && selectedSupplierIds.length > 0) {
         const effective =
           selectedSupplierIds.length === 1 ? selectedSupplierIds[0] : primarySupplierId;
         const { error: linkErr } = await linkSuppliersToProduct(
@@ -654,20 +674,24 @@ export default function AdminProductsPage() {
                 id="prod-type"
                 value={formData.type}
                 onChange={(e) => {
-                  setFormData((p) => ({
-                    ...p,
-                    type: e.target.value as "MATERIA_PRIMA" | "PRODUCTO_TERMINADO",
-                  }));
-                  if (e.target.value === "PRODUCTO_TERMINADO") {
+                  const newType = e.target.value as ProductType;
+                  setFormData((p) => ({ ...p, type: newType }));
+                  if (!PURCHASABLE_TYPES.includes(newType)) {
                     setSelectedSupplierIds([]);
                     setPrimarySupplierId("");
                   }
                 }}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
               >
-                <option value="MATERIA_PRIMA">Materia Prima</option>
-                <option value="PRODUCTO_TERMINADO">Producto Terminado</option>
+                {PRODUCT_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
+              {formData.type === "PRODUCTO_TERMINADO" && (
+                <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                  Los productos terminados solo ingresan al inventario mediante producción o empaque.
+                </p>
+              )}
             </div>
 
             {/* Unidad */}
@@ -693,7 +717,7 @@ export default function AdminProductsPage() {
             {formData.type === "PRODUCTO_TERMINADO" && (
               <div className="space-y-1.5">
                 <label htmlFor="prod-price" className="text-xs font-medium text-muted-foreground">
-                  Precio (USD)
+                  Precio de venta (USD)
                 </label>
                 <input
                   id="prod-price"
@@ -705,6 +729,50 @@ export default function AdminProductsPage() {
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
                   placeholder="0.00"
                 />
+              </div>
+            )}
+
+            {/* Costo unitario — para materias primas, insumos y envases (afecta costo de producción) */}
+            {formData.type !== "PRODUCTO_TERMINADO" && (
+              <div className="space-y-1.5">
+                <label htmlFor="prod-cost" className="text-xs font-medium text-muted-foreground">
+                  Costo unitario (USD)
+                </label>
+                <input
+                  id="prod-cost"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  value={formData.cost_per_unit}
+                  onChange={(e) => setFormData((p) => ({ ...p, cost_per_unit: e.target.value }))}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                  placeholder="0.00"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Se usa para calcular el costo de producción automáticamente.
+                </p>
+              </div>
+            )}
+
+            {/* Alerta de stock mínimo — solo para tipos comprables */}
+            {PURCHASABLE_TYPES.includes(formData.type) && (
+              <div className="space-y-1.5">
+                <label htmlFor="prod-min-stock" className="text-xs font-medium text-muted-foreground">
+                  Alerta stock mínimo
+                </label>
+                <input
+                  id="prod-min-stock"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.min_stock_alert}
+                  onChange={(e) => setFormData((p) => ({ ...p, min_stock_alert: e.target.value }))}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                  placeholder="Opcional"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Se mostrará una alerta cuando el stock sea igual o inferior a este valor.
+                </p>
               </div>
             )}
 
@@ -792,8 +860,8 @@ export default function AdminProductsPage() {
             </div>
           )}
 
-          {/* ─── Proveedores (solo MATERIA_PRIMA) ─── */}
-          {formData.type === "MATERIA_PRIMA" && (
+          {/* ─── Proveedores (tipos comprables) ─── */}
+          {PURCHASABLE_TYPES.includes(formData.type) && (
             <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
               {formMode === "edit" && (
                 <p className="text-[10px] text-muted-foreground bg-amber-50 border border-amber-200 rounded-md px-3 py-1.5 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300">
@@ -845,6 +913,7 @@ export default function AdminProductsPage() {
         </div>
       )}
 
+
       {/* ─── Tables ─── */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
@@ -852,254 +921,120 @@ export default function AdminProductsPage() {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* ─── Materias Primas ─── */}
-          <div className="space-y-3">
-            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-500" />
-              Materias Primas
-            </h2>
-            <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">SKU</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Nombre</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden sm:table-cell">Unidad</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden md:table-cell">Proveedores</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.filter((p) => p.type === "MATERIA_PRIMA").length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
-                        <Tag className="h-7 w-7 mx-auto mb-2 opacity-25" />
-                        No hay materias primas registradas.
-                      </td>
-                    </tr>
-                  ) : (
-                    products
-                      .filter((p) => p.type === "MATERIA_PRIMA")
-                      .map((p) => (
-                        <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 text-center font-mono text-xs text-muted-foreground">{p.sku}</td>
-                          <td className="px-4 py-3 text-center font-medium">{p.name}</td>
-                          <td className="px-4 py-3 text-center text-muted-foreground hidden sm:table-cell">{p.unit}</td>
-                          <td className="px-4 py-3 text-center hidden md:table-cell">
-                            {p.suppliers.length === 0 ? (
-                              <span className="text-xs text-destructive/70">Sin proveedor</span>
-                            ) : (
-                              <div className="flex flex-wrap gap-1">
-                                {p.suppliers.map((s, i) => (
-                                  <span
-                                    key={i}
-                                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                                      s.is_primary ? "bg-brand-100 text-brand-700" : "bg-muted text-muted-foreground"
-                                    }`}
-                                  >
-                                    {s.is_primary && <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />}
-                                    {s.company ?? s.name}
-                                  </span>
-                                ))}
-                              </div>
+          {PRODUCT_TYPE_OPTIONS.map(({ value: typeValue, label: typeLabel, color: typeColor }) => {
+            const typeProducts = products.filter((p) => p.type === typeValue);
+            const typeArchived = archivedProducts.filter((p) => p.type === typeValue);
+            const isPurchasable = PURCHASABLE_TYPES.includes(typeValue);
+            return (
+              <div key={typeValue} className="space-y-3">
+                <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${typeColor}`}>
+                    {typeLabel}
+                  </span>
+                  <span className="text-xs text-muted-foreground">({typeProducts.length})</span>
+                </h2>
+                <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className="px-4 py-3 text-center font-medium text-muted-foreground">SKU</th>
+                        <th className="px-4 py-3 text-center font-medium text-muted-foreground">Nombre</th>
+                        <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden sm:table-cell">Unidad</th>
+                        {isPurchasable && <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden md:table-cell">Proveedores</th>}
+                        {typeValue === "PRODUCTO_TERMINADO" && <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden lg:table-cell">Precio</th>}
+                        <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
+                        <th className="px-4 py-3 text-center font-medium text-muted-foreground">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {typeProducts.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                            <Tag className="h-6 w-6 mx-auto mb-1 opacity-25" />
+                            No hay {typeLabel.toLowerCase()} registrados.
+                          </td>
+                        </tr>
+                      ) : (
+                        typeProducts.map((p) => (
+                          <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+                            <td className="px-4 py-3 text-center font-mono text-xs text-muted-foreground">{p.sku}</td>
+                            <td className="px-4 py-3 text-center font-medium">{p.name}</td>
+                            <td className="px-4 py-3 text-center text-muted-foreground hidden sm:table-cell">{p.unit}</td>
+                            {isPurchasable && (
+                              <td className="px-4 py-3 text-center hidden md:table-cell">
+                                {p.suppliers.length === 0 ? (
+                                  <span className="text-xs text-muted-foreground/60">—</span>
+                                ) : (
+                                  <div className="flex flex-wrap gap-1 justify-center">
+                                    {p.suppliers.map((s, i) => (
+                                      <span key={i} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${s.is_primary ? 'bg-brand-100 text-brand-700' : 'bg-muted text-muted-foreground'}`}>
+                                        {s.is_primary && <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />}
+                                        {s.company ?? s.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </td>
                             )}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`inline-flex h-2 w-2 rounded-full ${p.is_active ? "bg-brand-500" : "bg-red-500"}`} />
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => openEdit(p)}
-                                className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors whitespace-nowrap"
-                              >
-                                <Pencil className="h-3 w-3" /> Editar
-                              </button>
-                              {isAdmin && (
-                                <button
-                                  onClick={() => openDeleteConfirm(p)}
-                                  className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors whitespace-nowrap"
-                                >
-                                  <Trash2 className="h-3 w-3" /> Eliminar
+                            {typeValue === "PRODUCTO_TERMINADO" && (
+                              <td className="px-4 py-3 text-center tabular-nums font-medium hidden lg:table-cell">
+                                {Number(p.price).toLocaleString('es-EC', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })}
+                              </td>
+                            )}
+                            <td className="px-4 py-3 text-center">
+                              <span className={`inline-flex h-2 w-2 rounded-full ${p.is_active ? 'bg-brand-500' : 'bg-red-500'}`} />
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <button onClick={() => openEdit(p)} className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors whitespace-nowrap">
+                                  <Pencil className="h-3 w-3" /> Editar
                                 </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* ─── Materias Primas Archivadas ─── */}
-          {showArchived && (
-            <div className="space-y-2">
-              {loadingArchived ? (
-                <div className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
-                  Cargando archivados...
+                                {isAdmin && (
+                                  <button onClick={() => openDeleteConfirm(p)} className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors whitespace-nowrap">
+                                    <Trash2 className="h-3 w-3" /> Eliminar
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-              ) : archivedProducts.filter((p) => p.type === "MATERIA_PRIMA").length > 0 ? (
-                <div className="overflow-x-auto rounded-xl border border-amber-200/60 dark:border-amber-800/40 bg-muted/20 shadow-sm">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-amber-50/60 dark:bg-amber-900/10">
-                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">SKU</th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Nombre</th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400 hidden sm:table-cell">Unidad</th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Estado</th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {archivedProducts
-                        .filter((p) => p.type === "MATERIA_PRIMA")
-                        .map((p) => (
+                {showArchived && !loadingArchived && typeArchived.length > 0 && (
+                  <div className="overflow-x-auto rounded-xl border border-amber-200/60 dark:border-amber-800/40 bg-muted/20 shadow-sm">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-amber-50/60 dark:bg-amber-900/10">
+                          <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">SKU</th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Nombre</th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Estado</th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {typeArchived.map((p) => (
                           <tr key={p.id} className="border-b border-border/30 last:border-0 opacity-60">
                             <td className="px-4 py-2.5 text-center font-mono text-xs text-muted-foreground">{p.sku}</td>
-                            <td className="px-4 py-2.5 text-center text-sm font-medium text-foreground">{p.name}</td>
-                            <td className="px-4 py-2.5 text-center text-xs text-muted-foreground hidden sm:table-cell">{p.unit}</td>
+                            <td className="px-4 py-2.5 text-center text-sm font-medium">{p.name}</td>
                             <td className="px-4 py-2.5 text-center">
-                              <span className="inline-flex rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
-                                Archivado
-                              </span>
+                              <span className="inline-flex rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">Archivado</span>
                             </td>
                             <td className="px-4 py-2.5 text-center">
-                              <button
-                                onClick={() => handleReactivate(p.id)}
-                                disabled={saving}
-                                className="inline-flex items-center gap-1 rounded-md bg-accent-600 px-2 py-1 text-xs font-medium text-white hover:bg-accent-700 disabled:opacity-50 transition-colors"
-                              >
+                              <button onClick={() => handleReactivate(p.id)} disabled={saving} className="inline-flex items-center gap-1 rounded-md bg-accent-600 px-2 py-1 text-xs font-medium text-white hover:bg-accent-700 disabled:opacity-50 transition-colors">
                                 Reactivar
                               </button>
                             </td>
                           </tr>
                         ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
-            </div>
-          )}
-
-          {/* ─── Productos Terminados ─── */}
-          <div className="space-y-3">
-            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-brand-500" />
-              Productos Terminados
-            </h2>
-            <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">SKU</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Nombre</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden sm:table-cell">Unidad</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden lg:table-cell">Precio</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.filter((p) => p.type === "PRODUCTO_TERMINADO").length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
-                        <Tag className="h-7 w-7 mx-auto mb-2 opacity-25" />
-                        No hay productos terminados registrados.
-                      </td>
-                    </tr>
-                  ) : (
-                    products
-                      .filter((p) => p.type === "PRODUCTO_TERMINADO")
-                      .map((p) => (
-                        <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 text-center font-mono text-xs text-muted-foreground">{p.sku}</td>
-                          <td className="px-4 py-3 text-center font-medium">{p.name}</td>
-                          <td className="px-4 py-3 text-center text-muted-foreground hidden sm:table-cell">{p.unit}</td>
-                          <td className="px-4 py-3 text-center tabular-nums font-medium hidden lg:table-cell">
-                            {Number(p.price).toLocaleString("es-EC", {
-                              style: "currency",
-                              currency: "USD",
-                              minimumFractionDigits: 2,
-                            })}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`inline-flex h-2 w-2 rounded-full ${p.is_active ? "bg-brand-500" : "bg-red-500"}`} />
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => openEdit(p)}
-                                className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors whitespace-nowrap"
-                              >
-                                <Pencil className="h-3 w-3" /> Editar
-                              </button>
-                              {isAdmin && (
-                                <button
-                                  onClick={() => openDeleteConfirm(p)}
-                                  className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors whitespace-nowrap"
-                                >
-                                  <Trash2 className="h-3 w-3" /> Eliminar
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* ─── Productos Terminados Archivados ─── */}
-          {showArchived && (
-            <div className="space-y-2">
-              {loadingArchived ? null : archivedProducts.filter((p) => p.type === "PRODUCTO_TERMINADO").length > 0 ? (
-                <div className="overflow-x-auto rounded-xl border border-amber-200/60 dark:border-amber-800/40 bg-muted/20 shadow-sm">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-amber-50/60 dark:bg-amber-900/10">
-                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">SKU</th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Nombre</th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400 hidden sm:table-cell">Unidad</th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Estado</th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-400">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {archivedProducts
-                        .filter((p) => p.type === "PRODUCTO_TERMINADO")
-                        .map((p) => (
-                          <tr key={p.id} className="border-b border-border/30 last:border-0 opacity-60">
-                            <td className="px-4 py-2.5 text-center font-mono text-xs text-muted-foreground">{p.sku}</td>
-                            <td className="px-4 py-2.5 text-center text-sm font-medium text-foreground">{p.name}</td>
-                            <td className="px-4 py-2.5 text-center text-xs text-muted-foreground hidden sm:table-cell">{p.unit}</td>
-                            <td className="px-4 py-2.5 text-center">
-                              <span className="inline-flex rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
-                                Archivado
-              </span>
-                            </td>
-                            <td className="px-4 py-2.5 text-center">
-                              <button
-                                onClick={() => handleReactivate(p.id)}
-                                disabled={saving}
-                                className="inline-flex items-center gap-1 rounded-md bg-accent-600 px-2 py-1 text-xs font-medium text-white hover:bg-accent-700 disabled:opacity-50 transition-colors"
-                              >
-                                Reactivar
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
-            </div>
-          )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

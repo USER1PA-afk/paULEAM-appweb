@@ -4,7 +4,7 @@ import { getInsforge } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback } from "react";
 import { ProductionOrder, ProductionStatus } from "@entities/production";
 import { Recipe, RecipeIngredient } from "@entities/recipe";
-import { calculateScaleFactor, scaleIngredientsWithStock } from "../lib";
+import { calculateScaleFactor, scaleIngredientsWithStock, calculateTotalProductionCost } from "../lib";
 import { ScaledIngredient } from "@entities/production";
 
 /**
@@ -43,7 +43,9 @@ export function useProductionOrders() {
     async (order: {
       recipe_id: string;
       target_yield: number;
-      notes?: string;
+      batch_number?: string | null;
+      scheduled_date?: string | null;
+      notes?: string | null;
     }) => {
       try {
         const { data, error: insertError } = await insforge.database
@@ -143,6 +145,31 @@ export function useProductionOrders() {
     [insforge, fetchOrders]
   );
 
+  /**
+   * Declarar merma de una orden completada.
+   * Llama al RPC declare_production_waste que inserta un EGRESO MERMA.
+   */
+  const declareWaste = useCallback(
+    async (orderId: string, wasteQty: number, notes?: string) => {
+      try {
+        const { error: rpcErr } = await insforge.database.rpc("declare_production_waste", {
+          p_order_id: orderId,
+          p_waste_qty: wasteQty,
+          p_waste_notes: notes ?? null,
+        });
+
+        if (rpcErr) throw rpcErr;
+        await fetchOrders();
+        return { error: null };
+      } catch (err: unknown) {
+        return {
+          error: err instanceof Error ? err.message : "Error al declarar merma",
+        };
+      }
+    },
+    [insforge, fetchOrders]
+  );
+
   return {
     orders,
     loading,
@@ -151,6 +178,7 @@ export function useProductionOrders() {
     completeOrder,
     updateStatus,
     cancelOrder,
+    declareWaste,
     refetch: fetchOrders,
   };
 }
@@ -244,7 +272,7 @@ export function useRecipeScale(
 export function useScalePreview(recipeId: string | null, targetYield: number) {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
-  const [stockMap, setStockMap] = useState<Record<string, { stock_actual: number; unit: string; name: string; sku: string }>>({});
+  const [stockMap, setStockMap] = useState<Record<string, { stock_actual: number; unit: string; name: string; sku: string; cost_per_unit: number }>>({} as Record<string, { stock_actual: number; unit: string; name: string; sku: string; cost_per_unit: number }>);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -287,18 +315,29 @@ export function useScalePreview(recipeId: string | null, targetYield: number) {
 
         // 3. Cargar stock solo para los ingredientes necesarios
         const productIds = ingredientsData.map(i => i.product_id);
-        const map: Record<string, { stock_actual: number; unit: string; name: string; sku: string }> = {};
-        
+        const map: Record<string, { stock_actual: number; unit: string; name: string; sku: string; cost_per_unit: number }> = {};
+
         if (productIds.length > 0) {
           const { data: stockData, error: stockErr } = await insforge.database
             .from("stock_summary")
             .select("*")
             .in("product_id", productIds);
-            
+
           if (stockErr) throw stockErr;
-          
+
+          // Enriquecer con costo unitario
+          const { data: costData } = await insforge.database
+            .from("products")
+            .select("id, cost_per_unit")
+            .in("id", productIds);
+
+          const costMap: Record<string, number> = {};
+          ((costData as { id: string; cost_per_unit: number }[]) ?? []).forEach(c => {
+            costMap[c.id] = c.cost_per_unit ?? 0;
+          });
+
           (stockData as { product_id: string; stock_actual: number; unit: string; name: string; sku: string }[]).forEach(s => {
-            map[s.product_id] = s;
+            map[s.product_id] = { ...s, cost_per_unit: costMap[s.product_id] ?? 0 };
           });
         }
 
@@ -320,19 +359,21 @@ export function useScalePreview(recipeId: string | null, targetYield: number) {
   }, [recipeId, targetYield, insforge]);
 
   const scaleFactor = recipe ? calculateScaleFactor(recipe.yield_base, targetYield) : 0;
-  
-  const scaledIngredients: ScaledIngredient[] = 
+
+  const scaledIngredients: ScaledIngredient[] =
     (recipe && ingredients.length > 0)
       ? scaleIngredientsWithStock(ingredients, scaleFactor, stockMap)
       : [];
 
   const canProduce = scaledIngredients.every(ing => ing.stock_sufficient);
+  const estimatedCost = calculateTotalProductionCost(scaledIngredients);
 
   return {
     recipe,
     scaleFactor,
     scaledIngredients,
     canProduce,
+    estimatedCost,
     loading,
     error
   };

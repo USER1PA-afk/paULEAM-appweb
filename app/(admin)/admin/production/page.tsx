@@ -4,7 +4,7 @@ import { useProductionOrders, useRecipes, ProductionScalePreview, ProductionOrde
 import { formatDate } from "@shared/lib/utils";
 import React, { useState } from "react";
 import { useRole } from "@features/auth/hooks";
-import { Printer } from "lucide-react";
+import { Printer, Trash2 } from "lucide-react";
 
 
 const STATUS_LABELS: Record<string, { label: string; dot: string }> = {
@@ -15,7 +15,7 @@ const STATUS_LABELS: Record<string, { label: string; dot: string }> = {
 };
 
 export default function AdminProductionPage() {
-  const { orders, loading, completeOrder, updateStatus, createOrder, cancelOrder, refetch } =
+  const { orders, loading, completeOrder, updateStatus, createOrder, cancelOrder, declareWaste, refetch } =
     useProductionOrders();
   const { recipes } = useRecipes();
   const { role } = useRole();
@@ -27,11 +27,19 @@ export default function AdminProductionPage() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  // Per-row error state: orderId -> error message
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+
+  // Merma
+  const [wasteOrderId, setWasteOrderId] = useState<string | null>(null);
+  const [wasteQty, setWasteQty] = useState("");
+  const [wasteNotes, setWasteNotes] = useState("");
+  const [savingWaste, setSavingWaste] = useState(false);
+
   const [form, setForm] = useState({
     recipe_id: "",
     target_yield: "",
+    batch_number: "",
+    scheduled_date: "",
     notes: "",
   });
 
@@ -43,7 +51,9 @@ export default function AdminProductionPage() {
     const result = await createOrder({
       recipe_id: form.recipe_id,
       target_yield: Number(form.target_yield),
-      notes: form.notes || undefined,
+      batch_number: form.batch_number || null,
+      scheduled_date: form.scheduled_date || null,
+      notes: form.notes || null,
     });
 
     setCreating(false);
@@ -52,7 +62,7 @@ export default function AdminProductionPage() {
       return;
     }
 
-    setForm({ recipe_id: "", target_yield: "", notes: "" });
+    setForm({ recipe_id: "", target_yield: "", batch_number: "", scheduled_date: "", notes: "" });
     setShowForm(false);
     refetch();
   }
@@ -79,6 +89,20 @@ export default function AdminProductionPage() {
     setRowError(orderId, null);
     const result = await cancelOrder(orderId);
     if (result.error) setRowError(orderId, result.error as string);
+  }
+
+  async function handleDeclareWaste(e: React.FormEvent) {
+    e.preventDefault();
+    if (!wasteOrderId || !wasteQty) return;
+    setSavingWaste(true);
+    const { error: wErr } = await declareWaste(wasteOrderId, Number(wasteQty), wasteNotes || undefined);
+    setSavingWaste(false);
+    if (wErr) {
+      setRowErrors((prev) => ({ ...prev, [wasteOrderId]: wErr }));
+    }
+    setWasteOrderId(null);
+    setWasteQty("");
+    setWasteNotes("");
   }
 
   const completedOrders = orders.filter((o) => o.status === "COMPLETADA");
@@ -150,6 +174,11 @@ export default function AdminProductionPage() {
             >
               <h3 className="text-lg font-semibold">Nueva Orden de Producción</h3>
               <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5 sm:col-span-3">
+                  <p className="text-[10px] text-muted-foreground">
+                    El número de lote se auto-genera (PROD-YYYY-NNNN) si se deja vacío.
+                  </p>
+                </div>
                 <div className="space-y-1.5 sm:col-span-1">
                   <label htmlFor="prod-recipe" className="text-xs font-medium text-muted-foreground">
                     Receta *
@@ -194,6 +223,35 @@ export default function AdminProductionPage() {
                       setForm((p) => ({ ...p, target_yield: e.target.value }))
                     }
                     placeholder="Ej: 25"
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="prod-batch" className="text-xs font-medium text-muted-foreground">
+                    Nº Lote (opcional)
+                  </label>
+                  <input
+                    id="prod-batch"
+                    type="text"
+                    value={form.batch_number}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, batch_number: e.target.value }))
+                    }
+                    placeholder="PROD-2026-0001"
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="prod-date" className="text-xs font-medium text-muted-foreground">
+                    Fecha Planificada
+                  </label>
+                  <input
+                    id="prod-date"
+                    type="date"
+                    value={form.scheduled_date}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, scheduled_date: e.target.value }))
+                    }
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
@@ -315,7 +373,7 @@ export default function AdminProductionPage() {
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="px-4 py-3 text-center font-medium text-muted-foreground">
-                    ID
+                    Lote
                   </th>
                   <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                     Fecha
@@ -358,8 +416,8 @@ export default function AdminProductionPage() {
                     return (
                       <React.Fragment key={order.id}>
                         <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 text-center font-mono text-xs">
-                            {order.id.substring(0, 8)}
+                          <td className="px-4 py-3 text-center font-mono text-xs text-muted-foreground">
+                            {order.batch_number ?? order.id.substring(0, 8)}
                           </td>
                           <td className="px-4 py-3 text-center text-xs text-muted-foreground whitespace-nowrap">
                             {order.created_at ? formatDate(order.created_at) : "—"}
@@ -434,13 +492,21 @@ export default function AdminProductionPage() {
                             )}
                             {/* Actions for COMPLETADA */}
                             {order.status === "COMPLETADA" && (
-                              <div className="flex items-center justify-center gap-2">
+                              <div className="flex items-center justify-center gap-2 flex-wrap">
                                 <button
                                   onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
                                   className="rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
                                 >
                                   {isExpanded ? "Ocultar" : "Ver Detalle"}
                                 </button>
+                                {isAdmin && (
+                                  <button
+                                    onClick={() => setWasteOrderId(wasteOrderId === order.id ? null : order.id)}
+                                    className="rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                                  >
+                                    <Trash2 className="h-3 w-3 inline mr-0.5" />Merma
+                                  </button>
+                                )}
                               </div>
                             )}
                           </td>
@@ -449,6 +515,56 @@ export default function AdminProductionPage() {
                           <tr className="bg-muted/10 border-t-0">
                             <td colSpan={6} className="px-4 py-3 pb-4">
                               <ProductionOrderDetail orderId={order.id} completedAt={order.completed_at ?? null} />
+                            </td>
+                          </tr>
+                        )}
+                        {wasteOrderId === order.id && order.status === "COMPLETADA" && (
+                          <tr className="bg-amber-50/60 dark:bg-amber-900/10 border-t-0">
+                            <td colSpan={6} className="px-4 py-3 pb-4">
+                              <form onSubmit={handleDeclareWaste} className="flex flex-wrap items-end gap-3">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-amber-700 dark:text-amber-400">Cantidad de merma *</label>
+                                  <input
+                                    type="number"
+                                    required
+                                    min="0.001"
+                                    step="0.001"
+                                    value={wasteQty}
+                                    onChange={(e) => setWasteQty(e.target.value)}
+                                    placeholder="0.000"
+                                    className="w-28 rounded-md border border-amber-300 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                  />
+                                </div>
+                                <div className="space-y-1 flex-1 min-w-32">
+                                  <label className="text-[10px] font-medium text-amber-700 dark:text-amber-400">Motivo (opcional)</label>
+                                  <input
+                                    type="text"
+                                    value={wasteNotes}
+                                    onChange={(e) => setWasteNotes(e.target.value)}
+                                    placeholder="Daño de empaque, contaminación..."
+                                    className="w-full rounded-md border border-amber-300 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                  />
+                                </div>
+                                <button
+                                  type="submit"
+                                  disabled={savingWaste || !wasteQty}
+                                  className="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                                >
+                                  {savingWaste ? "Registrando..." : "Registrar Merma"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { setWasteOrderId(null); setWasteQty(""); setWasteNotes(""); }}
+                                  className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                                >
+                                  Cancelar
+                                </button>
+                              </form>
+                              {rowErrors[order.id] && (
+                                <div className="mt-2 rounded-md bg-destructive/10 border border-destructive/20 px-2 py-1 text-xs text-destructive">
+                                  {rowErrors[order.id]}
+                                </div>
+                              )}
                             </td>
                           </tr>
                         )}
