@@ -60,6 +60,16 @@ export default function CatalogPage() {
   const [activeTab, setActiveTab] = useState<"descripcion" | "ingredientes" | "nutricion" | "especificaciones" | "comercial">("descripcion");
 
   const fetchProducts = useCallback(async () => {
+    // Obtener IDs de productos que son inputs de empaque (granel) — no se venden directamente
+    const { data: tplData } = await insforge.database
+      .from("packaging_templates")
+      .select("finished_product_id")
+      .eq("is_active", true);
+
+    const bulkInputIds = new Set<string>(
+      (tplData as { finished_product_id: string }[] ?? []).map((t) => t.finished_product_id)
+    );
+
     const { data } = await insforge.database
       .from("products")
       .select("id, name, sku, description, short_description, long_description, price, unit, image_url, is_active, featured, weight, ingredients, specifications, nutritional_info, commercial_details, conversion_factor, sales_unit_name")
@@ -68,7 +78,10 @@ export default function CatalogPage() {
       .order("name");
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mappedProducts = ((data as any[]) ?? []).map((p) => ({
+    const mappedProducts = ((data as any[]) ?? [])
+      // Excluir productos granel (inputs de plantillas de empaque)
+      .filter((p) => !bulkInputIds.has(p.id))
+      .map((p) => ({
       id: p.id,
       name: p.name,
       sku: p.sku,

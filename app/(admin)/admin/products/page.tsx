@@ -8,7 +8,7 @@ import { useRole } from "@features/auth/hooks";
 import { Tag, AlertTriangle, Pencil, Trash2, Star, ImagePlus, X as XIcon } from "lucide-react";
 import Image from "next/image";
 
-type ProductType = "MATERIA_PRIMA" | "INSUMO" | "ENVASE_EMPAQUE" | "PRODUCTO_TERMINADO" | "OTRO";
+type ProductType = "MATERIA_PRIMA" | "INSUMO" | "ENVASE_EMPAQUE" | "PRODUCTO_A_GRANEL" | "PRODUCTO_TERMINADO" | "OTRO";
 
 interface Product {
   id: string;
@@ -43,11 +43,12 @@ interface ProductWithSuppliers extends Product {
 type FormMode = "create" | "edit";
 
 const PRODUCT_TYPE_OPTIONS: { value: ProductType; label: string; color: string }[] = [
-  { value: "MATERIA_PRIMA",      label: "Materia Prima",       color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-  { value: "INSUMO",             label: "Insumo / Auxiliar",   color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
-  { value: "ENVASE_EMPAQUE",     label: "Envase / Empaque",    color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
-  { value: "PRODUCTO_TERMINADO", label: "Producto Terminado",  color: "bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400" },
-  { value: "OTRO",               label: "Otro",                color: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" },
+  { value: "MATERIA_PRIMA",      label: "Materia Prima",        color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  { value: "INSUMO",             label: "Insumo / Auxiliar",    color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+  { value: "ENVASE_EMPAQUE",     label: "Envase / Empaque",     color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  { value: "PRODUCTO_A_GRANEL",  label: "Producto a Granel",    color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400" },
+  { value: "PRODUCTO_TERMINADO", label: "Producto Terminado",   color: "bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400" },
+  { value: "OTRO",               label: "Otro",                 color: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" },
 ];
 
 // Tipos que requieren proveedor y pueden comprarse externamente
@@ -740,9 +741,14 @@ export default function AdminProductsPage() {
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
+              {formData.type === "PRODUCTO_A_GRANEL" && (
+                <p className="text-[10px] text-teal-600 dark:text-teal-400">
+                  El producto a granel solo ingresa al inventario mediante producción (o ajuste).
+                </p>
+              )}
               {formData.type === "PRODUCTO_TERMINADO" && (
                 <p className="text-[10px] text-amber-600 dark:text-amber-400">
-                  Los productos terminados solo ingresan al inventario mediante producción o empaque.
+                  El producto terminado solo ingresa al inventario mediante empaque (o ajuste).
                 </p>
               )}
             </div>

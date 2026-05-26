@@ -191,7 +191,7 @@ export function useProducts() {
 
   const rawMaterials = products.filter((p) => p.type === "MATERIA_PRIMA");
   const supplies = products.filter((p) => p.type === "INSUMO");
-  const finishedProducts = products.filter((p) => p.type === "PRODUCTO_TERMINADO");
+  const finishedProducts = products.filter((p) => p.type === "PRODUCTO_A_GRANEL");
   // Productos válidos como ingredientes de receta
   const ingredientProducts = products.filter(
     (p) => p.type === "MATERIA_PRIMA" || p.type === "INSUMO"

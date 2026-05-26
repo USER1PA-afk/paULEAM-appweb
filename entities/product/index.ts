@@ -1,14 +1,15 @@
 import { z } from "zod";
 
 // ============================
-// Product Type Enum (5 categorías)
+// Product Type Enum (6 categorías)
 // ============================
 export const ProductTypeEnum = z.enum([
-  "MATERIA_PRIMA",    // Ingredientes principales: leche, harina, sal
-  "INSUMO",           // Auxiliares: cuajo, conservantes, etiquetas
-  "ENVASE_EMPAQUE",   // Envases y embalajes: bolsas, botellas, tapas
-  "PRODUCTO_TERMINADO", // Solo se genera por producción/empaque
-  "OTRO",             // Genérico
+  "MATERIA_PRIMA",       // Ingredientes principales: leche, harina, sal
+  "INSUMO",              // Auxiliares: cuajo, conservantes, etiquetas
+  "ENVASE_EMPAQUE",      // Envases y embalajes: bolsas, botellas, tapas
+  "PRODUCTO_A_GRANEL",   // Resultado de producción (ej. queso en kg). Input del empaque.
+  "PRODUCTO_TERMINADO",  // Presentación final envasada, lista para vender al cliente.
+  "OTRO",                // Genérico
 ]);
 export type ProductType = z.infer<typeof ProductTypeEnum>;
 
@@ -16,22 +17,24 @@ export type ProductType = z.infer<typeof ProductTypeEnum>;
  * Etiquetas en español para cada tipo de producto.
  */
 export const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
-  MATERIA_PRIMA:     "Materia Prima",
-  INSUMO:            "Insumo / Auxiliar",
-  ENVASE_EMPAQUE:    "Envase / Empaque",
-  PRODUCTO_TERMINADO:"Producto Terminado",
-  OTRO:              "Otro",
+  MATERIA_PRIMA:       "Materia Prima",
+  INSUMO:              "Insumo / Auxiliar",
+  ENVASE_EMPAQUE:      "Envase / Empaque",
+  PRODUCTO_A_GRANEL:   "Producto a Granel",
+  PRODUCTO_TERMINADO:  "Producto Terminado",
+  OTRO:                "Otro",
 };
 
 /**
  * Color de badge por tipo (clases Tailwind).
  */
 export const PRODUCT_TYPE_COLORS: Record<ProductType, string> = {
-  MATERIA_PRIMA:     "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  INSUMO:            "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  ENVASE_EMPAQUE:    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  PRODUCTO_TERMINADO:"bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400",
-  OTRO:              "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
+  MATERIA_PRIMA:      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  INSUMO:             "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  ENVASE_EMPAQUE:     "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  PRODUCTO_A_GRANEL:  "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
+  PRODUCTO_TERMINADO: "bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400",
+  OTRO:               "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
 };
 
 /**

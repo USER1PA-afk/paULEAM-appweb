@@ -36,8 +36,9 @@ export default function EditPackagingTemplatePage() {
     usePackagingTemplate(templateId);
   const { updateTemplate } = usePackagingTemplateMutations(refetch);
 
-  const [finishedProducts, setFinishedProducts] = useState<Product[]>([]);
-  const [packagingMaterials, setPackagingMaterials] = useState<Product[]>([]);
+  const [finishedProducts, setFinishedProducts] = useState<Product[]>([]);   // PRODUCTO_A_GRANEL (input granel)
+  const [outputProducts, setOutputProducts] = useState<Product[]>([]);       // PRODUCTO_TERMINADO (salida envasada)
+  const [packagingMaterials, setPackagingMaterials] = useState<Product[]>([]); // ENVASE_EMPAQUE
   const [loadingProducts, setLoadingProducts] = useState(true);
 
   const [form, setForm] = useState({
@@ -67,7 +68,8 @@ export default function EditPackagingTemplatePage() {
       .order("name");
 
     const all = (data as Product[]) ?? [];
-    setFinishedProducts(all.filter((p) => p.type === "PRODUCTO_TERMINADO"));
+    setFinishedProducts(all.filter((p) => p.type === "PRODUCTO_A_GRANEL"));
+    setOutputProducts(all.filter((p) => p.type === "PRODUCTO_TERMINADO"));
     setPackagingMaterials(all.filter((p) => p.type === "ENVASE_EMPAQUE"));
     setLoadingProducts(false);
   }, [insforge]);
@@ -271,23 +273,47 @@ export default function EditPackagingTemplatePage() {
               {/* Producto de salida */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Producto de salida (presentación)
+                  Producto de salida (presentación) *
                 </label>
                 <select
                   value={form.output_product_id}
                   onChange={(e) => setForm((p) => ({ ...p, output_product_id: e.target.value }))}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className={`w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${
+                    !form.output_product_id || form.output_product_id === form.finished_product_id
+                      ? "border-amber-400 dark:border-amber-600"
+                      : "border-border"
+                  }`}
                 >
-                  <option value="">Mismo que el granel</option>
-                  {finishedProducts.map((p) => (
+                  <option value="">Mismo que el granel (no recomendado)</option>
+                  {outputProducts.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.sku})
+                      {p.name} ({p.sku}) — {p.unit}
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-muted-foreground">
-                  Si la presentación tiene su propio SKU, selecciónalo aquí.
-                </p>
+
+                {/* Advertencia cuando output == granel */}
+                {(!form.output_product_id || form.output_product_id === form.finished_product_id) && form.finished_product_id && (
+                  <div className="rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2.5 space-y-1.5">
+                    <p className="text-xs font-semibold text-amber-800 dark:text-amber-400 flex items-center gap-1.5">
+                      ⚠️ Producto de salida = granel
+                    </p>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-500 leading-relaxed">
+                      Este producto <strong>no aparecerá en la tienda</strong> porque es el mismo que el granel (producto interno).
+                    </p>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-500 leading-relaxed">
+                      Crea primero un producto separado:{" "}
+                      <Link
+                        href="/admin/products"
+                        className="font-semibold underline hover:text-amber-900 dark:hover:text-amber-300"
+                        target="_blank"
+                      >
+                        ir a Productos →
+                      </Link>
+                      {" "}(tipo <strong>Producto Terminado</strong>, unidad: <strong>unidades</strong>, ej: &quot;Queso Fresco 500gr&quot;), luego regresa y selecciónalo aquí.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Descripción */}

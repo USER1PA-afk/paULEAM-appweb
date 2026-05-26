@@ -99,6 +99,11 @@ export default function StoreProductsPage() {
   }
 
   async function handleToggleActive(p: StoreProductWithStock) {
+    // Prevenir activar productos granel (inputs de empaque — no se venden directamente)
+    if (!p.is_active && bulkProductIds.has(p.id) && !packagingOutputIds.has(p.id)) {
+      alert("⚠️ Este es un producto granel (input de empaque). No debe venderse directamente en la tienda.\n\nPara venderlo como presentación, edita la plantilla de empaque y selecciona un producto de salida separado (ej: \"Queso Fresco 500gr\").");
+      return;
+    }
     setActionLoading(p.id + "-active");
     await toggleActive(p.id, p.is_active);
     await refetch();
