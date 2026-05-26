@@ -3,6 +3,7 @@
 import { usePackagingOrders, usePackagingTemplates, usePackagingActions } from "@features/packaging";
 import { useRole } from "@features/auth/hooks";
 import { formatDate } from "@shared/lib/utils";
+import { getInsforge } from "@shared/lib/insforge/client";
 import Link from "next/link";
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -22,12 +23,23 @@ function AdminPackagingPageInner() {
   const searchParams = useSearchParams();
 
   const { completeOrder, cancelOrder, updateStatus, createOrder } = usePackagingActions(refetch);
+  const insforge = getInsforge();
 
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [filterStatus, setFilterStatus] = useState("");
+
+  // ── Modal "Habilitar en tienda" post-completar ──
+  const [storeModal, setStoreModal] = useState<{
+    productId: string;
+    productName: string;
+    currentPrice: number | null;
+    isAlreadyActive: boolean;
+  } | null>(null);
+  const [storePrice, setStorePrice] = useState("");
+  const [storeLoading, setStoreLoading] = useState(false);
 
   const [form, setForm] = useState({
     template_id: "",
@@ -85,10 +97,50 @@ function AdminPackagingPageInner() {
     setShowForm(false);
   }
 
-  async function handleComplete(id: string) {
-    setRowError(id, null);
-    const { error: err } = await completeOrder(id);
-    if (err) setRowError(id, err);
+  async function handleComplete(orderId: string) {
+    setRowError(orderId, null);
+    const { error: err } = await completeOrder(orderId);
+    if (err) {
+      setRowError(orderId, err);
+      return;
+    }
+
+    // Tras completar: buscar el output product para mostrar modal de tienda
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
+    const template = templates.find((t) => t.id === order.template_id);
+    if (!template) return;
+
+    const { data: productData } = await insforge.database
+      .from("products")
+      .select("id, name, price, is_active")
+      .eq("id", template.output_product_id)
+      .single();
+
+    if (productData) {
+      const pd = productData as { id: string; name: string; price: number | null; is_active: boolean };
+      setStoreModal({
+        productId: pd.id,
+        productName: pd.name,
+        currentPrice: pd.price,
+        isAlreadyActive: pd.is_active,
+      });
+      setStorePrice(pd.price ? String(pd.price) : "");
+    }
+  }
+
+  async function handleEnableInStore() {
+    if (!storeModal) return;
+    const price = parseFloat(storePrice);
+    if (isNaN(price) || price <= 0) return;
+    setStoreLoading(true);
+    await insforge.database
+      .from("products")
+      .update({ is_active: true, price })
+      .eq("id", storeModal.productId);
+    setStoreModal(null);
+    setStorePrice("");
+    setStoreLoading(false);
   }
 
   async function handleCancel(id: string) {
@@ -420,6 +472,85 @@ function AdminPackagingPageInner() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ─── Modal: Habilitar producto en tienda ─── */}
+      {storeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5">
+            {/* Título */}
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5 text-accent-600 dark:text-accent-400 text-sm font-semibold mb-1">
+                <span>✓</span>
+                <span>Orden de empaque completada</span>
+              </div>
+              <h3 className="text-lg font-bold text-foreground">
+                {storeModal.isAlreadyActive ? "Actualizar precio en tienda" : "Habilitar en la Tienda"}
+              </h3>
+            </div>
+
+            {/* Descripción */}
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {storeModal.isAlreadyActive ? (
+                <>
+                  <span className="font-semibold text-foreground">{storeModal.productName}</span>{" "}
+                  ya está visible en la tienda.
+                  ¿Deseas actualizar su precio?
+                </>
+              ) : (
+                <>
+                  Se generaron unidades de{" "}
+                  <span className="font-semibold text-foreground">{storeModal.productName}</span>.{" "}
+                  ¿Deseas habilitarlo en el catálogo de la tienda ahora?
+                </>
+              )}
+            </p>
+
+            {/* Input precio */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                Precio por unidad (USD)
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium pointer-events-none">
+                  $
+                </span>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={storePrice}
+                  onChange={(e) => setStorePrice(e.target.value)}
+                  placeholder="0.00"
+                  autoFocus
+                  className="w-full rounded-md border border-border bg-background pl-7 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            </div>
+
+            {/* Botones */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setStoreModal(null); setStorePrice(""); }}
+                disabled={storeLoading}
+                className="flex-1 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                Omitir
+              </button>
+              <button
+                onClick={handleEnableInStore}
+                disabled={storeLoading || !storePrice || parseFloat(storePrice) <= 0}
+                className="flex-1 rounded-lg bg-accent-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-accent-700 disabled:opacity-50 transition-colors"
+              >
+                {storeLoading
+                  ? "Guardando..."
+                  : storeModal.isAlreadyActive
+                  ? "Actualizar precio →"
+                  : "Habilitar en tienda →"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

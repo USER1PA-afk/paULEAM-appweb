@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getInsforge } from "@shared/lib/insforge/client";
 import {
   Search, Plus, ChevronLeft, ChevronRight,
   ChevronUp, ChevronDown, SlidersHorizontal, ShoppingBag,
@@ -44,6 +45,27 @@ function SortIcon({ col, sortBy, sortDir }: {
 
 export default function StoreProductsPage() {
   const router = useRouter();
+  const insforge = getInsforge();
+
+  // ── Sets de IDs para badges de origen ──
+  const [packagingOutputIds, setPackagingOutputIds] = useState<Set<string>>(new Set());
+  const [bulkProductIds, setBulkProductIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    async function loadTemplateIds() {
+      const { data } = await insforge.database
+        .from("packaging_templates")
+        .select("output_product_id, finished_product_id");
+      if (data) {
+        type TplRow = { output_product_id: string; finished_product_id: string };
+        const rows = data as TplRow[];
+        setPackagingOutputIds(new Set(rows.map((r) => r.output_product_id)));
+        setBulkProductIds(new Set(rows.map((r) => r.finished_product_id)));
+      }
+    }
+    loadTemplateIds();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [filters, setFilters] = useState<StoreProductsFilters>({
     search: "",
@@ -342,7 +364,22 @@ export default function StoreProductsPage() {
                       >
                         {p.name}
                       </Link>
-                      <span className="text-[11px] font-mono text-muted-foreground">{p.sku}</span>
+                      <div className="flex items-center justify-center flex-wrap gap-1 mt-0.5">
+                        <span className="text-[11px] font-mono text-muted-foreground">{p.sku}</span>
+                        {packagingOutputIds.has(p.id) && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-accent-100 dark:bg-accent-900/30 border border-accent-200 dark:border-accent-700 px-1.5 py-0.5 text-[9px] font-bold text-accent-700 dark:text-accent-400 uppercase tracking-wide">
+                            📦 Empaque
+                          </span>
+                        )}
+                        {bulkProductIds.has(p.id) && (
+                          <span
+                            title="Producto interno — use empaque para vender en presentaciones"
+                            className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide cursor-help"
+                          >
+                            ⚗️ Granel
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Category */}
