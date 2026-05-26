@@ -405,7 +405,12 @@ export default function StoreProductsPage() {
 
                     {/* Stock */}
                     <td className="px-4 py-3 text-center hidden sm:table-cell">
-                      <StockBadge stock={p.stock} unit={p.unit} />
+                      <StockBadge
+                        stock={p.stock}
+                        unit={p.unit}
+                        conversionFactor={p.conversion_factor}
+                        salesUnitName={p.sales_unit_name}
+                      />
                     </td>
 
                     {/* Status */}

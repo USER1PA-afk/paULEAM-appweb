@@ -153,7 +153,11 @@ export function StockSummaryTable({
   }
 
   const rawMaterials = summary.filter((i) => i.type === "MATERIA_PRIMA");
-  const finishedGoods = summary.filter((i) => i.type !== "MATERIA_PRIMA");
+  const supplies     = summary.filter((i) => i.type === "INSUMO");
+  const packaging    = summary.filter((i) => i.type === "ENVASE_EMPAQUE");
+  const bulkGoods    = summary.filter((i) => i.type === "PRODUCTO_A_GRANEL");
+  const finished     = summary.filter((i) => i.type === "PRODUCTO_TERMINADO");
+  const other        = summary.filter((i) => !["MATERIA_PRIMA","INSUMO","ENVASE_EMPAQUE","PRODUCTO_A_GRANEL","PRODUCTO_TERMINADO"].includes(i.type ?? ""));
 
   return (
     <div className="space-y-4">
@@ -184,8 +188,15 @@ export function StockSummaryTable({
         </div>
       )}
 
-      <StockSubTable items={rawMaterials} label="Materias Primas" accentColor="bg-blue-500" />
-      <StockSubTable items={finishedGoods} label="Productos Terminados" accentColor="bg-accent-500" />
+      {rawMaterials.length > 0 && <StockSubTable items={rawMaterials} label="Materias Primas" accentColor="bg-blue-500" />}
+      {supplies.length > 0     && <StockSubTable items={supplies}     label="Insumos / Auxiliares" accentColor="bg-purple-500" />}
+      {packaging.length > 0    && <StockSubTable items={packaging}    label="Envases y Empaques" accentColor="bg-amber-500" />}
+      {bulkGoods.length > 0    && <StockSubTable items={bulkGoods}    label="Productos a Granel" accentColor="bg-teal-500" />}
+      {finished.length > 0     && <StockSubTable items={finished}     label="Productos Terminados" accentColor="bg-brand-500" />}
+      {other.length > 0        && <StockSubTable items={other}        label="Otros" accentColor="bg-zinc-400" />}
+      {summary.length === 0    && (
+        <p className="py-8 text-center text-sm text-muted-foreground/60">Sin movimientos de stock registrados</p>
+      )}
     </div>
   );
 }
@@ -232,21 +243,41 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
     }));
   }
 
-  // Al seleccionar un producto MATERIA_PRIMA, pre-filtrar proveedores disponibles
+  // Tipos que se pueden comprar externamente y tener proveedor
+  const PURCHASABLE = ["MATERIA_PRIMA", "INSUMO", "ENVASE_EMPAQUE", "OTRO"];
+
   const selectedProduct = products.find((p) => p.id === form.product_id);
   const selectedUnit = selectedProduct?.unit?.toLowerCase() || "";
+  const isPurchasable = PURCHASABLE.includes(selectedProduct?.type ?? "");
+  const isGranel     = selectedProduct?.type === "PRODUCTO_A_GRANEL";
+  const isTerminado  = selectedProduct?.type === "PRODUCTO_TERMINADO";
+
   let minQty = "0.01";
   let stepQty = "0.01";
-  if (["kg", "lt"].includes(selectedUnit)) {
-    minQty = "0.01";
-    stepQty = "0.01";
-  } else if (["unidad", "unidades", "libra", "libras", "unit", "units", "lb", "lbs"].includes(selectedUnit)) {
+  if (["unidad", "unidades", "libra", "libras", "unit", "units", "lb", "lbs"].includes(selectedUnit)) {
     minQty = "1";
     stepQty = "1";
   }
+
   const isCompra = form.reference_type === "COMPRA";
-  const isMateriaPrima = selectedProduct?.type === "MATERIA_PRIMA";
-  const requiresSupplier = isCompra && isMateriaPrima;
+  const requiresSupplier = isCompra && isPurchasable;
+
+  // Opciones de tipo de movimiento según el tipo de producto seleccionado
+  const refTypeOptions: { value: string; label: string }[] = isPurchasable
+    ? [
+        { value: "COMPRA",     label: "Compra a proveedor" },
+        { value: "AJUSTE",     label: "Ajuste de inventario" },
+        { value: "DEVOLUCION", label: "Devolución" },
+      ]
+    : isGranel
+    ? [{ value: "AJUSTE", label: "Ajuste de inventario" }]
+    : isTerminado
+    ? [{ value: "AJUSTE", label: "Ajuste de inventario" }]
+    : [
+        { value: "COMPRA",     label: "Compra a proveedor" },
+        { value: "AJUSTE",     label: "Ajuste de inventario" },
+        { value: "DEVOLUCION", label: "Devolución" },
+      ];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -311,7 +342,16 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
                 id="entry-product"
                 required
                 value={form.product_id}
-                onChange={(e) => setForm((p) => ({ ...p, product_id: e.target.value, supplier_id: "" }))}
+                onChange={(e) => {
+                  const pType = products.find((pr) => pr.id === e.target.value)?.type ?? "";
+                  const nonPurchasable = ["PRODUCTO_A_GRANEL", "PRODUCTO_TERMINADO"].includes(pType);
+                  setForm((p) => ({
+                    ...p,
+                    product_id: e.target.value,
+                    supplier_id: "",
+                    reference_type: nonPurchasable ? "AJUSTE" : p.reference_type,
+                  }));
+                }}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Seleccionar producto...</option>
@@ -362,6 +402,11 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
             <div className="space-y-1.5">
               <label htmlFor="entry-ref" className="text-xs font-medium text-muted-foreground">
                 Tipo de Movimiento
+                {(isGranel || isTerminado) && (
+                  <span className="ml-1 text-[10px] text-amber-600">
+                    — {isGranel ? "usa módulo Producción" : "usa módulo Empaque"}
+                  </span>
+                )}
               </label>
               <select
                 id="entry-ref"
@@ -369,21 +414,17 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
                 onChange={(e) => handleRefTypeChange(e.target.value)}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                <option value="COMPRA">Compra a proveedor</option>
-                <option value="AJUSTE">Ajuste de inventario</option>
-                <option value="DEVOLUCION">Devolución</option>
-                <option value="PRODUCCION">Producción</option>
+                {refTypeOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
               </select>
             </div>
 
-            {/* Proveedor — visible solo cuando tipo = COMPRA y producto = MATERIA_PRIMA */}
-            {isCompra && (
+            {/* Proveedor — visible solo cuando tipo = COMPRA y producto es comprable */}
+            {isCompra && isPurchasable && (
               <div className="space-y-1.5">
                 <label htmlFor="entry-supplier" className="text-xs font-medium text-muted-foreground">
-                  Proveedor {requiresSupplier ? "*" : ""}
-                  {!isMateriaPrima && isCompra && (
-                    <span className="ml-1 text-[10px] text-muted-foreground/60">(opcional para PT)</span>
-                  )}
+                  Proveedor *
                 </label>
                 <select
                   id="entry-supplier"
@@ -449,7 +490,7 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
 const LEDGER_DEFAULT = 5;
 const LEDGER_STEP = 10;
 
-const REF_TYPES = ["COMPRA", "AJUSTE", "DEVOLUCION", "PRODUCCION"] as const;
+const REF_TYPES = ["COMPRA", "AJUSTE", "DEVOLUCION", "PRODUCCION", "EMPAQUE", "MERMA"] as const;
 
 interface LedgerEntry {
   id: string;
@@ -476,8 +517,9 @@ function buildDisplayItems(entries: LedgerEntry[]): DisplayItem[] {
   const items: DisplayItem[] = [];
   const seenGroups = new Map<string, LedgerEntry[]>();
   for (const entry of entries) {
-    if (entry.reference_type === "PRODUCCION" && entry.reference_id) {
-      const key = entry.reference_id;
+    const isGroupable = (entry.reference_type === "PRODUCCION" || entry.reference_type === "EMPAQUE") && entry.reference_id;
+    if (isGroupable) {
+      const key = entry.reference_id!;
       if (!seenGroups.has(key)) {
         const groupEntries: LedgerEntry[] = [];
         seenGroups.set(key, groupEntries);
@@ -626,9 +668,17 @@ export function InventoryLedgerTable({
           className="h-7 rounded-full border border-border bg-background px-3 text-[11px] font-medium focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-foreground/30"
         >
           <option value="">Todos los orígenes</option>
-          {REF_TYPES.map((r) => (
-            <option key={r} value={r}>{r.charAt(0) + r.slice(1).toLowerCase()}</option>
-          ))}
+          {REF_TYPES.map((r) => {
+            const labels: Record<string, string> = {
+              COMPRA: "Compra",
+              AJUSTE: "Ajuste",
+              DEVOLUCION: "Devolución",
+              PRODUCCION: "Producción",
+              EMPAQUE: "Empaque",
+              MERMA: "Merma",
+            };
+            return <option key={r} value={r}>{labels[r] ?? r}</option>;
+          })}
         </select>
 
         <div className="flex items-center gap-1.5 ml-auto">
@@ -675,7 +725,11 @@ export function InventoryLedgerTable({
                     <Fragment key={item.referenceId}>
                       {/* Production group header */}
                       <tr
-                        className="border-l-[3px] border-l-violet-400 bg-violet-50/40 dark:bg-violet-950/20 hover:bg-violet-50/70 dark:hover:bg-violet-950/30 cursor-pointer transition-colors"
+                        className={`border-l-[3px] cursor-pointer transition-colors ${
+                          (item.entries[0]?.reference_type === "EMPAQUE")
+                            ? "border-l-amber-400 bg-amber-50/40 dark:bg-amber-950/20 hover:bg-amber-50/70 dark:hover:bg-amber-950/30"
+                            : "border-l-violet-400 bg-violet-50/40 dark:bg-violet-950/20 hover:bg-violet-50/70 dark:hover:bg-violet-950/30"
+                        }`}
                         onClick={() => toggleGroup(item.referenceId)}
                       >
                         <td className="px-4 py-3 align-top">
@@ -686,15 +740,29 @@ export function InventoryLedgerTable({
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
-                            <span className="inline-grid place-items-center h-5 w-5 rounded-md bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 shrink-0">
+                            <span className={`inline-grid place-items-center h-5 w-5 rounded-md shrink-0 ${
+                              item.entries[0]?.reference_type === "EMPAQUE"
+                                ? "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400"
+                                : "bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400"
+                            }`}>
                               {expanded
                                 ? <ChevronDown aria-hidden="true" className="h-3 w-3" />
                                 : <ChevronRight aria-hidden="true" className="h-3 w-3" />}
                             </span>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">Producción</span>
-                                <span className="inline-flex items-center rounded-full bg-violet-100 dark:bg-violet-900/50 px-1.5 py-px text-[10px] font-semibold text-violet-600 dark:text-violet-400 tabular-nums">
+                                <span className={`text-xs font-semibold ${
+                                  item.entries[0]?.reference_type === "EMPAQUE"
+                                    ? "text-amber-700 dark:text-amber-300"
+                                    : "text-violet-700 dark:text-violet-300"
+                                }`}>
+                                  {item.entries[0]?.reference_type === "EMPAQUE" ? "Empaque" : "Producción"}
+                                </span>
+                                <span className={`inline-flex items-center rounded-full px-1.5 py-px text-[10px] font-semibold tabular-nums ${
+                                  item.entries[0]?.reference_type === "EMPAQUE"
+                                    ? "bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400"
+                                    : "bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-400"
+                                }`}>
                                   {item.entries.length}
                                 </span>
                               </div>

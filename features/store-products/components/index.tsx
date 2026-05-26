@@ -47,20 +47,37 @@ export function ProductStatusBadge({ isActive, featured, stock }: StatusBadgePro
 
 // ─── StockBadge ───────────────────────────────────────────────────────────────
 
-export function StockBadge({ stock, unit }: { stock: number; unit: string }) {
+export function StockBadge({
+  stock,
+  unit,
+  conversionFactor,
+  salesUnitName,
+}: {
+  stock: number;
+  unit: string;
+  conversionFactor?: number | null;
+  salesUnitName?: string | null;
+}) {
+  // Si tiene factor de conversión, mostrar en unidades comerciales
+  const cf = conversionFactor && conversionFactor > 0 ? conversionFactor : null;
+  const displayValue = cf ? Math.floor(stock / cf) : stock;
+  const displayUnit  = cf ? (salesUnitName || "unidades") : unit;
+
   const color =
-    stock <= 0   ? "text-red-600 dark:text-red-400" :
-    stock <= 5   ? "text-amber-600 dark:text-amber-400" :
-                   "text-brand-700 dark:text-brand-400";
-  const isPhysical = ["kg", "lt"].includes(unit?.toLowerCase());
-  const formatted = Number(stock).toLocaleString("es-EC", {
+    displayValue <= 0 ? "text-red-600 dark:text-red-400" :
+    displayValue <= 5 ? "text-amber-600 dark:text-amber-400" :
+                        "text-brand-700 dark:text-brand-400";
+
+  const isPhysical = !cf && ["kg", "lt"].includes(unit?.toLowerCase());
+  const formatted = Number(displayValue).toLocaleString("es-EC", {
     minimumFractionDigits: isPhysical ? 2 : 0,
-    maximumFractionDigits: isPhysical ? 2 : (stock % 1 === 0 ? 0 : 2),
+    maximumFractionDigits: isPhysical ? 2 : 0,
     useGrouping: false,
   });
+
   return (
     <span className={`tabular-nums font-medium text-sm ${color}`}>
-      {formatted} {unit}
+      {formatted} {displayUnit}
     </span>
   );
 }

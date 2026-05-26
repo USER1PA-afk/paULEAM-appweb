@@ -54,7 +54,6 @@ export default function CatalogPage() {
 
   // Modal State
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
-  const [loadingExtra, setLoadingExtra] = useState(false);
   const [availableStock, setAvailableStock] = useState<number | null>(null);
   const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"descripcion" | "ingredientes" | "nutricion" | "especificaciones" | "comercial">("descripcion");
@@ -121,7 +120,6 @@ export default function CatalogPage() {
     }
 
     const fetchExtraDetails = async () => {
-      setLoadingExtra(true);
       try {
         // Fetch images
         const { data: imgs } = await insforge.database
@@ -152,8 +150,6 @@ export default function CatalogPage() {
         }
       } catch (err) {
         console.error("Error fetching extra details", err);
-      } finally {
-        setLoadingExtra(false);
       }
     };
 
@@ -296,8 +292,7 @@ export default function CatalogPage() {
 
                 {/* Info */}
                 <div className="flex flex-1 flex-col p-4 pb-0">
-                  <p className="text-[10px] font-mono text-muted-foreground">{product.sku}</p>
-                  <h3 className="mt-1 font-semibold text-foreground leading-tight">
+                  <h3 className="font-semibold text-foreground leading-tight">
                     {product.name}
                   </h3>
                   {(product.short_description || product.description) && (
@@ -319,7 +314,6 @@ export default function CatalogPage() {
                         minimumFractionDigits: 2,
                       })}
                     </p>
-                    <p className="text-[10px] text-muted-foreground">por {product.unit}</p>
                   </div>
                 </div>
               </div>
@@ -330,13 +324,13 @@ export default function CatalogPage() {
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
-                      min={product.unit === "und" || product.unit === "unidades" ? "1" : "0.01"}
-                      step={product.unit === "und" || product.unit === "unidades" ? "1" : "0.01"}
+                      min="1"
+                      step="1"
                       value={quantities[product.id] || 1}
                       onChange={(e) =>
-                        setQuantities({ ...quantities, [product.id]: Number(e.target.value) })
+                        setQuantities({ ...quantities, [product.id]: Math.max(1, parseInt(e.target.value) || 1) })
                       }
-                      aria-label={`Cantidad de ${product.name} (${product.unit})`}
+                      aria-label={`Cantidad de ${product.name}`}
                       className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                     <button
@@ -462,14 +456,13 @@ export default function CatalogPage() {
             {/* Right Side: Details */}
             <div className="w-full md:w-1/2 flex flex-col gap-5 justify-between">
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <p className="text-[10px] font-mono bg-muted text-muted-foreground px-2 py-0.5 rounded">SKU: {selectedProduct.sku}</p>
-                  {selectedProduct.weight && (
+                {selectedProduct.weight && (
+                  <div className="flex items-center gap-2">
                     <p className="text-[10px] font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 px-2 py-0.5 rounded">
                       Peso: {selectedProduct.weight} {selectedProduct.unit}
                     </p>
-                  )}
-                </div>
+                  </div>
+                )}
                 <h2 className="text-2xl font-bold text-foreground leading-tight">
                   {selectedProduct.name}
                 </h2>
@@ -486,22 +479,24 @@ export default function CatalogPage() {
                         minimumFractionDigits: 2,
                       })}
                     </p>
-                    <p className="text-xs text-muted-foreground">precio por {selectedProduct.unit}</p>
                   </div>
                   <div>
-                    {availableStock !== null ? (
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                        availableStock <= 0
-                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                          : availableStock <= 5
-                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                      }`}>
-                        {availableStock <= 0
-                          ? "Agotado temporalmente"
-                          : `Disponible: ${availableStock} ${selectedProduct.unit}`}
-                      </span>
-                    ) : (
+                    {availableStock !== null ? (() => {
+                      const cf = selectedProduct.conversion_factor || 1;
+                      const units = Math.floor(availableStock / cf);
+                      const unitLabel = selectedProduct.sales_unit_name || "unidades";
+                      return (
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                          units <= 0
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : units <= 5
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        }`}>
+                          {units <= 0 ? "Agotado temporalmente" : `Disponible: ${units} ${unitLabel}`}
+                        </span>
+                      );
+                    })() : (
                       <span className="text-xs text-muted-foreground animate-pulse">Consultando stock...</span>
                     )}
                   </div>
@@ -514,11 +509,11 @@ export default function CatalogPage() {
                       <input
                         id="modal-qty"
                         type="number"
-                        min={selectedProduct.unit === "und" || selectedProduct.unit === "unidades" ? "1" : "0.01"}
-                        step={selectedProduct.unit === "und" || selectedProduct.unit === "unidades" ? "1" : "0.01"}
+                        min="1"
+                        step="1"
                         value={quantities[selectedProduct.id] || 1}
                         onChange={(e) =>
-                          setQuantities({ ...quantities, [selectedProduct.id]: Number(e.target.value) })
+                          setQuantities({ ...quantities, [selectedProduct.id]: Math.max(1, parseInt(e.target.value) || 1) })
                         }
                         className="w-24 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
                       />
