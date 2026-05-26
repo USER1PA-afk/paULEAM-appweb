@@ -17,14 +17,6 @@ export const MEASUREMENT_UNITS = {
     { value: "ml", label: "Mililitros (ml)" },
     { value: "gal", label: "Galones (gal)" },
   ],
-  COCINA: [
-    { value: "cucharadas", label: "Cucharadas (cda)" },
-    { value: "cucharaditas", label: "Cucharaditas (cdta)" },
-    { value: "tazas", label: "Tazas" },
-  ],
-  CONTEO: [
-    { value: "unidades", label: "Unidades (und)" },
-  ],
 };
 
 /**

@@ -32,7 +32,7 @@ function generateKey() {
 
 export function RecipeForm({ recipeId }: RecipeFormProps) {
   const router = useRouter();
-  const { rawMaterials, finishedProducts } = useProducts();
+  const { ingredientProducts, finishedProducts } = useProducts();
   const { createRecipe, updateRecipe, replaceIngredients } = useRecipeMutations();
   const { recipe, ingredients: existingIngredients, loading: recipeLoading } = useRecipe(recipeId ?? null);
 
@@ -104,7 +104,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
         const updated = { ...r, [field]: value };
         // Auto-set unit when selecting a product
         if (field === "product_id") {
-          const prod = rawMaterials.find((p) => p.id === value);
+          const prod = ingredientProducts.find((p) => p.id === value);
           if (prod) updated.unit = prod.unit;
         }
         return updated;
@@ -401,7 +401,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
             <div className="space-y-2">
               {/* Column headers — desktop only */}
               <div className="hidden sm:grid sm:grid-cols-12 gap-3 px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                <div className="col-span-5">Materia Prima</div>
+                <div className="col-span-5">Ingrediente</div>
                 <div className="col-span-3">Cantidad</div>
                 <div className="col-span-3">Unidad</div>
                 <div className="col-span-1" />
@@ -436,17 +436,26 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                       </span>
                       <select
                         required
-                        aria-label={`Ingrediente ${idx + 1}: materia prima`}
+                        aria-label={`Ingrediente ${idx + 1}`}
                         value={row.product_id}
                         onChange={(e) => updateIngredientRow(row.key, "product_id", e.target.value)}
                         className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
                       >
                         <option value="">Seleccionar ingrediente...</option>
-                        {rawMaterials.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} ({p.sku})
-                          </option>
-                        ))}
+                        {ingredientProducts.filter(p => p.type === "MATERIA_PRIMA").length > 0 && (
+                          <optgroup label="Materias Primas">
+                            {ingredientProducts.filter(p => p.type === "MATERIA_PRIMA").map((p) => (
+                              <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {ingredientProducts.filter(p => p.type === "INSUMO").length > 0 && (
+                          <optgroup label="Insumos">
+                            {ingredientProducts.filter(p => p.type === "INSUMO").map((p) => (
+                              <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
+                            ))}
+                          </optgroup>
+                        )}
                       </select>
                     </div>
 

@@ -88,6 +88,10 @@ export interface ScaledIngredient {
   inventory_unit: string;
   scaled_quantity: number;
   stock_available: number;
+  /** Stock convertido a la unidad de la receta (para comparación y display uniforme) */
+  stock_available_normalized: number;
+  /** Unidad en que se muestra el stock normalizado (= ing.unit cuando se convirtió, inventory_unit si no) */
+  stock_display_unit: string;
   stock_sufficient: boolean;
   unit_mismatch: boolean;
   /** Costo unitario del producto (para cálculo de costo de producción) */

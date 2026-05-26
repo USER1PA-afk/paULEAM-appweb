@@ -85,11 +85,11 @@ export function useProductionOrders() {
         await fetchOrders();
         return { data: null, error: null };
       } catch (err: unknown) {
-        return {
-          data: null,
-          error:
-            err instanceof Error ? err.message : "Error al completar orden",
-        };
+        const msg =
+          err instanceof Error
+            ? err.message
+            : (err as { message?: string })?.message ?? "Error al completar orden";
+        return { data: null, error: msg };
       }
     },
     [insforge, fetchOrders]
@@ -107,13 +107,8 @@ export function useProductionOrders() {
         await fetchOrders();
         return { data: null, error: null };
       } catch (err: unknown) {
-        return {
-          data: null,
-          error:
-            err instanceof Error
-              ? err.message
-              : "Error al actualizar estado",
-        };
+        const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? "Error al actualizar estado";
+        return { data: null, error: msg };
       }
     },
     [insforge, fetchOrders]
@@ -135,11 +130,8 @@ export function useProductionOrders() {
         await fetchOrders();
         return { data: null, error: null };
       } catch (err: unknown) {
-        return {
-          data: null,
-          error:
-            err instanceof Error ? err.message : "Error al cancelar orden",
-        };
+        const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? "Error al cancelar orden";
+        return { data: null, error: msg };
       }
     },
     [insforge, fetchOrders]

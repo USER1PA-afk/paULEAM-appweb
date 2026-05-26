@@ -21,6 +21,7 @@ import {
   LogOut,
   ShoppingBag,
   Monitor,
+  PackageOpen,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { label: "Recetas",     href: "/admin/recipes",     icon: ClipboardList,   roles: ["admin"] },
   { label: "Inventario",  href: "/admin/inventory",   icon: Boxes,           roles: ["admin", "operario"] },
   { label: "Producción",  href: "/admin/production",  icon: Factory,         roles: ["admin", "operario"] },
+  { label: "Empaque",     href: "/admin/packaging",   icon: PackageOpen,     roles: ["admin", "operario"] },
   { label: "Usuarios",    href: "/admin/users",       icon: Users,           roles: ["admin"] },
 ];
 

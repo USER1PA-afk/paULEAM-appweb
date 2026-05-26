@@ -23,11 +23,21 @@ interface Product {
   is_active: boolean;
   min_stock_alert: number | null;
   cost_per_unit: number;
+  capacity: number | null;
   created_at: string;
 }
 
+interface PackagingLink {
+  template_id: string;
+  template_name: string;
+  finished_product_name: string;
+  output_product_name: string;
+  qty_per_unit: number;
+  unit: string;
+}
+
 interface ProductWithSuppliers extends Product {
-  suppliers: { company: string | null; name: string; is_primary: boolean }[];
+  suppliers: { supplier_id: string; company: string | null; name: string; is_primary: boolean }[];
 }
 
 type FormMode = "create" | "edit";
@@ -52,6 +62,7 @@ const EMPTY_FORM = {
   cost_per_unit: "",
   min_stock_alert: "",
   description: "",
+  capacity: "",
 };
 
 export default function AdminProductsPage() {
@@ -80,6 +91,10 @@ export default function AdminProductsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Packaging links (for ENVASE_EMPAQUE edit)
+  const [packagingLinks, setPackagingLinks] = useState<PackagingLink[]>([]);
+  const [loadingLinks, setLoadingLinks] = useState(false);
+
   // Archived products (loaded on demand)
   const [archivedProducts, setArchivedProducts] = useState<ProductWithSuppliers[]>([]);
   const [archivedCount, setArchivedCount] = useState(0);
@@ -105,6 +120,7 @@ export default function AdminProductsPage() {
       .select(`
         *,
         suppliers:product_suppliers(
+          supplier_id,
           is_primary,
           supplier:suppliers(name, company)
         )
@@ -115,11 +131,13 @@ export default function AdminProductsPage() {
     const mapped: ProductWithSuppliers[] = ((data as unknown[]) ?? []).map(
       (p: unknown) => {
         const prod = p as Product & {
-          suppliers: { is_primary: boolean; supplier: { name: string; company: string | null } }[];
+          suppliers: { supplier_id: string; is_primary: boolean; supplier: { name: string; company: string | null } }[];
         };
         return {
           ...prod,
+          capacity: (prod as unknown as { capacity?: number | null }).capacity ?? null,
           suppliers: (prod.suppliers ?? []).map((ps) => ({
+            supplier_id: ps.supplier_id,
             name: ps.supplier.name,
             company: ps.supplier.company,
             is_primary: ps.is_primary,
@@ -145,6 +163,7 @@ export default function AdminProductsPage() {
       .select(`
         *,
         suppliers:product_suppliers(
+          supplier_id,
           is_primary,
           supplier:suppliers(name, company)
         )
@@ -155,11 +174,13 @@ export default function AdminProductsPage() {
     const mapped: ProductWithSuppliers[] = ((data as unknown[]) ?? []).map(
       (p: unknown) => {
         const prod = p as Product & {
-          suppliers: { is_primary: boolean; supplier: { name: string; company: string | null } }[];
+          suppliers: { supplier_id: string; is_primary: boolean; supplier: { name: string; company: string | null } }[];
         };
         return {
           ...prod,
+          capacity: (prod as unknown as { capacity?: number | null }).capacity ?? null,
           suppliers: (prod.suppliers ?? []).map((ps) => ({
+            supplier_id: ps.supplier_id,
             name: ps.supplier.name,
             company: ps.supplier.company,
             is_primary: ps.is_primary,
@@ -192,6 +213,47 @@ export default function AdminProductsPage() {
     }
   }
 
+  async function fetchPackagingLinks(productId: string) {
+    setLoadingLinks(true);
+    const { data } = await insforge.database
+      .from("packaging_template_materials")
+      .select(`
+        id,
+        quantity_per_unit,
+        unit,
+        template:packaging_templates(
+          id,
+          name,
+          finished_product:products!finished_product_id(name),
+          output_product:products!output_product_id(name)
+        )
+      `)
+      .eq("material_product_id", productId);
+
+    const links: PackagingLink[] = ((data as unknown[]) ?? []).map((row) => {
+      const r = row as {
+        quantity_per_unit: number;
+        unit: string;
+        template: {
+          id: string;
+          name: string;
+          finished_product: { name: string };
+          output_product: { name: string };
+        };
+      };
+      return {
+        template_id: r.template.id,
+        template_name: r.template.name,
+        finished_product_name: r.template.finished_product.name,
+        output_product_name: r.template.output_product.name,
+        qty_per_unit: r.quantity_per_unit,
+        unit: r.unit,
+      };
+    });
+    setPackagingLinks(links);
+    setLoadingLinks(false);
+  }
+
   function resetForm() {
     setFormData({ ...EMPTY_FORM } as typeof EMPTY_FORM);
     setSelectedSupplierIds([]);
@@ -201,6 +263,7 @@ export default function AdminProductsPage() {
     setError(null);
     setEditingId(null);
     setFormMode("create");
+    setPackagingLinks([]);
   }
 
   function openCreate() {
@@ -218,12 +281,17 @@ export default function AdminProductsPage() {
       cost_per_unit: p.cost_per_unit ? String(p.cost_per_unit) : "",
       min_stock_alert: p.min_stock_alert != null ? String(p.min_stock_alert) : "",
       description: p.description ?? "",
+      capacity: p.capacity != null ? String(p.capacity) : "",
     });
+    if (p.type === "ENVASE_EMPAQUE") {
+      fetchPackagingLinks(p.id);
+    }
     setImageFile(null);
     setImagePreview(p.image_url);
-    const ids = p.suppliers.map((_, i) => { void i; return ""; }).filter(Boolean);
+    const ids = p.suppliers.map((s) => s.supplier_id).filter(Boolean);
+    const primaryId = p.suppliers.find((s) => s.is_primary)?.supplier_id ?? (ids[0] ?? "");
     setSelectedSupplierIds(ids);
-    setPrimarySupplierId("");
+    setPrimarySupplierId(primaryId);
     setEditingId(p.id);
     setFormMode("edit");
     setShowForm(true);
@@ -288,6 +356,7 @@ export default function AdminProductsPage() {
         cost_per_unit: Number(formData.cost_per_unit) || 0,
         min_stock_alert: formData.min_stock_alert ? Number(formData.min_stock_alert) : null,
         description: formData.description || null,
+        capacity: formData.capacity ? Number(formData.capacity) : null,
       };
       if (uploadedImageUrl !== undefined) {
         updatePayload.image_url = uploadedImageUrl;
@@ -323,6 +392,7 @@ export default function AdminProductsPage() {
           min_stock_alert: formData.min_stock_alert ? Number(formData.min_stock_alert) : null,
           description: formData.description || null,
           image_url: uploadedImageUrl ?? null,
+          capacity: formData.capacity ? Number(formData.capacity) : null,
         })
         .select()
         .single();
@@ -630,42 +700,19 @@ export default function AdminProductsPage() {
           onSubmit={handleSubmit}
           className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5"
         >
-          <h3 className="text-lg font-semibold">
-            {formMode === "edit" ? "Editar Producto" : "Registrar Producto"}
-          </h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold">
+              {formMode === "edit" ? "Editar Producto" : "Registrar Producto"}
+            </h3>
+            {formData.type === "ENVASE_EMPAQUE" && (
+              <span className="inline-flex rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2.5 py-0.5 text-xs font-semibold">
+                Envase / Empaque
+              </span>
+            )}
+          </div>
 
+          {/* ─── Tipo selector (siempre visible) ─── */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Nombre */}
-            <div className="space-y-1.5">
-              <label htmlFor="prod-name" className="text-xs font-medium text-muted-foreground">
-                Nombre *
-              </label>
-              <input
-                id="prod-name"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-                placeholder="Leche entera"
-              />
-            </div>
-
-            {/* SKU */}
-            <div className="space-y-1.5">
-              <label htmlFor="prod-sku" className="text-xs font-medium text-muted-foreground">
-                SKU *
-              </label>
-              <input
-                id="prod-sku"
-                required
-                value={formData.sku}
-                onChange={(e) => setFormData((p) => ({ ...p, sku: e.target.value }))}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-                placeholder="MP-001"
-              />
-            </div>
-
-            {/* Tipo */}
             <div className="space-y-1.5">
               <label htmlFor="prod-type" className="text-xs font-medium text-muted-foreground">
                 Tipo *
@@ -675,11 +722,17 @@ export default function AdminProductsPage() {
                 value={formData.type}
                 onChange={(e) => {
                   const newType = e.target.value as ProductType;
-                  setFormData((p) => ({ ...p, type: newType }));
+                  setFormData((p) => ({
+                    ...p,
+                    type: newType,
+                    unit: newType === "ENVASE_EMPAQUE" ? "unidades" : p.unit,
+                    capacity: "",
+                  }));
                   if (!PURCHASABLE_TYPES.includes(newType)) {
                     setSelectedSupplierIds([]);
                     setPrimarySupplierId("");
                   }
+                  if (newType !== "ENVASE_EMPAQUE") setPackagingLinks([]);
                 }}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
               >
@@ -693,186 +746,422 @@ export default function AdminProductsPage() {
                 </p>
               )}
             </div>
-
-            {/* Unidad */}
-            <div className="space-y-1.5">
-              <label htmlFor="prod-unit" className="text-xs font-medium text-muted-foreground">
-                Unidad *
-              </label>
-              <select
-                id="prod-unit"
-                value={formData.unit}
-                onChange={(e) => setFormData((p) => ({ ...p, unit: e.target.value }))}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-              >
-                <option value="kg">Kilogramos (kg)</option>
-                <option value="lt">Litros (lt)</option>
-                <option value="unidades">Unidades</option>
-                <option value="gr">Gramos (gr)</option>
-                <option value="ml">Mililitros (ml)</option>
-              </select>
-            </div>
-
-            {/* Precio — solo PRODUCTO_TERMINADO */}
-            {formData.type === "PRODUCTO_TERMINADO" && (
-              <div className="space-y-1.5">
-                <label htmlFor="prod-price" className="text-xs font-medium text-muted-foreground">
-                  Precio de venta (USD)
-                </label>
-                <input
-                  id="prod-price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) => setFormData((p) => ({ ...p, price: e.target.value }))}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-                  placeholder="0.00"
-                />
-              </div>
-            )}
-
-            {/* Costo unitario — para materias primas, insumos y envases (afecta costo de producción) */}
-            {formData.type !== "PRODUCTO_TERMINADO" && (
-              <div className="space-y-1.5">
-                <label htmlFor="prod-cost" className="text-xs font-medium text-muted-foreground">
-                  Costo unitario (USD)
-                </label>
-                <input
-                  id="prod-cost"
-                  type="number"
-                  min="0"
-                  step="0.0001"
-                  value={formData.cost_per_unit}
-                  onChange={(e) => setFormData((p) => ({ ...p, cost_per_unit: e.target.value }))}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-                  placeholder="0.00"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Se usa para calcular el costo de producción automáticamente.
-                </p>
-              </div>
-            )}
-
-            {/* Alerta de stock mínimo — solo para tipos comprables */}
-            {PURCHASABLE_TYPES.includes(formData.type) && (
-              <div className="space-y-1.5">
-                <label htmlFor="prod-min-stock" className="text-xs font-medium text-muted-foreground">
-                  Alerta stock mínimo
-                </label>
-                <input
-                  id="prod-min-stock"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.min_stock_alert}
-                  onChange={(e) => setFormData((p) => ({ ...p, min_stock_alert: e.target.value }))}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-                  placeholder="Opcional"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Se mostrará una alerta cuando el stock sea igual o inferior a este valor.
-                </p>
-              </div>
-            )}
-
-            {/* Descripción */}
-            <div className={`space-y-1.5 ${formData.type === "MATERIA_PRIMA" ? "sm:col-span-2 lg:col-span-3" : "sm:col-span-1"}`}>
-              <label htmlFor="prod-desc" className="text-xs font-medium text-muted-foreground">
-                Descripción
-              </label>
-              <input
-                id="prod-desc"
-                value={formData.description}
-                onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-                placeholder="Opcional"
-              />
-            </div>
           </div>
 
-          {/* ─── Imagen del Producto (solo admin, solo producto terminado) ─── */}
-          {isAdmin && formData.type === "PRODUCTO_TERMINADO" && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                Imagen del Producto
-              </p>
-              <div className="flex items-start gap-4 flex-wrap">
-                {/* Preview */}
-                {imagePreview ? (
-                  <div className="relative h-24 w-24 shrink-0 rounded-lg overflow-hidden border border-border bg-muted">
-                    <Image
-                      src={imagePreview}
-                      alt="Vista previa"
-                      fill
-                      className="object-cover"
-                      unoptimized={imagePreview.startsWith("blob:")}
+          {/* ════════════════════════════════════════
+              FORMULARIO ESPECIAL — ENVASE / EMPAQUE
+          ════════════════════════════════════════ */}
+          {formData.type === "ENVASE_EMPAQUE" ? (
+            <div className="space-y-5">
+              {/* Info banner */}
+              <div className="rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-900/10 dark:border-amber-800/40 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">
+                Los envases/empaques se consumen durante el proceso de empaque. Define su capacidad para facilitar la gestión de plantillas.
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {/* Nombre */}
+                <div className="space-y-1.5">
+                  <label htmlFor="env-name" className="text-xs font-medium text-muted-foreground">
+                    Nombre del Envase *
+                  </label>
+                  <input
+                    id="env-name"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                    placeholder="Ej: Tarro 500g, Bolsa 1kg"
+                  />
+                </div>
+
+                {/* SKU */}
+                <div className="space-y-1.5">
+                  <label htmlFor="env-sku" className="text-xs font-medium text-muted-foreground">
+                    SKU *
+                  </label>
+                  <input
+                    id="env-sku"
+                    required
+                    value={formData.sku}
+                    onChange={(e) => setFormData((p) => ({ ...p, sku: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                    placeholder="ENV-001"
+                  />
+                </div>
+
+                {/* Capacidad del envase */}
+                <div className="space-y-1.5">
+                  <label htmlFor="env-capacity" className="text-xs font-medium text-muted-foreground">
+                    Capacidad del Envase
+                  </label>
+                  <input
+                    id="env-capacity"
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={formData.capacity}
+                    onChange={(e) => setFormData((p) => ({ ...p, capacity: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                    placeholder="500"
+                  />
+                  <p className="text-[10px] text-muted-foreground">Cantidad que soporta (ej: 500 para 500g)</p>
+                </div>
+
+                {/* Unidad de la capacidad */}
+                <div className="space-y-1.5">
+                  <label htmlFor="env-unit" className="text-xs font-medium text-muted-foreground">
+                    Unidad de la Capacidad *
+                  </label>
+                  <select
+                    id="env-unit"
+                    value={formData.unit}
+                    onChange={(e) => setFormData((p) => ({ ...p, unit: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                  >
+                    <optgroup label="Masa">
+                      <option value="g">Gramos (g)</option>
+                      <option value="kg">Kilogramos (kg)</option>
+                      <option value="lb">Libras (lb)</option>
+                      <option value="oz">Onzas (oz)</option>
+                    </optgroup>
+                    <optgroup label="Volumen">
+                      <option value="ml">Mililitros (ml)</option>
+                      <option value="lt">Litros (lt)</option>
+                    </optgroup>
+                    <optgroup label="Unidades">
+                      <option value="unidades">Unidades</option>
+                      <option value="paquete">Paquete</option>
+                      <option value="rollo">Rollo</option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                {/* Costo unitario */}
+                <div className="space-y-1.5">
+                  <label htmlFor="env-cost" className="text-xs font-medium text-muted-foreground">
+                    Costo unitario (USD)
+                  </label>
+                  <input
+                    id="env-cost"
+                    type="number"
+                    min="0"
+                    step="0.0001"
+                    value={formData.cost_per_unit}
+                    onChange={(e) => setFormData((p) => ({ ...p, cost_per_unit: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                    placeholder="0.00"
+                  />
+                  <p className="text-[10px] text-muted-foreground">Costo por unidad de envase.</p>
+                </div>
+
+                {/* Alerta de stock mínimo */}
+                <div className="space-y-1.5">
+                  <label htmlFor="env-min-stock" className="text-xs font-medium text-muted-foreground">
+                    Alerta stock mínimo
+                  </label>
+                  <input
+                    id="env-min-stock"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={formData.min_stock_alert}
+                    onChange={(e) => setFormData((p) => ({ ...p, min_stock_alert: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                    placeholder="Opcional"
+                  />
+                </div>
+
+                {/* Descripción / notas */}
+                <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
+                  <label htmlFor="env-desc" className="text-xs font-medium text-muted-foreground">
+                    Notas / Especificaciones
+                  </label>
+                  <input
+                    id="env-desc"
+                    value={formData.description}
+                    onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                    placeholder="Ej: Material PET, tapa rosca, apto alimentario…"
+                  />
+                </div>
+              </div>
+
+              {/* Proveedor */}
+              <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+                <p className="text-xs font-semibold text-foreground">Proveedor del Envase</p>
+                <SupplierSelect
+                  selectedIds={selectedSupplierIds}
+                  primaryId={primarySupplierId}
+                  onChange={handleSupplierChange}
+                />
+              </div>
+
+              {/* ─── Productos vinculados (solo en edición) ─── */}
+              {formMode === "edit" && (
+                <div className="rounded-lg border border-amber-200/60 dark:border-amber-800/40 bg-amber-50/40 dark:bg-amber-900/10 p-4 space-y-3">
+                  <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    Productos vinculados a este envase
+                    {loadingLinks && (
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-300 border-t-amber-600" />
+                    )}
+                  </p>
+                  {!loadingLinks && packagingLinks.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Este envase aún no está asociado a ninguna plantilla de empaque.
+                    </p>
+                  )}
+                  {!loadingLinks && packagingLinks.length > 0 && (
+                    <div className="space-y-2">
+                      {packagingLinks.map((lk) => (
+                        <div
+                          key={lk.template_id}
+                          className="flex items-center justify-between gap-4 rounded-md border border-border bg-background px-3 py-2 text-xs"
+                        >
+                          <div>
+                            <p className="font-medium">{lk.template_name}</p>
+                            <p className="text-muted-foreground">
+                              {lk.finished_product_name}
+                              {lk.output_product_name !== lk.finished_product_name &&
+                                ` → ${lk.output_product_name}`}
+                            </p>
+                          </div>
+                          <span className="shrink-0 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-0.5 font-semibold">
+                            {lk.qty_per_unit} {lk.unit}/unid.
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-[10px] text-muted-foreground">
+                    La vinculación se gestiona desde{" "}
+                    <a href="/admin/packaging/templates" className="underline underline-offset-2 text-amber-700 dark:text-amber-400 hover:text-amber-600">
+                      Plantillas de Empaque
+                    </a>.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ════════════════════════════════════════
+               FORMULARIO ESTÁNDAR — otros tipos
+            ════════════════════════════════════════ */
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {/* Nombre */}
+                <div className="space-y-1.5">
+                  <label htmlFor="prod-name" className="text-xs font-medium text-muted-foreground">
+                    Nombre *
+                  </label>
+                  <input
+                    id="prod-name"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                    placeholder="Leche entera"
+                  />
+                </div>
+
+                {/* SKU */}
+                <div className="space-y-1.5">
+                  <label htmlFor="prod-sku" className="text-xs font-medium text-muted-foreground">
+                    SKU *
+                  </label>
+                  <input
+                    id="prod-sku"
+                    required
+                    value={formData.sku}
+                    onChange={(e) => setFormData((p) => ({ ...p, sku: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                    placeholder="MP-001"
+                  />
+                </div>
+
+                {/* Unidad */}
+                <div className="space-y-1.5">
+                  <label htmlFor="prod-unit" className="text-xs font-medium text-muted-foreground">
+                    Unidad *
+                  </label>
+                  <select
+                    id="prod-unit"
+                    value={formData.unit}
+                    onChange={(e) => setFormData((p) => ({ ...p, unit: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                  >
+                    <optgroup label="Masa">
+                      <option value="kg">Kilogramos (kg)</option>
+                      <option value="g">Gramos (g)</option>
+                      <option value="lb">Libras (lb)</option>
+                      <option value="oz">Onzas (oz)</option>
+                    </optgroup>
+                    <optgroup label="Volumen">
+                      <option value="lt">Litros (lt)</option>
+                      <option value="ml">Mililitros (ml)</option>
+                      <option value="gal">Galones (gal)</option>
+                    </optgroup>
+                    <optgroup label="Unidades">
+                      <option value="unidades">Unidades</option>
+                      <option value="paquete">Paquete</option>
+                      <option value="caja">Caja</option>
+                      <option value="rollo">Rollo</option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                {/* Precio — solo PRODUCTO_TERMINADO */}
+                {formData.type === "PRODUCTO_TERMINADO" && (
+                  <div className="space-y-1.5">
+                    <label htmlFor="prod-price" className="text-xs font-medium text-muted-foreground">
+                      Precio de venta (USD)
+                    </label>
+                    <input
+                      id="prod-price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={(e) => setFormData((p) => ({ ...p, price: e.target.value }))}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                      placeholder="0.00"
                     />
-                    <button
-                      type="button"
-                      onClick={clearImage}
-                      aria-label="Quitar imagen"
-                      className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80 transition-colors"
-                    >
-                      <XIcon className="h-3 w-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 text-muted-foreground">
-                    <ImagePlus className="h-7 w-7 opacity-40" />
                   </div>
                 )}
 
-                {/* Upload button */}
-                <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="prod-image"
-                    className="cursor-pointer rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors inline-flex items-center gap-2"
-                  >
-                    <ImagePlus className="h-4 w-4 text-muted-foreground" />
-                    {imageFile ? "Cambiar imagen" : imagePreview ? "Reemplazar imagen" : "Subir imagen"}
+                {/* Costo unitario */}
+                {formData.type !== "PRODUCTO_TERMINADO" && (
+                  <div className="space-y-1.5">
+                    <label htmlFor="prod-cost" className="text-xs font-medium text-muted-foreground">
+                      Costo unitario (USD)
+                    </label>
                     <input
-                      ref={imageInputRef}
-                      id="prod-image"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
+                      id="prod-cost"
+                      type="number"
+                      min="0"
+                      step="0.0001"
+                      value={formData.cost_per_unit}
+                      onChange={(e) => setFormData((p) => ({ ...p, cost_per_unit: e.target.value }))}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                      placeholder="0.00"
                     />
+                    <p className="text-[10px] text-muted-foreground">
+                      Se usa para calcular el costo de producción automáticamente.
+                    </p>
+                  </div>
+                )}
+
+                {/* Alerta de stock mínimo */}
+                {PURCHASABLE_TYPES.includes(formData.type) && (
+                  <div className="space-y-1.5">
+                    <label htmlFor="prod-min-stock" className="text-xs font-medium text-muted-foreground">
+                      Alerta stock mínimo
+                    </label>
+                    <input
+                      id="prod-min-stock"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.min_stock_alert}
+                      onChange={(e) => setFormData((p) => ({ ...p, min_stock_alert: e.target.value }))}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                      placeholder="Opcional"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Se mostrará una alerta cuando el stock sea igual o inferior a este valor.
+                    </p>
+                  </div>
+                )}
+
+                {/* Descripción */}
+                <div className={`space-y-1.5 ${formData.type === "MATERIA_PRIMA" ? "sm:col-span-2 lg:col-span-3" : "sm:col-span-1"}`}>
+                  <label htmlFor="prod-desc" className="text-xs font-medium text-muted-foreground">
+                    Descripción
                   </label>
-                  {imageFile && (
-                    <p className="text-xs text-muted-foreground">
-                      {imageFile.name} — {(imageFile.size / 1024).toFixed(1)} KB
-                    </p>
-                  )}
-                  {!imageFile && !imagePreview && (
-                    <p className="text-xs text-muted-foreground">
-                      JPG, PNG o WebP. Recomendado: 500×500 px.
-                    </p>
-                  )}
-                  {formMode === "edit" && !imageFile && imagePreview && (
-                    <p className="text-xs text-muted-foreground">
-                      Imagen actual. Sube una nueva para reemplazarla.
-                    </p>
-                  )}
+                  <input
+                    id="prod-desc"
+                    value={formData.description}
+                    onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                    placeholder="Opcional"
+                  />
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* ─── Proveedores (tipos comprables) ─── */}
-          {PURCHASABLE_TYPES.includes(formData.type) && (
-            <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
-              {formMode === "edit" && (
-                <p className="text-[10px] text-muted-foreground bg-amber-50 border border-amber-200 rounded-md px-3 py-1.5 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300">
-                  Al editar, selecciona nuevamente los proveedores para actualizar la vinculación.
-                </p>
+              {/* Imagen del Producto (solo admin, solo producto terminado) */}
+              {isAdmin && formData.type === "PRODUCTO_TERMINADO" && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Imagen del Producto
+                  </p>
+                  <div className="flex items-start gap-4 flex-wrap">
+                    {imagePreview ? (
+                      <div className="relative h-24 w-24 shrink-0 rounded-lg overflow-hidden border border-border bg-muted">
+                        <Image
+                          src={imagePreview}
+                          alt="Vista previa"
+                          fill
+                          className="object-cover"
+                          unoptimized={imagePreview.startsWith("blob:")}
+                        />
+                        <button
+                          type="button"
+                          onClick={clearImage}
+                          aria-label="Quitar imagen"
+                          className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80 transition-colors"
+                        >
+                          <XIcon className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 text-muted-foreground">
+                        <ImagePlus className="h-7 w-7 opacity-40" />
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-2">
+                      <label
+                        htmlFor="prod-image"
+                        className="cursor-pointer rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors inline-flex items-center gap-2"
+                      >
+                        <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                        {imageFile ? "Cambiar imagen" : imagePreview ? "Reemplazar imagen" : "Subir imagen"}
+                        <input
+                          ref={imageInputRef}
+                          id="prod-image"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                        />
+                      </label>
+                      {imageFile && (
+                        <p className="text-xs text-muted-foreground">
+                          {imageFile.name} — {(imageFile.size / 1024).toFixed(1)} KB
+                        </p>
+                      )}
+                      {!imageFile && !imagePreview && (
+                        <p className="text-xs text-muted-foreground">
+                          JPG, PNG o WebP. Recomendado: 500×500 px.
+                        </p>
+                      )}
+                      {formMode === "edit" && !imageFile && imagePreview && (
+                        <p className="text-xs text-muted-foreground">
+                          Imagen actual. Sube una nueva para reemplazarla.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
-              <SupplierSelect
-                selectedIds={selectedSupplierIds}
-                primaryId={primarySupplierId}
-                onChange={handleSupplierChange}
-              />
+
+              {/* Proveedores (tipos comprables) */}
+              {PURCHASABLE_TYPES.includes(formData.type) && (
+                <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+                  <SupplierSelect
+                    selectedIds={selectedSupplierIds}
+                    primaryId={primarySupplierId}
+                    onChange={handleSupplierChange}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -940,6 +1229,7 @@ export default function AdminProductsPage() {
                         <th className="px-4 py-3 text-center font-medium text-muted-foreground">SKU</th>
                         <th className="px-4 py-3 text-center font-medium text-muted-foreground">Nombre</th>
                         <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden sm:table-cell">Unidad</th>
+                        {typeValue === "ENVASE_EMPAQUE" && <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden sm:table-cell">Capacidad</th>}
                         {isPurchasable && <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden md:table-cell">Proveedores</th>}
                         {typeValue === "PRODUCTO_TERMINADO" && <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden lg:table-cell">Precio</th>}
                         <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
@@ -960,6 +1250,13 @@ export default function AdminProductsPage() {
                             <td className="px-4 py-3 text-center font-mono text-xs text-muted-foreground">{p.sku}</td>
                             <td className="px-4 py-3 text-center font-medium">{p.name}</td>
                             <td className="px-4 py-3 text-center text-muted-foreground hidden sm:table-cell">{p.unit}</td>
+                            {typeValue === "ENVASE_EMPAQUE" && (
+                              <td className="px-4 py-3 text-center text-muted-foreground hidden sm:table-cell">
+                                {p.capacity != null
+                                  ? `${p.capacity} ${p.unit}`
+                                  : <span className="text-muted-foreground/50">—</span>}
+                              </td>
+                            )}
                             {isPurchasable && (
                               <td className="px-4 py-3 text-center hidden md:table-cell">
                                 {p.suppliers.length === 0 ? (

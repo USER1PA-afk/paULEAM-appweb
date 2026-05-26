@@ -72,9 +72,9 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
                     <div className="font-medium text-foreground text-xs">{ing.product_name}</div>
                     <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                       {ing.product_sku}
-                      {ing.unit_mismatch && (
-                        <span className="text-blue-600 bg-blue-50 px-1 rounded-sm" title={`Receta en ${ing.unit}, stock en ${ing.inventory_unit}`}>
-                          Dif. Unidad
+                      {ing.unit_mismatch && ing.stock_display_unit !== ing.unit && (
+                        <span className="text-amber-600 bg-amber-50 px-1 rounded-sm" title={`Receta en ${ing.unit}, stock en ${ing.inventory_unit} — unidades incompatibles`}>
+                          ⚠ Unidades distintas
                         </span>
                       )}
                     </div>
@@ -90,11 +90,14 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
                     {formatScaledQuantity(ing.scaled_quantity, ing.unit)}
                   </td>
                   <td className="py-2.5 px-2 text-center text-xs text-muted-foreground tabular-nums">
-                    {Number(ing.stock_available).toLocaleString("es-EC", {
-                      minimumFractionDigits: ["kg", "lt"].includes(ing.inventory_unit?.toLowerCase() || "") ? 2 : 0,
-                      maximumFractionDigits: ["kg", "lt"].includes(ing.inventory_unit?.toLowerCase() || "") ? 2 : 2,
+                    {Number(ing.stock_available_normalized).toLocaleString("es-EC", {
+                      minimumFractionDigits: ["kg", "lt"].includes(ing.stock_display_unit?.toLowerCase() || "") ? 2 : 0,
+                      maximumFractionDigits: 4,
                       useGrouping: false
-                    })} {ing.inventory_unit}
+                    })} {ing.stock_display_unit}
+                    {ing.unit_mismatch && ing.stock_display_unit === ing.unit && (
+                      <span className="block text-[10px] text-muted-foreground/60">({Number(ing.stock_available).toLocaleString("es-EC", { maximumFractionDigits: 4, useGrouping: false })} {ing.inventory_unit})</span>
+                    )}
                   </td>
                   <td className="py-2.5 pl-4 text-center">
                     {ing.stock_sufficient ? (

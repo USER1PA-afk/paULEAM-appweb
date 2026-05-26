@@ -4,17 +4,22 @@ import { usePackagingOrders, usePackagingTemplates, usePackagingActions } from "
 import { useRole } from "@features/auth/hooks";
 import { formatDate } from "@shared/lib/utils";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   PACKAGING_STATUS_LABELS,
   PACKAGING_STATUS_COLORS,
 } from "@entities/packaging";
 
-export default function AdminPackagingPage() {
+// ─────────────────────────────────────────────────────────────
+// Inner component que usa useSearchParams (requiere Suspense)
+// ─────────────────────────────────────────────────────────────
+function AdminPackagingPageInner() {
   const { orders, loading, error, refetch } = usePackagingOrders();
   const { templates } = usePackagingTemplates();
   const { role } = useRole();
   const isAdmin = role === "admin";
+  const searchParams = useSearchParams();
 
   const { completeOrder, cancelOrder, updateStatus, createOrder } = usePackagingActions(refetch);
 
@@ -30,6 +35,23 @@ export default function AdminPackagingPage() {
     production_order_id: "",
     notes: "",
   });
+
+  // Pre-rellenar formulario desde parámetros de URL (viene de producción)
+  useEffect(() => {
+    const tplId = searchParams.get("template_id");
+    const prodId = searchParams.get("production_order_id");
+    const units = searchParams.get("units");
+    if (tplId) {
+      setForm((p) => ({
+        ...p,
+        template_id: tplId,
+        production_order_id: prodId ?? "",
+        units_to_package: units ?? "",
+      }));
+      setShowForm(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function setRowError(id: string, msg: string | null) {
     setRowErrors((prev) => {
@@ -83,6 +105,9 @@ export default function AdminPackagingPage() {
   const completedCount = orders.filter((o) => o.status === "COMPLETADA").length;
   const inProgressCount = orders.filter((o) => o.status === "EN_PROCESO").length;
 
+  // Plantilla seleccionada (para mostrar info de conversión)
+  const selectedTemplate = templates.find((t) => t.id === form.template_id);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -133,6 +158,23 @@ export default function AdminPackagingPage() {
         >
           <h3 className="text-lg font-semibold">Nueva Orden de Empaque</h3>
 
+          {/* Badge de vinculación con producción */}
+          {form.production_order_id && (
+            <div className="inline-flex items-center gap-2 rounded-md bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 px-3 py-1.5 text-xs font-medium text-brand-700 dark:text-brand-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+              Vinculado a orden de producción:{" "}
+              <span className="font-mono">{form.production_order_id.substring(0, 8)}</span>
+              <button
+                type="button"
+                onClick={() => setForm((p) => ({ ...p, production_order_id: "" }))}
+                className="ml-1 text-brand-400 hover:text-brand-700 transition-colors"
+                title="Desvincular"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
           {templates.length === 0 ? (
             <div className="rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-900/10 dark:border-amber-800 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
               No hay plantillas de empaque activas.{" "}
@@ -160,6 +202,12 @@ export default function AdminPackagingPage() {
                     </option>
                   ))}
                 </select>
+                {/* Info de conversión de la plantilla seleccionada */}
+                {selectedTemplate && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Consume {selectedTemplate.bulk_qty_per_unit} {selectedTemplate.bulk_unit} de granel por unidad empacada ({selectedTemplate.output_unit})
+                  </p>
+                )}
               </div>
 
               {/* Unidades */}
@@ -175,6 +223,16 @@ export default function AdminPackagingPage() {
                   placeholder="Ej: 50"
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
+                {/* Calculo de consumo estimado */}
+                {selectedTemplate && Number(form.units_to_package) > 0 && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Consumirá ≈{" "}
+                    <span className="font-semibold">
+                      {(Number(form.units_to_package) * Number(selectedTemplate.bulk_qty_per_unit)).toLocaleString("es-EC", { maximumFractionDigits: 4 })} {selectedTemplate.bulk_unit}
+                    </span>{" "}
+                    de granel
+                  </p>
+                )}
               </div>
 
               {/* Notas */}
@@ -286,6 +344,11 @@ export default function AdminPackagingPage() {
                             {order.finished_product_name} → {order.output_product_name}
                           </div>
                         )}
+                        {order.production_order_id && (
+                          <div className="text-[10px] text-brand-600 dark:text-brand-400 font-mono mt-0.5">
+                            Prod: {order.production_order_id.substring(0, 8)}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center font-semibold tabular-nums">
                         {Number(order.units_to_package).toLocaleString("es-EC")}
@@ -360,5 +423,20 @@ export default function AdminPackagingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Export default con Suspense (requerido por useSearchParams)
+// ─────────────────────────────────────────────────────────────
+export default function AdminPackagingPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+      </div>
+    }>
+      <AdminPackagingPageInner />
+    </Suspense>
   );
 }

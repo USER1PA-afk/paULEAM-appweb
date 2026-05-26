@@ -27,6 +27,40 @@ export const MEASUREMENT_UNITS = {
 };
 
 /**
+ * Factores de conversión a unidad base (g para masa, ml para volumen).
+ */
+const UNIT_FACTORS: Record<string, number> = {
+  g: 1, kg: 1000, lb: 453.592, oz: 28.3495,
+  ml: 1, lt: 1000, gal: 3785.41,
+};
+
+/**
+ * Devuelve el grupo de medida de una unidad ("MASA" | "VOLUMEN" | null).
+ */
+function getUnitGroup(unit: string): "MASA" | "VOLUMEN" | null {
+  const u = unit.toLowerCase();
+  if (["g", "kg", "lb", "oz"].includes(u)) return "MASA";
+  if (["ml", "lt", "gal"].includes(u)) return "VOLUMEN";
+  return null;
+}
+
+/**
+ * Convierte una cantidad de `fromUnit` a `toUnit`.
+ * Solo funciona si ambas unidades pertenecen al mismo grupo de medida.
+ * Devuelve null si no es posible convertir.
+ */
+export function convertUnit(value: number, fromUnit: string, toUnit: string): number | null {
+  if (fromUnit === toUnit) return value;
+  const fromGroup = getUnitGroup(fromUnit);
+  const toGroup = getUnitGroup(toUnit);
+  if (!fromGroup || fromGroup !== toGroup) return null;
+  const fromFactor = UNIT_FACTORS[fromUnit.toLowerCase()];
+  const toFactor = UNIT_FACTORS[toUnit.toLowerCase()];
+  if (!fromFactor || !toFactor) return null;
+  return value * (fromFactor / toFactor);
+}
+
+/**
  * Calcula el factor de escala.
  * factor = rendimiento_objetivo / rendimiento_base
  */
@@ -85,8 +119,14 @@ export function scaleIngredientsWithStock(
     const productSku = inventoryData?.sku || "N/A";
     const costPerUnit = inventoryData?.cost_per_unit ?? 0;
 
-    const isSufficient = isStockSufficient(scaledQty, stockAvailable);
     const unitMismatch = ing.unit !== inventoryUnit;
+
+    // Intentar convertir el stock a la unidad de la receta para comparación uniforme
+    const converted = unitMismatch ? convertUnit(stockAvailable, inventoryUnit, ing.unit) : null;
+    const stockNormalized = converted !== null ? converted : stockAvailable;
+    const stockDisplayUnit = converted !== null ? ing.unit : inventoryUnit;
+
+    const isSufficient = isStockSufficient(scaledQty, stockNormalized);
 
     return {
       id: ing.id,
@@ -99,6 +139,8 @@ export function scaleIngredientsWithStock(
       inventory_unit: inventoryUnit,
       scaled_quantity: scaledQty,
       stock_available: stockAvailable,
+      stock_available_normalized: stockNormalized,
+      stock_display_unit: stockDisplayUnit,
       stock_sufficient: isSufficient,
       unit_mismatch: unitMismatch,
       cost_per_unit: costPerUnit,

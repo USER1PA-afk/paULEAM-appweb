@@ -79,9 +79,10 @@ CREATE TRIGGER trg_enforce_packaging_material
 -- ============================
 -- 3. ÓRDENES DE EMPAQUE
 -- ============================
-CREATE TYPE IF NOT EXISTS public.packaging_status AS ENUM (
-  'BORRADOR', 'EN_PROCESO', 'COMPLETADA', 'CANCELADA'
-);
+DO $$ BEGIN
+  CREATE TYPE public.packaging_status AS ENUM ('BORRADOR', 'EN_PROCESO', 'COMPLETADA', 'CANCELADA');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.packaging_orders (
   id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -325,7 +326,8 @@ CREATE POLICY "pkg_orders_update_staff"
 -- ============================
 -- 6. VISTA ENRIQUECIDA DEL LEDGER (ACTUALIZADA)
 -- ============================
-CREATE OR REPLACE VIEW public.inventory_ledger_view AS
+DROP VIEW IF EXISTS public.inventory_ledger_view;
+CREATE VIEW public.inventory_ledger_view AS
 SELECT
   il.*,
   p.name       AS product_name,
