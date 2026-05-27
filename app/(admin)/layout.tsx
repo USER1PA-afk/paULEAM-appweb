@@ -22,6 +22,7 @@ import {
   ShoppingBag,
   Monitor,
   PackageOpen,
+  Bell,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -106,6 +107,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen,      setSidebarOpen]      = useState(false);
+  const [notifOpen,        setNotifOpen]        = useState(false);
+  const [notifications] = useState([
+    { id: 1, text: "Nueva orden de venta recibida",        time: "Hace 2 min",  read: false, href: "/admin/orders"     },
+    { id: 2, text: "Stock bajo: Harina de trigo",          time: "Hace 15 min", read: false, href: "/admin/inventory"  },
+    { id: 3, text: "Orden de producción #042 completada",  time: "Hace 1 hora", read: true,  href: "/admin/production" },
+    { id: 4, text: "Nuevo usuario registrado",             time: "Hace 3 horas",read: true,  href: "/admin/users"      },
+  ]);
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleHamburgerClick = () => {
     if (window.innerWidth >= 1024) {
@@ -229,6 +238,83 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* ── User info + logout ── */}
         <div className="flex items-center gap-2 pr-1">
           <ThemeToggle />
+
+          {/* ── Notifications ── */}
+          <div className="relative">
+            <button
+              onClick={() => setNotifOpen((prev) => !prev)}
+              aria-label="Notificaciones"
+              title="Notificaciones"
+              className="flex h-8 w-8 items-center justify-center rounded-md
+                text-muted-foreground hover:bg-muted hover:text-foreground
+                transition-colors duration-200 relative"
+            >
+              <Bell aria-hidden="true" className="h-4 w-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center
+                  rounded-full bg-brand-600 text-[9px] font-bold text-white leading-none">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {notifOpen && (
+              <>
+                {/* Backdrop para cerrar */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setNotifOpen(false)}
+                />
+                {/* Panel */}
+                <div className="absolute right-0 top-10 z-50 w-80
+                  rounded-xl border border-border bg-card shadow-xl
+                  overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                  {/* Header del panel */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                    <span className="text-sm font-semibold text-foreground">Notificaciones</span>
+                    {unreadCount > 0 && (
+                      <span className="rounded-full bg-brand-100 dark:bg-brand-900/40
+                        px-2 py-0.5 text-[10px] font-bold text-brand-600 dark:text-brand-300">
+                        {unreadCount} nuevas
+                      </span>
+                    )}
+                  </div>
+                  {/* Lista */}
+                  <ul className="divide-y divide-border max-h-72 overflow-y-auto">
+                    {notifications.map((n) => (
+                      <li key={n.id}>
+                        <Link
+                          href={n.href}
+                          onClick={() => setNotifOpen(false)}
+                          className={`flex items-start gap-3 px-4 py-3 text-sm
+                            transition-colors hover:bg-muted/50 cursor-pointer
+                            ${n.read ? "opacity-60" : ""}`}
+                        >
+                          <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full
+                            ${n.read ? "bg-muted-foreground/30" : "bg-brand-600"}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-foreground leading-snug">{n.text}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">{n.time}</p>
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  {/* Footer */}
+                  <div className="px-4 py-2.5 border-t border-border">
+                    <Link
+                      href="/admin/notifications"
+                      onClick={() => setNotifOpen(false)}
+                      className="block w-full text-center text-xs text-brand-600 dark:text-brand-400
+                        font-medium hover:underline"
+                    >
+                      Ver todas las notificaciones
+                    </Link>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           <div className="hidden sm:flex flex-col items-end leading-tight">
             <span className="text-sm font-semibold text-foreground truncate max-w-36">
               {user?.profile?.name ?? user?.email ?? "Sin sesión"}
