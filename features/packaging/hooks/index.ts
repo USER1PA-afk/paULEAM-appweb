@@ -238,7 +238,10 @@ export function usePackagingActions(refetch: () => void) {
       refetch();
       return { error: null };
     } catch (err: unknown) {
-      return { error: err instanceof Error ? err.message : "Error al actualizar estado" };
+      const msg = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message ?? "Error al actualizar estado";
+      return { error: msg };
     }
   }, [insforge, refetch]);
 
@@ -436,6 +439,7 @@ export function usePackagingPreview(
 
         const materialIds = materialRows.map((m) => m.material_product_id);
         let stockMap: Record<string, number> = {};
+        let costMap: Record<string, number> = {};
 
         if (materialIds.length > 0) {
           const { data: stockData } = await insforge.database
@@ -446,11 +450,21 @@ export function usePackagingPreview(
           (stockData as { product_id: string; stock_actual: number }[] ?? []).forEach((s) => {
             stockMap[s.product_id] = Number(s.stock_actual);
           });
+
+          const { data: costData } = await insforge.database
+            .from("products")
+            .select("id, cost_per_unit")
+            .in("id", materialIds);
+
+          ((costData as { id: string; cost_per_unit: number }[]) ?? []).forEach((c) => {
+            costMap[c.id] = c.cost_per_unit ?? 0;
+          });
         }
 
         const materialsPreview: PackagingMaterialPreview[] = materialRows.map((m) => {
           const needed = m.quantity_per_unit * unitsToPackage;
           const available = stockMap[m.material_product_id] ?? 0;
+          const costPerUnit = costMap[m.material_product_id] ?? 0;
           return {
             material_product_id: m.material_product_id,
             material_name: m.material?.name ?? "Desconocido",
@@ -459,12 +473,18 @@ export function usePackagingPreview(
             unit: m.unit,
             stock_available: available,
             stock_sufficient: available >= needed,
+            cost_per_unit: costPerUnit,
+            estimated_cost: Number((needed * costPerUnit).toFixed(4)),
           };
         });
 
         const canPackage =
           bulkAvailable >= bulkNeeded &&
           materialsPreview.every((m) => m.stock_sufficient);
+
+        const estimatedPackagingCost = Number(
+          materialsPreview.reduce((sum, m) => sum + m.estimated_cost, 0).toFixed(4)
+        );
 
         if (mounted) {
           setPreview({
@@ -475,6 +495,7 @@ export function usePackagingPreview(
             bulk_stock_sufficient: bulkAvailable >= bulkNeeded,
             materials: materialsPreview,
             can_package: canPackage,
+            estimated_packaging_cost: estimatedPackagingCost,
           });
         }
       } catch (err: unknown) {
@@ -489,4 +510,53 @@ export function usePackagingPreview(
   }, [templateId, unitsToPackage, insforge]);
 
   return { preview, loading, error };
+}
+
+// ============================================================
+// Hook: Órdenes de empaque por orden de producción
+// ============================================================
+export function usePackagingOrdersByProduction(productionOrderId: string | null) {
+  const [orders, setOrders] = useState<PackagingOrder[]>([]);
+  const [loading, setLoading] = useState(false);
+  const insforge = getInsforge();
+
+  const fetchOrders = useCallback(async () => {
+    if (!productionOrderId) { setOrders([]); return; }
+    setLoading(true);
+    const { data } = await insforge.database
+      .from("packaging_orders")
+      .select(`
+        *,
+        template:packaging_templates(
+          name,
+          finished_product:products!packaging_templates_finished_product_id_fkey(name),
+          output_product:products!packaging_templates_output_product_id_fkey(name)
+        )
+      `)
+      .eq("production_order_id", productionOrderId)
+      .order("created_at", { ascending: true });
+
+    const mapped = ((data as unknown[]) ?? []).map((row: unknown) => {
+      const r = row as PackagingOrder & {
+        template?: {
+          name: string;
+          finished_product?: { name: string };
+          output_product?: { name: string };
+        };
+      };
+      return {
+        ...r,
+        template_name: r.template?.name,
+        finished_product_name: r.template?.finished_product?.name,
+        output_product_name: r.template?.output_product?.name,
+      } as PackagingOrder;
+    });
+    setOrders(mapped);
+    setLoading(false);
+  }, [productionOrderId, insforge]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
+
+  return { orders, loading, refetch: fetchOrders };
 }

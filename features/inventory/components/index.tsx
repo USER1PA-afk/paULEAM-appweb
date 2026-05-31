@@ -136,10 +136,40 @@ export function StockSummaryTable({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div role="status" className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
-          <span className="sr-only">Cargando stock...</span>
-        </div>
+      <div className="space-y-6" aria-busy="true" aria-label="Cargando stock...">
+        {Array.from({ length: 3 }).map((_, gi) => (
+          <div key={gi} className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="skeleton h-2 w-2 rounded-full" />
+              <div className="skeleton h-4 w-28" />
+              <div className="skeleton h-3.5 w-6 rounded-full" />
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-border/70 shadow-sm">
+              <table className="w-full text-sm table-fixed">
+                <thead>
+                  <tr className="border-b border-border/70 bg-muted/40">
+                    {["SKU","Producto","Stock","Unidad","Estado"].map((h) => (
+                      <th key={h} className="px-4 py-2.5">
+                        <div className="skeleton h-2.5 w-12 mx-auto" />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {Array.from({ length: 4 }).map((_, ri) => (
+                    <tr key={ri}>
+                      <td className="px-4 py-3"><div className="skeleton h-3.5 w-16" /></td>
+                      <td className="px-4 py-3"><div className="skeleton h-3.5 w-36" /></td>
+                      <td className="px-4 py-3"><div className="skeleton h-3.5 w-12 ml-auto" /></td>
+                      <td className="px-4 py-3 hidden sm:table-cell"><div className="skeleton h-3.5 w-10" /></td>
+                      <td className="px-4 py-3"><div className="skeleton h-5 w-14 mx-auto rounded-full" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -194,8 +224,14 @@ export function StockSummaryTable({
       {bulkGoods.length > 0    && <StockSubTable items={bulkGoods}    label="Productos a Granel" accentColor="bg-teal-500" />}
       {finished.length > 0     && <StockSubTable items={finished}     label="Productos Terminados" accentColor="bg-brand-500" />}
       {other.length > 0        && <StockSubTable items={other}        label="Otros" accentColor="bg-zinc-400" />}
-      {summary.length === 0    && (
-        <p className="py-8 text-center text-sm text-muted-foreground/60">Sin movimientos de stock registrados</p>
+      {summary.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-14 gap-3 text-center">
+          <Package className="h-10 w-10 text-muted-foreground/25" />
+          <p className="text-sm font-medium text-muted-foreground">Sin movimientos de stock registrados</p>
+          <p className="text-xs text-muted-foreground/60 max-w-xs">
+            Registra el primer ingreso de materia prima usando el formulario de arriba.
+          </p>
+        </div>
       )}
     </div>
   );
@@ -583,9 +619,31 @@ export function InventoryLedgerTable({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div role="status" className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
-          <span className="sr-only">Cargando movimientos...</span>
+      <div className="space-y-3" aria-busy="true" aria-label="Cargando movimientos...">
+        <div className="skeleton h-5 w-40" />
+        <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                {["Fecha","Producto","Tipo","Cantidad","Referencia"].map((h) => (
+                  <th key={h} className="px-4 py-3">
+                    <div className="skeleton h-3 w-16 mx-auto" />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i} className="border-b border-border/50 last:border-0">
+                  <td className="px-4 py-3"><div className="skeleton h-3.5 w-24" /></td>
+                  <td className="px-4 py-3"><div className="skeleton h-3.5 w-32" /></td>
+                  <td className="px-4 py-3"><div className="skeleton h-5 w-16 mx-auto rounded-full" /></td>
+                  <td className="px-4 py-3"><div className="skeleton h-3.5 w-14 ml-auto" /></td>
+                  <td className="px-4 py-3"><div className="skeleton h-3.5 w-20 mx-auto" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     );

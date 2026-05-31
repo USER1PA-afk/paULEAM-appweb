@@ -370,3 +370,32 @@ export function useScalePreview(recipeId: string | null, targetYield: number) {
     error
   };
 }
+
+/**
+ * Hook para cargar una sola orden de producción por ID.
+ */
+export function useProductionOrder(orderId: string | null) {
+  const [order, setOrder] = useState<ProductionOrder | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const insforge = getInsforge();
+
+  const fetchOrder = useCallback(async () => {
+    if (!orderId) { setOrder(null); return; }
+    setLoading(true);
+    setError(null);
+    const { data, error: qErr } = await insforge.database
+      .from("production_orders")
+      .select("*")
+      .eq("id", orderId)
+      .single();
+    if (qErr) { setError((qErr as { message?: string })?.message ?? "Error al cargar orden"); setLoading(false); return; }
+    setOrder(data as ProductionOrder);
+    setLoading(false);
+  }, [orderId, insforge]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchOrder(); }, [fetchOrder]);
+
+  return { order, loading, error, refetch: fetchOrder };
+}

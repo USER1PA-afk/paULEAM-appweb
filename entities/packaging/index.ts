@@ -166,6 +166,8 @@ export interface PackagingMaterialPreview {
   unit: string;
   stock_available: number;
   stock_sufficient: boolean;
+  cost_per_unit: number;
+  estimated_cost: number;
 }
 
 /** Preview completo antes de crear/completar una orden de empaque */
@@ -177,4 +179,5 @@ export interface PackagingOrderPreview {
   bulk_stock_sufficient: boolean;
   materials: PackagingMaterialPreview[];
   can_package: boolean;
+  estimated_packaging_cost: number;
 }

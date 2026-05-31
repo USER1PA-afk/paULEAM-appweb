@@ -4,18 +4,15 @@ import {
   useProductionOrders,
   useRecipes,
   ProductionScalePreview,
-  ProductionOrderDetail,
 } from "@features/production";
-import { usePackagingTemplates, usePackagingActions } from "@features/packaging";
 import { formatDate } from "@shared/lib/utils";
 import React, { useState, useEffect } from "react";
 import { useRole } from "@features/auth/hooks";
-import { Printer, Trash2, Package } from "lucide-react";
+import { Printer, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 // ─────────────────────────────────────────────────────────────
-// Sistema de unidades completo
-// factor = cuántas unidades base (g o ml) hay en 1 de esta unidad
+// Sistema de unidades
 // ─────────────────────────────────────────────────────────────
 const UNIT_GROUPS: Record<string, { label: string; factor: number }[]> = {
   MASA: [
@@ -61,9 +58,6 @@ export default function AdminProductionPage() {
     cancelOrder, declareWaste, refetch,
   } = useProductionOrders();
   const { recipes } = useRecipes();
-  const { templates: packagingTemplates } = usePackagingTemplates();
-  // noop refetch: no mostramos packaging orders en esta página
-  const { createOrder: createPackagingOrder } = usePackagingActions(() => {});
   const { role } = useRole();
   const isAdmin = role === "admin";
   const router = useRouter();
@@ -71,12 +65,10 @@ export default function AdminProductionPage() {
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
-  // Estado de la unidad de display (separado del form para manejar conversión al vuelo)
   const [displayUnit, setDisplayUnit] = useState<string>("");
 
   // Merma
@@ -93,9 +85,6 @@ export default function AdminProductionPage() {
     notes: "",
   });
 
-  // Lista de líneas de empaque: cada una tiene plantilla + unidades a empacar
-  const [packagingLines, setPackagingLines] = useState<{ template_id: string; units: string }[]>([]);
-
   // ── Receta seleccionada ───────────────────────────────────
   const selectedRecipe = recipes.find((r) => r.id === form.recipe_id);
   const recipeUnit = selectedRecipe?.yield_unit?.toLowerCase() || "";
@@ -103,7 +92,6 @@ export default function AdminProductionPage() {
   const unitGroup = recipeUnit ? getUnitGroup(recipeUnit) : null;
   const unitGroupOptions = unitGroup ? UNIT_GROUPS[unitGroup] : [];
 
-  // Cuando cambia la receta, resetear unidad de display a la unidad de la receta
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (recipeUnit) setDisplayUnit(recipeUnit);
@@ -114,56 +102,28 @@ export default function AdminProductionPage() {
   const activeDisplayUnit = displayUnit || recipeUnit;
   const displayFactor = getUnitFactor(activeDisplayUnit);
 
-  // Valor almacenado (en unidad de la receta)
   const inputValue = Number(form.target_yield);
   const storedYield = inputValue > 0
     ? inputValue * (displayFactor / recipeUnitFactor)
     : 0;
 
-  // El preview necesita el valor en la unidad de la receta
   const targetYieldForPreview = storedYield;
 
-  // Constraints del input
   const isDiscrete = !unitGroup && ["unidad","unidades","unit","units"].includes(recipeUnit);
   const targetMin  = isDiscrete ? "1"     : "0.001";
   const targetStep = isDiscrete ? "1"     : "0.001";
 
-  // ── Plantillas relevantes para la receta seleccionada ────
-  const relevantTemplates = selectedRecipe?.output_product_id
-    ? packagingTemplates.filter(
-        (t) => t.finished_product_id === selectedRecipe.output_product_id
-      )
-    : [];
-
-  // Cuánto rendimiento (en recipeUnit) consume una línea de empaque
-  function lineConsumedYield(line: { template_id: string; units: string }): number {
-    const tmpl = packagingTemplates.find((t) => t.id === line.template_id);
-    if (!tmpl) return 0;
-    const units = Number(line.units);
-    if (!units || units <= 0) return 0;
-    const bulkFactor = getUnitFactor(tmpl.bulk_unit);
-    const consumedInBulk = units * Number(tmpl.bulk_qty_per_unit);
-    return consumedInBulk * (bulkFactor / recipeUnitFactor);
-  }
-
-  const totalAssigned = packagingLines.reduce((sum, l) => sum + lineConsumedYield(l), 0);
-  const remaining = storedYield - totalAssigned;
-  const assignedPct = storedYield > 0 ? Math.min(100, (totalAssigned / storedYield) * 100) : 0;
-
-  // ── Cambio de unidad con conversión de valor ─────────────
   function handleUnitChange(newUnit: string) {
     const oldFactor = displayFactor;
     const newFactor = getUnitFactor(newUnit);
     if (inputValue > 0 && oldFactor !== newFactor) {
       const converted = inputValue * (oldFactor / newFactor);
-      // Redondear a 6 decimales máximo para evitar ruido flotante
       const rounded = parseFloat(converted.toPrecision(6));
       setForm((p) => ({ ...p, target_yield: String(rounded) }));
     }
     setDisplayUnit(newUnit);
   }
 
-  // ── Submit ────────────────────────────────────────────────
   async function handleCreateOrder(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
@@ -183,26 +143,7 @@ export default function AdminProductionPage() {
       return;
     }
 
-    // Crear una orden de empaque BORRADOR por cada línea configurada
-    const newOrderId = (result.data as { id: string }[] | null)?.[0]?.id;
-    if (newOrderId && packagingLines.length > 0) {
-      for (const line of packagingLines) {
-        const units = Number(line.units);
-        if (!line.template_id || !units || units <= 0) continue;
-        await createPackagingOrder({
-          template_id: line.template_id,
-          units_to_package: units,
-          production_order_id: newOrderId,
-          notes: `Vinculado a lote de producción`,
-        });
-      }
-    }
-
-    setForm({
-      recipe_id: "", target_yield: "", batch_number: "",
-      scheduled_date: "", notes: "",
-    });
-    setPackagingLines([]);
+    setForm({ recipe_id: "", target_yield: "", batch_number: "", scheduled_date: "", notes: "" });
     setDisplayUnit("");
     setShowForm(false);
     setCreating(false);
@@ -239,19 +180,10 @@ export default function AdminProductionPage() {
     setSavingWaste(true);
     const { error: wErr } = await declareWaste(wasteOrderId, Number(wasteQty), wasteNotes || undefined);
     setSavingWaste(false);
-    if (wErr) setRowErrors((prev) => ({ ...prev, [wasteOrderId]: wErr }));
+    if (wErr) setRowErrors((prev) => ({ ...prev, [wasteOrderId!]: wErr }));
     setWasteOrderId(null);
     setWasteQty("");
     setWasteNotes("");
-  }
-
-  function handleCreatePackaging(templateId: string, productionOrderId: string, units: number) {
-    const params = new URLSearchParams({
-      template_id: templateId,
-      production_order_id: productionOrderId,
-      units: String(Math.floor(units)),
-    });
-    router.push(`/admin/packaging?${params.toString()}`);
   }
 
   const completedOrders = orders.filter((o) => o.status === "COMPLETADA");
@@ -287,15 +219,12 @@ export default function AdminProductionPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => window.print()}
-              className="rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors flex items-center gap-2"
-            >
+            <button onClick={() => window.print()} className="btn-secondary">
               <Printer className="h-4 w-4" /> PDF
             </button>
             <button
               onClick={() => setShowForm(!showForm)}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors"
+              className={showForm ? "btn-outline" : "btn-primary"}
             >
               {showForm ? "Cancelar" : "+ Nueva Orden"}
             </button>
@@ -307,281 +236,184 @@ export default function AdminProductionPage() {
           <div className="space-y-4 print:hidden">
             <form
               onSubmit={handleCreateOrder}
-              className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5"
+              className="rounded-xl border border-border bg-card shadow-sm overflow-hidden"
             >
-              <h3 className="text-lg font-semibold">Nueva Orden de Producción</h3>
-
-              <p className="text-[10px] text-muted-foreground -mt-3">
-                El número de lote se auto-genera (PROD-YYYY-NNNN) si se deja vacío.
-              </p>
-
-              {/* Fila 1: Receta + Rendimiento */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                {/* Receta */}
-                <div className="space-y-1.5">
-                  <label htmlFor="prod-recipe" className="text-xs font-medium text-muted-foreground">
-                    Receta *
-                  </label>
-                  <select
-                    id="prod-recipe"
-                    required
-                    value={form.recipe_id}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        recipe_id: e.target.value,
-                        target_yield: "",
-                      }))
-                    }
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="">Seleccionar receta...</option>
-                    {recipes.map((r) => {
-                      const rUnit = r.yield_unit?.toLowerCase() || "";
-                      const rGroup = getUnitGroup(rUnit);
-                      // Mostrar base en unidad "grande" si aplica
-                      const baseStr = rGroup
-                        ? (() => {
-                            const rFactor = getUnitFactor(rUnit);
-                            // Preferir kg/lt si la base es g/ml
-                            const displayOpt = UNIT_GROUPS[rGroup]?.find(
-                              (u) => u.factor >= rFactor && u.factor <= rFactor * 1000
-                            );
-                            const df = displayOpt?.factor ?? rFactor;
-                            const dl = displayOpt?.label ?? rUnit;
-                            const val = r.yield_base / (df / rFactor);
-                            return `${Number(val).toLocaleString("es-EC", { maximumFractionDigits: 3 })} ${dl}`;
-                          })()
-                        : `${r.yield_base} ${r.yield_unit}`;
-                      return (
-                        <option key={r.id} value={r.id}>
-                          {r.name} (base: {baseStr})
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                {/* Rendimiento + toggle de unidades */}
-                <div className="space-y-1.5">
-                  <label htmlFor="prod-yield" className="text-xs font-medium text-muted-foreground">
-                    Rendimiento Objetivo{activeDisplayUnit ? ` (${activeDisplayUnit})` : ""} *
-                  </label>
-
-                  {/* Botones de toggle de unidades */}
-                  {unitGroupOptions.length > 0 && (
-                    <div className="flex gap-1 flex-wrap">
-                      {unitGroupOptions.map((opt) => (
-                        <button
-                          key={opt.label}
-                          type="button"
-                          onClick={() => handleUnitChange(opt.label)}
-                          className={`rounded px-2 py-0.5 text-xs font-medium border transition-colors ${
-                            activeDisplayUnit === opt.label
-                              ? "bg-brand-600 text-white border-brand-600"
-                              : "border-border bg-background text-muted-foreground hover:bg-muted"
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  <input
-                    id="prod-yield"
-                    type="number"
-                    required
-                    min={targetMin}
-                    step={targetStep}
-                    value={form.target_yield}
-                    onChange={(e) => setForm((p) => ({ ...p, target_yield: e.target.value }))}
-                    placeholder={`Ej: 2.5 ${activeDisplayUnit}`}
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-
-                  {/* Hint de conversión */}
-                  {unitGroup && selectedRecipe && inputValue > 0 && (
-                    <p className="text-[10px] text-muted-foreground">
-                      = {storedYield.toLocaleString("es-EC", { maximumFractionDigits: 4 })} {recipeUnit}
-                      {" "}·{" "}
-                      Base: {selectedRecipe.yield_base} {recipeUnit}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Fila 2: Lote + Fecha + Notas */}
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-1.5">
-                  <label htmlFor="prod-batch" className="text-xs font-medium text-muted-foreground">
-                    Nº Lote (opcional)
-                  </label>
-                  <input
-                    id="prod-batch"
-                    type="text"
-                    value={form.batch_number}
-                    onChange={(e) => setForm((p) => ({ ...p, batch_number: e.target.value }))}
-                    placeholder="PROD-2026-0001"
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="prod-date" className="text-xs font-medium text-muted-foreground">
-                    Fecha Planificada
-                  </label>
-                  <input
-                    id="prod-date"
-                    type="date"
-                    value={form.scheduled_date}
-                    onChange={(e) => setForm((p) => ({ ...p, scheduled_date: e.target.value }))}
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="prod-notes" className="text-xs font-medium text-muted-foreground">
-                    Notas
-                  </label>
-                  <input
-                    id="prod-notes"
-                    type="text"
-                    value={form.notes}
-                    onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                    placeholder="Observaciones..."
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-              </div>
-
-              {/* Fila 3: Presentaciones de empaque (multi-línea) */}
-              {relevantTemplates.length > 0 && storedYield > 0 && (
-                <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
-                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                    <Package className="h-3.5 w-3.5 text-brand-500" />
-                    Presentaciones de empaque <span className="font-normal">(opcional)</span>
+              {/* Header del formulario */}
+              <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-foreground">Nueva Orden de Producción</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    El lote se auto-genera (PROD-YYYY-NNNN) si se deja vacío
                   </p>
+                </div>
+              </div>
 
-                  {/* Líneas de empaque */}
-                  {packagingLines.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic">Sin presentaciones asignadas.</p>
-                  )}
-                  {packagingLines.map((line, idx) => {
-                    const tmpl = packagingTemplates.find((t) => t.id === line.template_id);
-                    const consumed = lineConsumedYield(line);
-                    return (
-                      <div key={idx} className="flex flex-wrap items-start gap-2">
-                        {/* Selector plantilla */}
-                        <select
-                          value={line.template_id}
-                          onChange={(e) => {
-                            setPackagingLines((prev) =>
-                              prev.map((l, i) => i === idx ? { ...l, template_id: e.target.value } : l)
-                            );
-                          }}
-                          className="flex-1 min-w-[180px] rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                        >
-                          <option value="">Seleccionar plantilla...</option>
-                          {relevantTemplates.map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {t.name} ({t.bulk_qty_per_unit} {t.bulk_unit} → 1 {t.output_unit})
+              <div className="p-6 space-y-6">
+                {/* Sección 1: Receta y rendimiento */}
+                <div className="space-y-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Producción</p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {/* Receta */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="prod-recipe" className="text-sm font-medium text-foreground">
+                        Receta <span className="text-brand-500">*</span>
+                      </label>
+                      <select
+                        id="prod-recipe"
+                        required
+                        value={form.recipe_id}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, recipe_id: e.target.value, target_yield: "" }))
+                        }
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-brand-400"
+                      >
+                        <option value="">Seleccionar receta...</option>
+                        {recipes.map((r) => {
+                          const rUnit = r.yield_unit?.toLowerCase() || "";
+                          const rGroup = getUnitGroup(rUnit);
+                          const baseStr = rGroup
+                            ? (() => {
+                                const rFactor = getUnitFactor(rUnit);
+                                const displayOpt = UNIT_GROUPS[rGroup]?.find(
+                                  (u) => u.factor >= rFactor && u.factor <= rFactor * 1000
+                                );
+                                const df = displayOpt?.factor ?? rFactor;
+                                const dl = displayOpt?.label ?? rUnit;
+                                const val = r.yield_base / (df / rFactor);
+                                return `${Number(val).toLocaleString("es-EC", { maximumFractionDigits: 3 })} ${dl}`;
+                              })()
+                            : `${r.yield_base} ${r.yield_unit}`;
+                          return (
+                            <option key={r.id} value={r.id}>
+                              {r.name} (base: {baseStr})
                             </option>
-                          ))}
-                        </select>
-                        {/* Input unidades */}
-                        <div className="space-y-0.5">
-                          <input
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={line.units}
-                            onChange={(e) => {
-                              setPackagingLines((prev) =>
-                                prev.map((l, i) => i === idx ? { ...l, units: e.target.value } : l)
-                              );
-                            }}
-                            placeholder="Unidades"
-                            className="w-28 rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                          />
-                          {tmpl && consumed > 0 && (
-                            <p className="text-[10px] text-muted-foreground tabular-nums">
-                              = {consumed.toLocaleString("es-EC", { maximumFractionDigits: 4 })} {recipeUnit}
-                            </p>
-                          )}
-                        </div>
-                        {/* Eliminar línea */}
-                        <button
-                          type="button"
-                          onClick={() => setPackagingLines((prev) => prev.filter((_, i) => i !== idx))}
-                          className="mt-0.5 rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                          title="Eliminar línea"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    );
-                  })}
+                          );
+                        })}
+                      </select>
+                    </div>
 
-                  {/* Botón agregar línea */}
-                  <button
-                    type="button"
-                    onClick={() => setPackagingLines((prev) => [...prev, { template_id: "", units: "" }])}
-                    className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition-colors"
-                  >
-                    + Agregar presentación
-                  </button>
+                    {/* Rendimiento + toggle de unidades */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="prod-yield" className="text-sm font-medium text-foreground">
+                        Rendimiento Objetivo{activeDisplayUnit ? ` (${activeDisplayUnit})` : ""} <span className="text-brand-500">*</span>
+                      </label>
 
-                  {/* Resumen de asignación */}
-                  {packagingLines.length > 0 && totalAssigned > 0 && (
-                    <div className="space-y-1 pt-1 border-t border-border/50">
-                      {/* Barra de progreso */}
-                      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${assignedPct > 100 ? "bg-red-500" : "bg-brand-500"}`}
-                          style={{ width: `${Math.min(assignedPct, 100)}%` }}
+                      <div className="space-y-2">
+                        {unitGroupOptions.length > 0 && (
+                          <div className="flex gap-1 flex-wrap">
+                            {unitGroupOptions.map((opt) => (
+                              <button
+                                key={opt.label}
+                                type="button"
+                                onClick={() => handleUnitChange(opt.label)}
+                                className={`rounded-md px-3 py-1 text-xs font-semibold border transition-colors ${
+                                  activeDisplayUnit === opt.label
+                                    ? "bg-brand-600 text-white border-brand-600"
+                                    : "border-border bg-background text-muted-foreground hover:bg-muted hover:border-brand-400"
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        <input
+                          id="prod-yield"
+                          type="number"
+                          required
+                          min={targetMin}
+                          step={targetStep}
+                          value={form.target_yield}
+                          onChange={(e) => setForm((p) => ({ ...p, target_yield: e.target.value }))}
+                          placeholder={`Ej: 2.5 ${activeDisplayUnit}`}
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-brand-400"
                         />
-                      </div>
-                      <div className="flex justify-between text-[10px] tabular-nums">
-                        <span className="text-muted-foreground">
-                          Asignado: <span className="font-semibold text-foreground">
-                            {totalAssigned.toLocaleString("es-EC", { maximumFractionDigits: 4 })} {recipeUnit}
-                          </span> ({assignedPct.toFixed(1)}%)
-                        </span>
-                        {remaining > 0.0001 && (
-                          <span className="text-muted-foreground">
-                            Sin asignar: {remaining.toLocaleString("es-EC", { maximumFractionDigits: 4 })} {recipeUnit}
-                          </span>
-                        )}
-                        {remaining < -0.0001 && (
-                          <span className="text-red-600 font-medium">
-                            ⚠ Sobre-asignando {Math.abs(remaining).toLocaleString("es-EC", { maximumFractionDigits: 4 })} {recipeUnit}
-                          </span>
-                        )}
-                        {Math.abs(remaining) <= 0.0001 && storedYield > 0 && (
-                          <span className="text-green-600 font-medium">✓ Todo asignado</span>
+
+                        {unitGroup && selectedRecipe && inputValue > 0 && (
+                          <p className="text-xs text-muted-foreground tabular-nums">
+                            = {storedYield.toLocaleString("es-EC", { maximumFractionDigits: 4 })} {recipeUnit}
+                            <span className="mx-1.5 opacity-40">·</span>
+                            Base: {selectedRecipe.yield_base} {recipeUnit}
+                          </p>
                         )}
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
-              )}
 
-              {formError && (
-                <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
-                  {formError}
+                {/* Divisor */}
+                <div className="border-t border-border/60" />
+
+                {/* Sección 2: Metadatos del lote */}
+                <div className="space-y-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Detalles del Lote</p>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-1.5">
+                      <label htmlFor="prod-batch" className="text-sm font-medium text-foreground">
+                        Nº Lote <span className="text-muted-foreground font-normal">(opcional)</span>
+                      </label>
+                      <input
+                        id="prod-batch"
+                        type="text"
+                        value={form.batch_number}
+                        onChange={(e) => setForm((p) => ({ ...p, batch_number: e.target.value }))}
+                        placeholder="PROD-2026-0001"
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-brand-400"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="prod-date" className="text-sm font-medium text-foreground">
+                        Fecha Planificada
+                      </label>
+                      <input
+                        id="prod-date"
+                        type="date"
+                        value={form.scheduled_date}
+                        onChange={(e) => setForm((p) => ({ ...p, scheduled_date: e.target.value }))}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-brand-400"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="prod-notes" className="text-sm font-medium text-foreground">
+                        Notas
+                      </label>
+                      <input
+                        id="prod-notes"
+                        type="text"
+                        value={form.notes}
+                        onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+                        placeholder="Observaciones..."
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-brand-400"
+                      />
+                    </div>
+                  </div>
                 </div>
-              )}
 
-              <button
-                type="submit"
-                disabled={creating}
-                className="rounded-lg bg-brand-600 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 transition-colors"
-              >
-                {creating
-                  ? "Creando..."
-                  : packagingLines.filter(l => l.template_id && Number(l.units) > 0).length > 0
-                    ? `Crear Orden + ${packagingLines.filter(l => l.template_id && Number(l.units) > 0).length} Empaque(s) Borrador`
-                    : "Crear Orden (Borrador)"}
-              </button>
+                {/* Error */}
+                {formError && (
+                  <div role="alert" className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive flex items-start gap-2">
+                    <span aria-hidden="true" className="shrink-0 mt-0.5">✕</span>
+                    <span>{formError}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer del formulario con CTA principal */}
+              <div className="px-6 py-4 border-t border-border bg-muted/20 flex items-center justify-end">
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {creating ? (
+                    <>
+                      <span className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      Creando...
+                    </>
+                  ) : "Crear Orden (Borrador)"}
+                </button>
+              </div>
             </form>
 
             {showPreview && (
@@ -601,9 +433,9 @@ export default function AdminProductionPage() {
             { label: "En Proceso",  value: orders.filter((o) => o.status === "EN_PROCESO").length },
             { label: "Completadas", value: completedOrders.length },
           ].map((s) => (
-            <div key={s.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
-              <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
-              <p className="text-2xl font-bold tabular-nums text-foreground">{s.value}</p>
+            <div key={s.label} className="rounded-xl border border-border bg-card p-5 shadow-sm">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{s.label}</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground mt-1">{s.value}</p>
             </div>
           ))}
         </div>
@@ -673,19 +505,6 @@ export default function AdminProductionPage() {
                   filteredOrders.map((order) => {
                     const status = STATUS_LABELS[order.status] ?? { label: order.status, dot: "bg-gray-400" };
                     const recipe = recipes.find((r) => r.id === order.recipe_id);
-                    const isExpanded = expandedOrder === order.id;
-
-                    // Plantillas de empaque para esta orden
-                    const orderRelevantTemplates = recipe?.output_product_id
-                      ? packagingTemplates.filter((t) => t.finished_product_id === recipe.output_product_id)
-                      : [];
-
-                    const possibleUnits = (tpl: typeof packagingTemplates[0]) => {
-                      const bulkFactor = getUnitFactor(tpl.bulk_unit);
-                      const recFactor  = getUnitFactor(recipe?.yield_unit?.toLowerCase() || "");
-                      const yieldInBulk = Number(order.target_yield) * (recFactor / bulkFactor);
-                      return Math.floor(yieldInBulk / Number(tpl.bulk_qty_per_unit));
-                    };
 
                     // Mostrar rendimiento en unidad "grande" si aplica
                     const displayYield = (() => {
@@ -693,7 +512,6 @@ export default function AdminProductionPage() {
                       const rFactor = getUnitFactor(rUnit);
                       const rGroup = getUnitGroup(rUnit);
                       if (rGroup) {
-                        // Mostrar en kg o lt si la unidad base es g/ml
                         const preferred = rFactor < 100
                           ? UNIT_GROUPS[rGroup]?.find((u) => u.factor >= 1000)
                           : null;
@@ -778,10 +596,10 @@ export default function AdminProductionPage() {
                             {order.status === "COMPLETADA" && (
                               <div className="flex items-center justify-center gap-2 flex-wrap">
                                 <button
-                                  onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
+                                  onClick={() => router.push(`/admin/production/${order.id}`)}
                                   className="rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
                                 >
-                                  {isExpanded ? "Ocultar" : "Ver Detalle"}
+                                  Ver Detalle
                                 </button>
                                 {isAdmin && (
                                   <button
@@ -795,49 +613,6 @@ export default function AdminProductionPage() {
                             )}
                           </td>
                         </tr>
-
-                        {/* Detalle expandido */}
-                        {isExpanded && order.status === "COMPLETADA" && (
-                          <tr className="bg-muted/10 border-t-0">
-                            <td colSpan={6} className="px-4 py-3 pb-4 space-y-4">
-                              <ProductionOrderDetail orderId={order.id} completedAt={order.completed_at ?? null} />
-
-                              {orderRelevantTemplates.length > 0 && (
-                                <div className="rounded-lg border border-border bg-background p-4 space-y-3">
-                                  <div className="flex items-center gap-2">
-                                    <Package className="h-4 w-4 text-brand-600" />
-                                    <span className="text-sm font-semibold">Empaques disponibles para este lote</span>
-                                  </div>
-                                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                    {orderRelevantTemplates.map((tpl) => {
-                                      const units = possibleUnits(tpl);
-                                      return (
-                                        <div key={tpl.id} className="rounded-md border border-border bg-card p-3 space-y-2">
-                                          <div className="text-xs font-semibold truncate">{tpl.name}</div>
-                                          <div className="text-[11px] text-muted-foreground">
-                                            {tpl.bulk_qty_per_unit} {tpl.bulk_unit} → 1 {tpl.output_unit}
-                                          </div>
-                                          <div className="flex items-center justify-between gap-2">
-                                            <span className="text-xs font-bold text-brand-600">
-                                              {units.toLocaleString("es-EC")} unidades
-                                            </span>
-                                            <button
-                                              onClick={() => handleCreatePackaging(tpl.id, order.id, units)}
-                                              disabled={units <= 0}
-                                              className="rounded-md bg-brand-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-brand-700 disabled:opacity-40 transition-colors whitespace-nowrap"
-                                            >
-                                              Crear Empaque
-                                            </button>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        )}
 
                         {/* Merma */}
                         {wasteOrderId === order.id && order.status === "COMPLETADA" && (

@@ -534,22 +534,47 @@ export default function AdminProductsPage() {
   return (
     <div className="space-y-6">
       {/* ─── Header ─── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Productos</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Materias primas y productos terminados del catálogo.
-          </p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          <div>
+            <h1 className="text-2xl font-black tracking-tight">Productos</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {products.length} activos
+              {archivedCount > 0 && ` · ${archivedCount} archivados`}
+            </p>
+          </div>
         </div>
         <button
           onClick={() => {
             if (showForm) { setShowForm(false); resetForm(); }
             else openCreate();
           }}
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors"
+          className={showForm ? "btn-outline" : "btn-primary"}
         >
           {showForm ? "Cancelar" : "+ Nuevo Producto"}
         </button>
+      </div>
+
+      {/* ─── Tipos de productos ─── */}
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {[
+          { value: "MATERIA_PRIMA",      color: "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800/40 dark:text-blue-400",      title: "Materia Prima",       desc: "Ingredientes crudos que entran al proceso de producción. Ej: leche, harina, ajonjolí." },
+          { value: "INSUMO",             color: "bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800/40 dark:text-purple-400", title: "Insumo / Auxiliar",   desc: "Materiales auxiliares del proceso. Ej: cuajo, sal, cloruro de calcio." },
+          { value: "ENVASE_EMPAQUE",     color: "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800/40 dark:text-amber-400",   title: "Envase / Empaque",    desc: "Contenedores y embalajes usados al envasar. Ej: fundas de vacío, tarros, etiquetas." },
+          { value: "PRODUCTO_A_GRANEL",  color: "bg-teal-50 border-teal-200 text-teal-700 dark:bg-teal-900/20 dark:border-teal-800/40 dark:text-teal-400",        title: "Producto a Granel",   desc: "Resultado intermedio de producción. Ej: queso fresco sin envasar." },
+          { value: "PRODUCTO_TERMINADO", color: "bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/20 dark:border-brand-800/40 dark:text-brand-400",  title: "Producto Terminado",  desc: "Listo para la venta. Entra al inventario mediante empaque o ajuste." },
+        ].map(({ value, color, title, desc }) => {
+          const count = products.filter((p) => p.type === value).length;
+          return (
+            <div key={value} className={`rounded-lg border px-3 py-2.5 ${color}`}>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <p className="text-xs font-black">{title}</p>
+                <span className="text-xs font-black tabular-nums">{count}</span>
+              </div>
+              <p className="text-[11px] leading-snug opacity-80">{desc}</p>
+            </div>
+          );
+        })}
       </div>
 
       {error && !showForm && (
@@ -582,13 +607,13 @@ export default function AdminProductsPage() {
                 <button
                   onClick={handleDeactivate}
                   disabled={saving}
-                  className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-4 py-2 rounded-lg shadow-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? "Desactivando..." : "Desactivar producto"}
                 </button>
                 <button
                   onClick={cancelDelete}
-                  className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                  className="btn-outline"
                 >
                   Cancelar
                 </button>
@@ -609,13 +634,13 @@ export default function AdminProductsPage() {
                 <button
                   onClick={handleHardDelete}
                   disabled={saving}
-                  className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white hover:bg-destructive/90 disabled:opacity-50 transition-colors"
+                  className="btn-danger"
                 >
                   {saving ? "Eliminando..." : "Sí, eliminar"}
                 </button>
                 <button
                   onClick={cancelDelete}
-                  className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                  className="btn-outline"
                 >
                   Cancelar
                 </button>
@@ -665,7 +690,7 @@ export default function AdminProductsPage() {
             <button
               onClick={handleReplaceAndDeactivate}
               disabled={!replacementProductId || conflictSaving}
-              className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
+              className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-4 py-2 rounded-lg shadow-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {conflictSaving ? "Reemplazando..." : "Reemplazar y archivar"}
             </button>
@@ -680,7 +705,7 @@ export default function AdminProductsPage() {
             <button
               onClick={handleSkipAndDeactivate}
               disabled={conflictSaving}
-              className="rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 transition-colors"
+              className="btn-secondary"
             >
               Confirmar archivo
             </button>
@@ -688,7 +713,7 @@ export default function AdminProductsPage() {
 
           <button
             onClick={() => { setShowRecipeModal(false); setRecipeConflicts([]); setReplacementProductId(""); }}
-            className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            className="btn-outline"
           >
             Cancelar
           </button>
@@ -713,7 +738,7 @@ export default function AdminProductsPage() {
           </div>
 
           {/* ─── Tipo selector (siempre visible) ─── */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4">
             <div className="space-y-1.5">
               <label htmlFor="prod-type" className="text-xs font-medium text-muted-foreground">
                 Tipo *
@@ -764,7 +789,7 @@ export default function AdminProductsPage() {
                 Los envases/empaques se consumen durante el proceso de empaque. Define su capacidad para facilitar la gestión de plantillas.
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4">
                 {/* Nombre */}
                 <div className="space-y-1.5">
                   <label htmlFor="env-name" className="text-xs font-medium text-muted-foreground">
@@ -878,7 +903,7 @@ export default function AdminProductsPage() {
                 </div>
 
                 {/* Descripción / notas */}
-                <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
+                <div className="space-y-1.5">
                   <label htmlFor="env-desc" className="text-xs font-medium text-muted-foreground">
                     Notas / Especificaciones
                   </label>
@@ -952,7 +977,7 @@ export default function AdminProductsPage() {
                FORMULARIO ESTÁNDAR — otros tipos
             ════════════════════════════════════════ */
             <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4">
                 {/* Nombre */}
                 <div className="space-y-1.5">
                   <label htmlFor="prod-name" className="text-xs font-medium text-muted-foreground">
@@ -1078,7 +1103,7 @@ export default function AdminProductsPage() {
                 )}
 
                 {/* Descripción */}
-                <div className={`space-y-1.5 ${formData.type === "MATERIA_PRIMA" ? "sm:col-span-2 lg:col-span-3" : "sm:col-span-1"}`}>
+                <div className="space-y-1.5">
                   <label htmlFor="prod-desc" className="text-xs font-medium text-muted-foreground">
                     Descripción
                   </label>
@@ -1181,14 +1206,14 @@ export default function AdminProductsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-brand-600 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 transition-colors"
+              className="btn-primary px-6"
             >
               {saving ? "Guardando..." : formMode === "edit" ? "Actualizar Producto" : "Guardar Producto"}
             </button>
             <button
               type="button"
               onClick={() => { setShowForm(false); resetForm(); }}
-              className="rounded-lg border border-border bg-background px-6 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              className="btn-outline px-6"
             >
               Cancelar
             </button>
@@ -1211,8 +1236,36 @@ export default function AdminProductsPage() {
 
       {/* ─── Tables ─── */}
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+        <div className="space-y-8">
+          {Array.from({ length: 3 }).map((_, gi) => (
+            <div key={gi} className="space-y-3">
+              <div className="skeleton h-5 w-36 rounded-full" />
+              <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50">
+                      {Array.from({ length: 5 }).map((_, ci) => (
+                        <th key={ci} className="px-4 py-3">
+                          <div className="skeleton h-3 w-16 mx-auto" />
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 4 }).map((_, ri) => (
+                      <tr key={ri} className="border-b border-border/50 last:border-0">
+                        <td className="px-4 py-3"><div className="skeleton h-3.5 w-20 mx-auto" /></td>
+                        <td className="px-4 py-3"><div className="skeleton h-3.5 w-32 mx-auto" /></td>
+                        <td className="px-4 py-3 hidden sm:table-cell"><div className="skeleton h-3.5 w-12 mx-auto" /></td>
+                        <td className="px-4 py-3"><div className="skeleton h-4 w-10 mx-auto rounded-full" /></td>
+                        <td className="px-4 py-3"><div className="skeleton h-7 w-16 mx-auto rounded-md" /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <div className="space-y-8">
@@ -1228,24 +1281,21 @@ export default function AdminProductsPage() {
                   </span>
                   <span className="text-xs text-muted-foreground">({typeProducts.length})</span>
                 </h2>
-                <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+                <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-border bg-muted/50">
-                        <th className="px-4 py-3 text-center font-medium text-muted-foreground">SKU</th>
-                        <th className="px-4 py-3 text-center font-medium text-muted-foreground">Nombre</th>
-                        <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden sm:table-cell">Unidad</th>
-                        {typeValue === "ENVASE_EMPAQUE" && <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden sm:table-cell">Capacidad</th>}
-                        {isPurchasable && <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden md:table-cell">Proveedores</th>}
-                        {typeValue === "PRODUCTO_TERMINADO" && <th className="px-4 py-3 text-center font-medium text-muted-foreground hidden lg:table-cell">Precio</th>}
-                        <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
-                        <th className="px-4 py-3 text-center font-medium text-muted-foreground">Acciones</th>
+                      <tr className="border-b border-border bg-muted/50 text-left">
+                        <th className="px-4 py-3 font-medium text-muted-foreground w-28">SKU</th>
+                        <th className="px-4 py-3 font-medium text-muted-foreground">Nombre</th>
+                        <th className="px-4 py-3 font-medium text-muted-foreground w-32">Unidad</th>
+                        <th className="px-4 py-3 font-medium text-muted-foreground w-28 text-center">Estado</th>
+                        <th className="px-4 py-3 font-medium text-muted-foreground w-44 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
                       {typeProducts.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                          <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                             <Tag className="h-6 w-6 mx-auto mb-1 opacity-25" />
                             No hay {typeLabel.toLowerCase()} registrados.
                           </td>
@@ -1253,47 +1303,38 @@ export default function AdminProductsPage() {
                       ) : (
                         typeProducts.map((p) => (
                           <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-                            <td className="px-4 py-3 text-center font-mono text-xs text-muted-foreground">{p.sku}</td>
-                            <td className="px-4 py-3 text-center font-medium">{p.name}</td>
-                            <td className="px-4 py-3 text-center text-muted-foreground hidden sm:table-cell">{p.unit}</td>
-                            {typeValue === "ENVASE_EMPAQUE" && (
-                              <td className="px-4 py-3 text-center text-muted-foreground hidden sm:table-cell">
-                                {p.capacity != null
-                                  ? `${p.capacity} ${p.unit}`
-                                  : <span className="text-muted-foreground/50">—</span>}
-                              </td>
-                            )}
-                            {isPurchasable && (
-                              <td className="px-4 py-3 text-center hidden md:table-cell">
-                                {p.suppliers.length === 0 ? (
-                                  <span className="text-xs text-muted-foreground/60">—</span>
-                                ) : (
-                                  <div className="flex flex-wrap gap-1 justify-center">
-                                    {p.suppliers.map((s, i) => (
-                                      <span key={i} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${s.is_primary ? 'bg-brand-100 text-brand-700' : 'bg-muted text-muted-foreground'}`}>
-                                        {s.is_primary && <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />}
-                                        {s.company ?? s.name}
-                                      </span>
-                                    ))}
-                                  </div>
+                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
+                            <td className="px-4 py-3">
+                              <p className="font-medium text-foreground">{p.name}</p>
+                              {/* Extra info inline bajo el nombre */}
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {typeValue === "ENVASE_EMPAQUE" && p.capacity != null && (
+                                  <span className="text-[10px] text-muted-foreground">Cap: {p.capacity} {p.unit}</span>
                                 )}
-                              </td>
-                            )}
-                            {typeValue === "PRODUCTO_TERMINADO" && (
-                              <td className="px-4 py-3 text-center tabular-nums font-medium hidden lg:table-cell">
-                                {Number(p.price).toLocaleString('es-EC', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })}
-                              </td>
-                            )}
-                            <td className="px-4 py-3 text-center">
-                              <span className={`inline-flex h-2 w-2 rounded-full ${p.is_active ? 'bg-brand-500' : 'bg-red-500'}`} />
+                                {isPurchasable && p.suppliers.length > 0 && p.suppliers.map((s, i) => (
+                                  <span key={i} className={`inline-flex items-center rounded-full px-2 py-0 text-[10px] font-medium ${s.is_primary ? 'bg-brand-100 text-brand-700' : 'bg-muted text-muted-foreground'}`}>
+                                    {s.is_primary && <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />}
+                                    {s.company ?? s.name}
+                                  </span>
+                                ))}
+                                {typeValue === "PRODUCTO_TERMINADO" && (
+                                  <span className="text-[10px] font-medium text-muted-foreground tabular-nums">
+                                    {Number(p.price).toLocaleString('es-EC', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })}
+                                  </span>
+                                )}
+                              </div>
                             </td>
+                            <td className="px-4 py-3 text-sm text-muted-foreground">{p.unit}</td>
                             <td className="px-4 py-3 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <button onClick={() => openEdit(p)} className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors whitespace-nowrap">
+                              <span className={`inline-flex h-2.5 w-2.5 rounded-full ${p.is_active ? 'bg-accent-500' : 'bg-red-500'}`} />
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="inline-flex items-center gap-2">
+                                <button onClick={() => openEdit(p)} className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors">
                                   <Pencil className="h-3 w-3" /> Editar
                                 </button>
                                 {isAdmin && (
-                                  <button onClick={() => openDeleteConfirm(p)} className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors whitespace-nowrap">
+                                  <button onClick={() => openDeleteConfirm(p)} className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition-colors">
                                     <Trash2 className="h-3 w-3" /> Eliminar
                                   </button>
                                 )}

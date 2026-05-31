@@ -174,14 +174,14 @@ function AdminPackagingPageInner() {
           {isAdmin && (
             <Link
               href="/admin/packaging/templates"
-              className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              className="btn-outline"
             >
               Plantillas
             </Link>
           )}
           <button
             onClick={() => setShowForm(!showForm)}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors"
+            className={showForm ? "btn-outline" : "btn-primary"}
           >
             {showForm ? "Cancelar" : "+ Nueva Orden"}
           </button>
@@ -195,9 +195,9 @@ function AdminPackagingPageInner() {
           { label: "En Proceso", value: inProgressCount },
           { label: "Completadas", value: completedCount },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
-            <p className="text-2xl font-bold tabular-nums">{s.value}</p>
+          <div key={s.label} className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{s.label}</p>
+            <p className="text-2xl font-bold tabular-nums text-foreground mt-1">{s.value}</p>
           </div>
         ))}
       </div>
@@ -311,7 +311,7 @@ function AdminPackagingPageInner() {
             <button
               type="submit"
               disabled={creating}
-              className="rounded-lg bg-brand-600 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 transition-colors"
+              className="btn-primary px-6"
             >
               {creating ? "Creando..." : "Crear Orden (Borrador)"}
             </button>

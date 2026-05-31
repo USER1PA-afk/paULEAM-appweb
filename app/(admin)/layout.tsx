@@ -208,7 +208,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           aria-label="Alternar menú lateral"
           aria-controls="admin-sidebar"
           aria-expanded={menuIconOpen}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
             text-muted-foreground hover:bg-muted hover:text-foreground
             transition-colors duration-200"
         >
@@ -245,14 +245,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               onClick={() => setNotifOpen((prev) => !prev)}
               aria-label="Notificaciones"
               title="Notificaciones"
-              className="flex h-8 w-8 items-center justify-center rounded-md
+              className="flex h-8 w-8 items-center justify-center rounded-lg
                 text-muted-foreground hover:bg-muted hover:text-foreground
                 transition-colors duration-200 relative"
             >
               <Bell aria-hidden="true" className="h-4 w-4" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center
-                  rounded-full bg-brand-600 text-[9px] font-bold text-white leading-none">
+                <span className="absolute -top-1 -right-1 flex min-w-[1.1rem] h-[1.1rem] items-center justify-center
+                  rounded-full bg-brand-600 text-[9px] font-bold text-white leading-none px-0.5">
                   {unreadCount}
                 </span>
               )}
@@ -333,7 +333,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               onClick={() => signOut()}
               aria-label="Cerrar sesión"
               title="Cerrar sesión"
-              className="flex h-8 w-8 items-center justify-center rounded-md
+              className="flex h-8 w-8 items-center justify-center rounded-lg
                 text-muted-foreground hover:bg-brand-50 hover:text-brand-700
                 dark:hover:bg-brand-900/20 dark:hover:text-brand-300
                 transition-all duration-150"

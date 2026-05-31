@@ -144,7 +144,16 @@ export function scaleIngredientsWithStock(
       stock_sufficient: isSufficient,
       unit_mismatch: unitMismatch,
       cost_per_unit: costPerUnit,
-      scaled_cost: Number((scaledQty * costPerUnit).toFixed(4)),
+      // Convertir scaledQty a la unidad del inventario antes de calcular el costo.
+      // cost_per_unit está expresado en la unidad del inventario (ej: $/kg, $/lt).
+      // Si hay mismatch (receta en g, inventario en kg), hay que convertir.
+      scaled_cost: (() => {
+        if (costPerUnit === 0) return 0;
+        const qtyInInventoryUnit = unitMismatch
+          ? (convertUnit(scaledQty, ing.unit, inventoryUnit) ?? scaledQty)
+          : scaledQty;
+        return Number((qtyInInventoryUnit * costPerUnit).toFixed(4));
+      })(),
     };
   });
 }

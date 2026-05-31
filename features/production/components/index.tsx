@@ -12,7 +12,7 @@ import { Check, X, ArrowDown, ArrowUp } from "lucide-react";
  * Muestra la tabla pivote con cantidades base, escaladas y el stock actual.
  */
 export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: string | null; targetYield: number }) {
-  const { recipe, scaleFactor, scaledIngredients, loading, error, canProduce } = useScalePreview(recipeId, targetYield);
+  const { recipe, scaleFactor, scaledIngredients, loading, error, canProduce, estimatedCost } = useScalePreview(recipeId, targetYield);
 
   if (!recipeId) return null;
 
@@ -55,6 +55,7 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
               <th className="text-center font-medium pb-2 px-2">Base</th>
               <th className="text-center font-medium pb-2 px-2">Requerido</th>
               <th className="text-center font-medium pb-2 px-2">Stock Disponible</th>
+              <th className="text-center font-medium pb-2 px-2">Costo Est.</th>
               <th className="text-center font-medium pb-2 pl-4">Estado</th>
             </tr>
           </thead>
@@ -99,6 +100,12 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
                       <span className="block text-[10px] text-muted-foreground/60">({Number(ing.stock_available).toLocaleString("es-EC", { maximumFractionDigits: 4, useGrouping: false })} {ing.inventory_unit})</span>
                     )}
                   </td>
+                  <td className="py-2.5 px-2 text-center text-xs tabular-nums text-muted-foreground">
+                    {ing.cost_per_unit > 0
+                      ? `$${ing.scaled_cost.toFixed(2)}`
+                      : <span className="opacity-40">—</span>
+                    }
+                  </td>
                   <td className="py-2.5 pl-4 text-center">
                     {ing.stock_sufficient ? (
                       <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-medium">
@@ -117,8 +124,17 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
         </table>
       </div>
 
+      {estimatedCost > 0 && (
+        <div className="flex items-center justify-between rounded-lg bg-muted/40 border border-border/50 px-4 py-2.5">
+          <span className="text-sm text-muted-foreground font-medium">Costo estimado de materiales</span>
+          <span className="text-sm font-bold tabular-nums text-foreground">
+            {estimatedCost.toLocaleString("es-EC", { style: "currency", currency: "USD", minimumFractionDigits: 2 })}
+          </span>
+        </div>
+      )}
+
       {!canProduce && (
-        <div role="alert" className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive mt-2">
+        <div role="alert" className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
           <strong>No hay stock suficiente</strong> para producir la cantidad deseada. Por favor, reabastezca los ingredientes marcados en rojo.
         </div>
       )}
