@@ -477,11 +477,12 @@ export default function StoreProductDetailPage() {
                           src={displayImages[activeImage]?.public_url ?? ""}
                           alt={product.name}
                           fill
+                          sizes="160px"
                           className="object-cover"
                           unoptimized
                         />
                       ) : product.image_url ? (
-                        <Image src={product.image_url} alt={product.name} fill className="object-cover" unoptimized />
+                        <Image src={product.image_url} alt={product.name} fill sizes="160px" className="object-cover" unoptimized />
                       ) : (
                         <div className="flex items-center justify-center h-full">
                           <Package className="h-14 w-14 text-muted-foreground/20" />
@@ -498,7 +499,7 @@ export default function StoreProductDetailPage() {
                               activeImage === idx ? "border-brand-500" : "border-border hover:border-muted-foreground"
                             }`}
                           >
-                            <Image src={img.public_url} alt="" fill className="object-cover" unoptimized />
+                            <Image src={img.public_url} alt="" fill sizes="36px" className="object-cover" unoptimized />
                           </button>
                         ))}
                       </div>

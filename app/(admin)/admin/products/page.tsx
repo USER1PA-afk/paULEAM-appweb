@@ -88,6 +88,8 @@ export default function AdminProductsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteLedgerCount, setDeleteLedgerCount] = useState(0);
   const [deleteChecking, setDeleteChecking] = useState(false);
+  const [showForceConfirm, setShowForceConfirm] = useState(false);
+  const [forceConfirmText, setForceConfirmText] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -448,6 +450,25 @@ export default function AdminProductsPage() {
     setDeletingProduct(null);
     setDeleteConfirm(false);
     setDeleteLedgerCount(0);
+    setShowForceConfirm(false);
+    setForceConfirmText("");
+  }
+
+  async function handlePurge() {
+    if (!deletingId || forceConfirmText !== deletingProduct?.name) return;
+    setSaving(true);
+    setError(null);
+    const { error: rpcErr } = await insforge.database.rpc("purge_product", {
+      p_product_id: deletingId,
+    });
+    setSaving(false);
+    if (rpcErr) {
+      setError((rpcErr as Error).message);
+      return;
+    }
+    cancelDelete();
+    fetchProducts();
+    if (archivedLoaded) fetchArchivedProducts();
   }
 
   async function handleHardDelete() {
@@ -618,6 +639,47 @@ export default function AdminProductsPage() {
                   Cancelar
                 </button>
               </div>
+
+              {isAdmin && !showForceConfirm && (
+                <button
+                  onClick={() => setShowForceConfirm(true)}
+                  className="text-xs text-destructive underline underline-offset-2 hover:no-underline"
+                >
+                  Forzar eliminación permanente (purgar historial)
+                </button>
+              )}
+
+              {isAdmin && showForceConfirm && (
+                <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4 space-y-3">
+                  <p className="text-xs font-semibold text-destructive">
+                    Eliminará el producto y todos sus movimientos de inventario, recetas, órdenes y referencias. Irreversible.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Escribe <strong className="text-foreground">{deletingProduct?.name}</strong> para confirmar:
+                  </p>
+                  <input
+                    value={forceConfirmText}
+                    onChange={(e) => setForceConfirmText(e.target.value)}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    placeholder={deletingProduct?.name ?? ""}
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handlePurge}
+                      disabled={forceConfirmText !== deletingProduct?.name || saving}
+                      className="btn-danger disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {saving ? "Eliminando..." : "Eliminar permanentemente"}
+                    </button>
+                    <button
+                      onClick={() => { setShowForceConfirm(false); setForceConfirmText(""); }}
+                      className="btn-outline"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <>

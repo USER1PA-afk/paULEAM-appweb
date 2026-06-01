@@ -15,6 +15,8 @@ import {
   CalendarDays,
   Eye,
   Loader2,
+  X,
+  Download,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@shared/lib/utils";
 
@@ -70,11 +72,16 @@ export default function MyOrdersPage() {
   const { isAuthenticated } = useAuth();
   const { orders, loading } = useUserOrders();
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [receiptLoading, setReceiptLoading] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [preview, setPreview] = useState<{
+    blobUrl: string;
+    mimeType: string;
+    originalUrl: string;
+    orderCode: string;
+  } | null>(null);
 
-  /** Abre el comprobante en una nueva pestaña via el proxy autenticado */
-  async function openReceipt(rawUrl: string) {
-    setReceiptLoading(true);
+  async function openPreview(rawUrl: string, orderCode: string) {
+    setPreviewLoading(true);
     try {
       const proxyUrl = receiptProxyUrl(rawUrl);
       const insforge = getInsforge();
@@ -86,16 +93,33 @@ export default function MyOrdersPage() {
 
       if (!res.ok) throw new Error(`Error ${res.status}`);
 
+      const contentType = res.headers.get("content-type")?.split(";")[0].trim() ?? "";
       const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, "_blank", "noopener");
-      // Revocar el blob URL después de un momento para liberar memoria
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+      setPreview({ blobUrl: URL.createObjectURL(blob), mimeType: contentType || blob.type, originalUrl: proxyUrl, orderCode });
     } catch (err) {
-      console.error("[openReceipt]", err);
+      console.error("[openPreview]", err);
     } finally {
-      setReceiptLoading(false);
+      setPreviewLoading(false);
     }
+  }
+
+  function closePreview() {
+    if (preview) URL.revokeObjectURL(preview.blobUrl);
+    setPreview(null);
+  }
+
+  function downloadPreview() {
+    if (!preview) return;
+    const mimeExt: Record<string, string> = {
+      "image/jpeg": ".jpg", "image/jpg": ".jpg", "image/png": ".png",
+      "image/webp": ".webp", "image/gif": ".gif", "application/pdf": ".pdf",
+    };
+    const urlExt = preview.originalUrl.split("?")[0].match(/\.[a-zA-Z0-9]{2,5}$/)?.[0]?.toLowerCase() ?? "";
+    const ext = urlExt || mimeExt[preview.mimeType] || "";
+    const a = document.createElement("a");
+    a.href = preview.blobUrl;
+    a.download = `comprobante-${preview.orderCode}${ext}`;
+    a.click();
   }
 
   if (!isAuthenticated) {
@@ -120,6 +144,76 @@ export default function MyOrdersPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">
+
+      {/* ─── Receipt preview modal ─── */}
+      {(previewLoading || preview) && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Vista previa del comprobante"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={closePreview}
+        >
+          <div
+            className="relative flex flex-col w-full max-w-2xl max-h-[90vh] rounded-xl bg-card shadow-2xl border border-border overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+              <span className="text-sm font-semibold text-foreground">Comprobante de pago</span>
+              <button
+                onClick={closePreview}
+                aria-label="Cerrar vista previa"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-auto bg-muted/30" style={{ height: "65vh" }}>
+              {previewLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div role="status" className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
+                    <span className="sr-only">Cargando comprobante...</span>
+                  </div>
+                </div>
+              ) : preview?.mimeType === "application/pdf" ? (
+                <iframe
+                  src={preview.blobUrl}
+                  title="Comprobante de pago"
+                  className="w-full border-0"
+                  style={{ height: "65vh" }}
+                />
+              ) : (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={preview!.blobUrl}
+                    alt="Comprobante de pago"
+                    style={{ width: "100%", height: "auto", display: "block" }}
+                  />
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border shrink-0">
+              <button
+                onClick={closePreview}
+                className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                Cerrar
+              </button>
+              {preview && (
+                <button
+                  onClick={downloadPreview}
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
+                >
+                  <Download className="h-4 w-4" /> Descargar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Mis Pedidos</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -206,16 +300,16 @@ export default function MyOrdersPage() {
                     </div>
                   </button>
 
-                  {/* Receipt preview button — visible always when url exists */}
+                  {/* Receipt preview button */}
                   {order.payment_receipt_url && (
                     <button
-                      onClick={() => openReceipt(order.payment_receipt_url!)}
-                      disabled={receiptLoading}
+                      onClick={() => openPreview(order.payment_receipt_url!, code)}
+                      disabled={previewLoading}
                       aria-label="Ver comprobante de pago"
                       title="Ver comprobante de pago"
                       className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-brand-600 hover:bg-brand-100 hover:border-brand-400 transition-colors disabled:opacity-50 dark:bg-brand-900/20 dark:border-brand-800 dark:hover:bg-brand-800/40"
                     >
-                      {receiptLoading
+                      {previewLoading
                         ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
                         : <Eye aria-hidden="true" className="h-4 w-4" />
                       }

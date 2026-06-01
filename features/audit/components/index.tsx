@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAuditLog } from "@features/audit/hooks";
 import {
   type AuditLog,
@@ -213,9 +213,8 @@ export function AuditLogTable() {
                 const hasDetail = !!(entry.old_values || entry.new_values);
 
                 return (
-                  <>
+                  <React.Fragment key={entry.id}>
                     <tr
-                      key={entry.id}
                       className="hover:bg-muted/30 transition-colors"
                     >
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
@@ -292,7 +291,7 @@ export function AuditLogTable() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>

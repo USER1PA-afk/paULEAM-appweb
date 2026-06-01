@@ -258,7 +258,7 @@ export default function CatalogPage() {
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {products.map((product) => (
+          {products.map((product, idx) => (
             <div
               key={product.id}
               className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:border-brand-200 hover:-translate-y-0.5"
@@ -277,6 +277,7 @@ export default function CatalogPage() {
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                       className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      priority={idx === 0}
                     />
                   ) : (
                     <div className="flex flex-col items-center text-muted-foreground">

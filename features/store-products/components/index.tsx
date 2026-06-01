@@ -106,6 +106,7 @@ export function ProductPreview({ name, price, imageUrl, unit, isActive, featured
             src={imageUrl}
             alt={name || "Producto"}
             fill
+            sizes="220px"
             className="object-cover"
             unoptimized={imageUrl.startsWith("blob:")}
           />
@@ -296,6 +297,7 @@ export function ImageManager({ productId, onPrimaryChange }: ImageManagerProps) 
               src={img.public_url}
               alt={img.alt_text ?? "Imagen"}
               fill
+              sizes="120px"
               className="object-cover"
               unoptimized
             />

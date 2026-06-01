@@ -39,6 +39,7 @@ export default function ShopLayout({
               alt="Logo PAuleam"
               width={32}
               height={32}
+              style={{ width: 32, height: 32 }}
               className="shrink-0 object-contain dark:invert"
             />
             <span className="text-base font-bold tracking-tight text-foreground">
