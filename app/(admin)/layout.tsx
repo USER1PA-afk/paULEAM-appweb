@@ -23,6 +23,7 @@ import {
   Monitor,
   PackageOpen,
   Bell,
+  Shield,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { label: "Producción",  href: "/admin/production",  icon: Factory,         roles: ["admin", "operario"] },
   { label: "Empaque",     href: "/admin/packaging",   icon: PackageOpen,     roles: ["admin", "operario"] },
   { label: "Usuarios",    href: "/admin/users",       icon: Users,           roles: ["admin"] },
+  { label: "Auditoría",  href: "/admin/audit",       icon: Shield,          roles: ["admin"] },
 ];
 
 const SUB_ITEMS = [

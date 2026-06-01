@@ -3,6 +3,7 @@
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useAuditActions } from "@features/audit/hooks";
 
 interface AuthUser {
   id: string;
@@ -33,6 +34,7 @@ export function useAuth() {
 
   const insforge = getInsforge();
   const router = useRouter();
+  const { logEvent } = useAuditActions();
 
   // Verificar sesión al montar
   useEffect(() => {
@@ -80,12 +82,16 @@ export function useAuth() {
           email,
           password,
         });
-        if (error) throw error;
+        if (error) {
+          logEvent("LOGIN_FAILED", "auth_session", null, `Login fallido: ${email}`);
+          throw error;
+        }
         setState({
           user: data?.user as unknown as AuthUser ?? null,
           loading: false,
           error: null,
         });
+        logEvent("LOGIN", "auth_session", null, `Inicio de sesión: ${email}`);
         return { data, error: null };
       } catch (err: unknown) {
         const message =
@@ -94,7 +100,7 @@ export function useAuth() {
         return { data: null, error: message };
       }
     },
-    [insforge]
+    [insforge, logEvent]
   );
 
   const signUp = useCallback(
@@ -134,6 +140,8 @@ export function useAuth() {
   );
 
   const signOut = useCallback(async (shouldRedirect: boolean = true) => {
+    // Registrar antes de cerrar sesión para capturar el user_id activo
+    logEvent("LOGOUT", "auth_session", null, "Cierre de sesión");
     try {
       await insforge.auth.signOut();
     } catch (err) {
@@ -162,7 +170,7 @@ export function useAuth() {
         router.push("/");
       }
     }
-  }, [insforge, router]);
+  }, [insforge, router, logEvent]);
 
   return {
     ...state,
