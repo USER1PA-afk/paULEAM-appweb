@@ -42,7 +42,8 @@ paULEAM-appweb/
 │   │       │       └── [id]/page.tsx # Edit product + image gallery
 │   │       ├── suppliers/page.tsx
 │   │       ├── orders/page.tsx       # Customer order approval workflow
-│   │       └── users/page.tsx
+│   │       ├── users/page.tsx
+│   │       └── audit/page.tsx        # Audit log viewer (admin only)
 │   ├── (shop)/                       # Public e-commerce route group
 │   │   ├── layout.tsx
 │   │   └── shop/
@@ -85,9 +86,12 @@ paULEAM-appweb/
 │   ├── store-products/               # E-commerce product management
 │   │   ├── components/               # ProductCarousel, StoreProductCard, ProductImageGallery
 │   │   └── hooks/                    # useStoreProducts(), useStoreProductDetail(), useStoreProductMutations(), useProductImages()
-│   └── suppliers/                    # External supplier management (not users)
-│       ├── components/               # SupplierSelect, SupplierQuickAddForm, SuppliersTable
-│       └── hooks/                    # useSuppliers(), useAllSuppliers(), useSupplierActions()
+│   ├── suppliers/                    # External supplier management (not users)
+│   │   ├── components/               # SupplierSelect, SupplierQuickAddForm, SuppliersTable
+│   │   └── hooks/                    # useSuppliers(), useAllSuppliers(), useSupplierActions()
+│   └── audit/                        # Audit trail module (admin-only)
+│       ├── components/               # AuditLogTable, AuditStats
+│       └── hooks/                    # useAuditLog(), useAuditActions()
 ├── entities/                         # Zod schemas + TS types
 │   ├── user/                         # UserRoleEnum, UserSchema
 │   ├── product/                      # ProductTypeEnum (5 types), ProductSchema, ProductImage, PRODUCT_TYPE_LABELS, PURCHASABLE_TYPES, INGREDIENT_TYPES
@@ -95,7 +99,8 @@ paULEAM-appweb/
 │   ├── production/                   # ProductionStatusEnum, ProductionOrderSchema (with batch_number, cost), ScaledIngredient (with cost)
 │   ├── packaging/                    # PackagingStatusEnum, PackagingTemplateSchema, PackagingOrderSchema, PackagingOrderPreview
 │   ├── order/                        # OrderStatusEnum, OrderSchema, OrderItemSchema
-│   └── supplier/                     # SupplierSchema, ProductSupplierSchema
+│   ├── supplier/                     # SupplierSchema, ProductSupplierSchema
+│   └── audit/                        # AuditActionEnum, AuditEntityTypeEnum, AuditLogSchema, AUDIT_ACTION_LABELS/COLORS
 ├── shared/
 │   ├── components/
 │   │   ├── footer.tsx
@@ -137,6 +142,8 @@ paULEAM-appweb/
 17. **Waste declaration:** Use `declare_production_waste(p_order_id, p_waste_qty, p_waste_notes)` RPC — inserts EGRESO with `reference_type = 'MERMA'`.
 18. **Packaging module:** `packaging_templates` define bulk→presentation conversion. `packaging_orders` trigger `trg_packaging_completion` which atomically EGRESOs bulk product + materials and INGRESOs packaged output.
 19. **Supplier scope:** All PURCHASABLE_TYPES (MATERIA_PRIMA, INSUMO, ENVASE_EMPAQUE, OTRO) can have suppliers. Not just MATERIA_PRIMA.
+20. **Audit module append-only:** `audit_log` never uses UPDATE or DELETE. The only write path is `log_audit_event()` RPC (SECURITY DEFINER). Audit failures must be silenced with `console.warn` — they must never block the primary operation.
+21. **Audit events from frontend:** Login/logout/login-failed events are logged in `features/auth/hooks/index.ts` via `useAuditActions().logEvent()`. Data-change events (products, status changes, role changes) are logged automatically by PostgreSQL triggers.
 
 ## User Roles
 
@@ -202,8 +209,9 @@ storage.from(bucket).remove(path)                  // async → { data, error }
 | `stock_reservations` | 15-min cart holds with `expires_at` |
 | `suppliers` | External suppliers (not users); N:M via product_suppliers |
 | `product_suppliers` | Maps products to suppliers; one `is_primary` per product |
+| `audit_log` | Append-only audit trail; action, entity_type, entity_id, old_values, new_values, user_id, created_at |
 
-**Views:** `stock_summary` (balance per product), `inventory_ledger_view` (enriched with supplier + packaging info, `reference_type_label`)
+**Views:** `stock_summary` (balance per product), `inventory_ledger_view` (enriched with supplier + packaging info, `reference_type_label`), `audit_log_view` (audit_log joined to profiles for `user_name`)
 
 **Functions:**
 - `get_stock_balance(product_id)` → balance (INGRESO − EGRESO)
@@ -216,6 +224,7 @@ storage.from(bucket).remove(path)                  // async → { data, error }
 - `archive_product_with_replacement(p_product_id_to_archive, p_replacement_product_id)` → replaces ingredient references in recipes then soft-deletes product
 - `declare_production_waste(p_order_id, p_waste_qty, p_waste_notes)` → inserts EGRESO MERMA, updates waste_quantity on order
 - `next_batch_number(prefix)` → auto-generates `PROD-YYYY-NNNN` or `EMP-YYYY-NNNN`
+- `log_audit_event(p_user_id, p_action, p_entity_type, p_entity_id, p_old_values, p_new_values, p_details)` → UUID (SECURITY DEFINER, used by triggers and frontend)
 
 **Triggers:**
 - `trg_production_completion` — fires on production_orders status → COMPLETADA; scales ingredients, validates stock, inserts EGRESO+INGRESO, calculates production_cost
@@ -294,6 +303,7 @@ export function pickupCode(orderId: string): string {
 | `20260525000001_add-ingredient-role.sql` | ⏳ Pending | ingredient_role + notes on recipe_ingredients |
 | `20260525000002_production-enrichment.sql` | ⏳ Pending | batch_number, production_cost, declare_production_waste RPC |
 | `20260525000003_packaging-module.sql` | ⏳ Pending | packaging_templates, packaging_template_materials, packaging_orders |
+| `20260601000000_audit-module.sql` | ⏳ Pending | audit_log table, audit_log_view, log_audit_event RPC, triggers on products/production_orders/packaging_orders/profiles |
 
 ## tsconfig Path Aliases
 
