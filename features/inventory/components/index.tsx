@@ -100,23 +100,23 @@ function StockSubTable({
 
 export function StockSummaryTable({
   refreshTrigger,
-  onRefresh,
+  onRefreshAction,
 }: {
   refreshTrigger?: number;
-  onRefresh?: () => void;
+  onRefreshAction?: () => void;
 }) {
   const { summary, loading, error, refetch } = useStockSummary();
   const [pulse, setPulse] = useState<string | null>(null);
 
   const handleUpdate = useCallback(() => {
-    if (onRefresh) {
-      onRefresh();
+    if (onRefreshAction) {
+      onRefreshAction();
     } else {
       refetch();
     }
     setPulse(Date.now().toString());
     setTimeout(() => setPulse(null), 2000);
-  }, [refetch, onRefresh]);
+  }, [refetch, onRefreshAction]);
 
   const { connected } = useRealtimeStock(handleUpdate);
 
@@ -127,8 +127,8 @@ export function StockSummaryTable({
   }, [refreshTrigger, refetch]);
 
   const handleManualRefresh = () => {
-    if (onRefresh) {
-      onRefresh();
+    if (onRefreshAction) {
+      onRefreshAction();
     } else {
       refetch();
     }
@@ -241,7 +241,7 @@ export function StockSummaryTable({
  * Formulario de Ingreso de Stock (movimiento INGRESO en ledger).
  * Cuando tipo = COMPRA, requiere selección de proveedor.
  */
-export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
+export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => void }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
@@ -338,7 +338,7 @@ export function StockEntryForm({ onSuccess }: { onSuccess?: () => void }) {
       const product = products.find((p) => p.id === form.product_id);
       setSuccess(`Ingreso registrado: ${form.quantity} ${product?.unit ?? ""} de ${product?.name ?? ""}`);
       setTimeout(() => setSuccess(null), 5000);
-      onSuccess?.();
+      onSuccessAction?.();
     }
   }
 

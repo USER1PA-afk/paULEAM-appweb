@@ -43,11 +43,11 @@ export default function AdminInventoryPage() {
 
         {/* Formulario ingreso de stock */}
         <div className="print:hidden">
-          <StockEntryForm onSuccess={handleRefresh} />
+          <StockEntryForm onSuccessAction={handleRefresh} />
         </div>
 
         {/* Tabla de stock */}
-        <StockSummaryTable refreshTrigger={refreshTrigger} onRefresh={handleRefresh} />
+        <StockSummaryTable refreshTrigger={refreshTrigger} onRefreshAction={handleRefresh} />
 
         {/* Ledger de movimientos */}
         <InventoryLedgerTable refreshTrigger={refreshTrigger} />
