@@ -55,7 +55,7 @@ BEGIN
   DELETE FROM public.product_images    WHERE product_id = p_product_id;
   DELETE FROM public.lots              WHERE product_id = p_product_id;
   DELETE FROM public.audit_log
-    WHERE entity_type = 'PRODUCT'
+    WHERE entity_type = 'products'
       AND entity_id   = p_product_id;
 
   -- 9. product row
@@ -66,3 +66,5 @@ BEGIN
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.purge_product(UUID) TO authenticated;

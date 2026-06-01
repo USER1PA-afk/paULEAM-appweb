@@ -138,8 +138,14 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_audit_products_update ON public.products;
 CREATE TRIGGER trg_audit_products_update
-  AFTER UPDATE ON public.products
+  AFTER UPDATE OF name, price, type, cost_per_unit ON public.products
   FOR EACH ROW
+  WHEN (
+    OLD.name          IS DISTINCT FROM NEW.name OR
+    OLD.price         IS DISTINCT FROM NEW.price OR
+    OLD.type          IS DISTINCT FROM NEW.type OR
+    OLD.cost_per_unit IS DISTINCT FROM NEW.cost_per_unit
+  )
   EXECUTE FUNCTION public.audit_products_update();
 
 -- ============================
@@ -171,8 +177,9 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_audit_production_orders ON public.production_orders;
 CREATE TRIGGER trg_audit_production_orders
-  AFTER UPDATE ON public.production_orders
+  AFTER UPDATE OF status ON public.production_orders
   FOR EACH ROW
+  WHEN (OLD.status IS DISTINCT FROM NEW.status)
   EXECUTE FUNCTION public.audit_production_orders_update();
 
 -- ============================
@@ -204,8 +211,9 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_audit_packaging_orders ON public.packaging_orders;
 CREATE TRIGGER trg_audit_packaging_orders
-  AFTER UPDATE ON public.packaging_orders
+  AFTER UPDATE OF status ON public.packaging_orders
   FOR EACH ROW
+  WHEN (OLD.status IS DISTINCT FROM NEW.status)
   EXECUTE FUNCTION public.audit_packaging_orders_update();
 
 -- ============================
@@ -250,6 +258,19 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_audit_profiles ON public.profiles;
 CREATE TRIGGER trg_audit_profiles
-  AFTER UPDATE ON public.profiles
+  AFTER UPDATE OF role, is_active ON public.profiles
   FOR EACH ROW
+  WHEN (
+    OLD.role      IS DISTINCT FROM NEW.role OR
+    OLD.is_active IS DISTINCT FROM NEW.is_active
+  )
   EXECUTE FUNCTION public.audit_profiles_update();
+
+-- ============================
+-- 9. PERMISOS
+-- ============================
+-- anon necesita ejecutar log_audit_event para registrar LOGIN_FAILED (usuario no autenticado)
+GRANT EXECUTE ON FUNCTION public.log_audit_event(UUID, TEXT, TEXT, UUID, JSONB, JSONB, TEXT)
+  TO authenticated, anon;
+
+GRANT SELECT ON public.audit_log_view TO authenticated;
