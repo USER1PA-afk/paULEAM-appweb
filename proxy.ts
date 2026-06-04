@@ -70,8 +70,18 @@ export async function proxy(request: NextRequest) {
   // /admin/dashboard would itself get kicked back to /login.
   if (!hasSession) {
     const referer = request.headers.get("referer") ?? "";
-    if (referer.endsWith("/login") || referer.endsWith("/register")) {
-      return NextResponse.next();
+    try {
+      if (referer) {
+        const refererUrl = new URL(referer);
+        if (refererUrl.pathname.endsWith("/login") || refererUrl.pathname.endsWith("/register")) {
+          return NextResponse.next();
+        }
+      }
+    } catch (e) {
+      // Fallback si el referer no es una URL válida
+      if (referer.endsWith("/login") || referer.endsWith("/register")) {
+        return NextResponse.next();
+      }
     }
   }
 
