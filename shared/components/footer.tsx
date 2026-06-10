@@ -10,7 +10,7 @@ export function Footer() {
           <img
             src={logoBase64}
             alt="Logo ULEAM" 
-            className="h-10 w-auto object-contain invert opacity-80 dark:invert-0 dark:opacity-100 transition-all"
+            className="h-10 w-auto object-contain opacity-90 dark:opacity-100 transition-all"
           />
           <div className="hidden h-8 w-px bg-border sm:block" />
           <p className="text-xs text-muted-foreground">
