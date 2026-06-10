@@ -3,11 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useRecipes, useProducts } from "../hooks";
 import { Beaker, Eye, Pencil } from "lucide-react";
+import { usePagination } from "@shared/hooks/use-pagination";
+import { TablePagination } from "@shared/components/ui/table-pagination";
 
 export function RecipeList() {
   const router = useRouter();
   const { recipes, loading } = useRecipes();
   const { finishedProducts } = useProducts();
+  const { page, setPage, paged: pagedRecipes, from, to, total, totalPages } = usePagination(recipes);
 
   if (loading) {
     return (
@@ -63,7 +66,7 @@ export function RecipeList() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border/50">
-            {recipes.map((r) => (
+            {pagedRecipes.map((r) => (
               <tr key={r.id} className="group hover:bg-muted/20 transition-colors">
                 <td className="px-5 py-4 text-center">
                   <div>
@@ -117,11 +120,19 @@ export function RecipeList() {
             ))}
           </tbody>
         </table>
+        <TablePagination
+          page={page}
+          totalPages={totalPages}
+          from={from}
+          to={to}
+          total={total}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* Mobile: Card View */}
       <div className="grid gap-4 lg:hidden">
-        {recipes.map((r) => (
+        {pagedRecipes.map((r) => (
           <div
             key={r.id}
             className="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md hover:border-brand-200 transition-all"
@@ -178,6 +189,16 @@ export function RecipeList() {
             </div>
           </div>
         ))}
+      </div>
+      <div className="lg:hidden">
+        <TablePagination
+          page={page}
+          totalPages={totalPages}
+          from={from}
+          to={to}
+          total={total}
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );

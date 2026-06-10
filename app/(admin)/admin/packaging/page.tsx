@@ -6,6 +6,8 @@ import { formatDate } from "@shared/lib/utils";
 import { getInsforge } from "@shared/lib/insforge/client";
 import Link from "next/link";
 import React, { useState, useEffect, Suspense } from "react";
+import { usePagination } from "@shared/hooks/use-pagination";
+import { TablePagination } from "@shared/components/ui/table-pagination";
 import { useSearchParams } from "next/navigation";
 import {
   PACKAGING_STATUS_LABELS,
@@ -153,6 +155,9 @@ function AdminPackagingPageInner() {
   const filteredOrders = orders.filter((o) =>
     !filterStatus || o.status === filterStatus
   );
+  const { page: pkgPage, setPage: setPkgPage, paged: pagedOrders, from: pkgFrom, to: pkgTo, total: pkgTotal, totalPages: pkgTotalPages } = usePagination(filteredOrders);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setPkgPage(1); }, [filterStatus]);
 
   const completedCount = orders.filter((o) => o.status === "COMPLETADA").length;
   const inProgressCount = orders.filter((o) => o.status === "EN_PROCESO").length;
@@ -377,7 +382,7 @@ function AdminPackagingPageInner() {
                   </td>
                 </tr>
               ) : (
-                filteredOrders.map((order) => {
+                pagedOrders.map((order) => {
                   const statusLabel = PACKAGING_STATUS_LABELS[order.status] ?? order.status;
                   const statusDot = PACKAGING_STATUS_COLORS[order.status] ?? "bg-gray-400";
 
@@ -472,6 +477,14 @@ function AdminPackagingPageInner() {
               )}
             </tbody>
           </table>
+        <TablePagination
+          page={pkgPage}
+          totalPages={pkgTotalPages}
+          from={pkgFrom}
+          to={pkgTo}
+          total={pkgTotal}
+          onPageChange={setPkgPage}
+        />
         </div>
       )}
 

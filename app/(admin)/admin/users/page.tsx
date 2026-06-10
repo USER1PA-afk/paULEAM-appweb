@@ -3,7 +3,9 @@
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback } from "react";
 import { formatDate } from "@shared/lib/utils";
-import { Shield, Wrench, Monitor, ShoppingBag, ChevronDown, Users } from "lucide-react";
+import { Shield, Wrench, Monitor, ShoppingBag, ChevronDown } from "lucide-react";
+import { usePagination } from "@shared/hooks/use-pagination";
+import { TablePagination } from "@shared/components/ui/table-pagination";
 
 interface UserProfile {
   id: string;
@@ -77,7 +79,6 @@ const ROLES: Record<string, {
 };
 
 const STAFF_ROLES = ["admin", "operario", "sales_kiosk"];
-const CLIENT_PAGE_SIZE = 5;
 
 function RoleBadge({ role }: { role: string }) {
   const def = ROLES[role] ?? { label: role, dot: "bg-gray-400", badgeBg: "bg-gray-100", badgeText: "text-gray-700" };
@@ -253,7 +254,6 @@ export default function AdminUsersPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState("");
   const [saving, setSaving] = useState(false);
-  const [clientLimit, setClientLimit] = useState(CLIENT_PAGE_SIZE);
   const insforge = getInsforge();
 
   const fetchUsers = useCallback(async () => {
@@ -289,8 +289,8 @@ export default function AdminUsersPage() {
 
   const staffUsers = users.filter((u) => STAFF_ROLES.includes(u.role));
   const clientUsers = users.filter((u) => u.role === "cliente");
-  const visibleClients = clientUsers.slice(0, clientLimit);
-  const hasMoreClients = clientUsers.length > clientLimit;
+  const staffPag = usePagination(staffUsers);
+  const clientPag = usePagination(clientUsers);
 
   return (
     <div className="space-y-8">
@@ -354,7 +354,7 @@ export default function AdminUsersPage() {
             </div>
             <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
               <UsersTable
-                users={staffUsers}
+                users={staffPag.paged}
                 editingId={editingId}
                 editRole={editRole}
                 saving={saving}
@@ -363,6 +363,14 @@ export default function AdminUsersPage() {
                 onSave={handleRoleUpdate}
                 onRoleChange={setEditRole}
                 emptyMessage="No hay administradores, operarios ni kioscos registrados."
+              />
+              <TablePagination
+                page={staffPag.page}
+                totalPages={staffPag.totalPages}
+                from={staffPag.from}
+                to={staffPag.to}
+                total={staffPag.total}
+                onPageChange={staffPag.setPage}
               />
             </div>
           </section>
@@ -377,7 +385,7 @@ export default function AdminUsersPage() {
             </div>
             <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
               <UsersTable
-                users={visibleClients}
+                users={clientPag.paged}
                 editingId={editingId}
                 editRole={editRole}
                 saving={saving}
@@ -387,20 +395,14 @@ export default function AdminUsersPage() {
                 onRoleChange={setEditRole}
                 emptyMessage="No hay clientes registrados aún."
               />
-              {hasMoreClients && (
-                <div className="flex items-center justify-center gap-2 border-t border-border/50 px-4 py-3">
-                  <button
-                    onClick={() => setClientLimit((prev) => prev + CLIENT_PAGE_SIZE)}
-                    className="flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-                  >
-                    <Users aria-hidden="true" className="h-3.5 w-3.5" />
-                    Cargar más clientes
-                    <span className="text-muted-foreground">
-                      ({clientUsers.length - clientLimit} restantes)
-                    </span>
-                  </button>
-                </div>
-              )}
+              <TablePagination
+                page={clientPag.page}
+                totalPages={clientPag.totalPages}
+                from={clientPag.from}
+                to={clientPag.to}
+                total={clientPag.total}
+                onPageChange={clientPag.setPage}
+              />
             </div>
           </section>
         </div>

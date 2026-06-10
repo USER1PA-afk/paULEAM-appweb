@@ -5,6 +5,8 @@ import { formatDate, formatCurrency } from "@shared/lib/utils";
 import { useState } from "react";
 import { getInsforge } from "@shared/lib/insforge/client";
 import { ChevronDown, ChevronUp, Receipt, X, Download, Eye, Loader2 } from "lucide-react";
+import { usePagination } from "@shared/hooks/use-pagination";
+import { TablePagination } from "@shared/components/ui/table-pagination";
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
   PENDIENTE:  { label: "Pendiente",  dot: "bg-yellow-500",  bg: "bg-yellow-100 dark:bg-yellow-900/20",  text: "text-yellow-700 dark:text-yellow-300"  },
@@ -17,6 +19,7 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; te
 
 export default function AdminOrdersPage() {
   const { orders, loading, approveOrder, rejectOrder } = useOrderManagement();
+  const { page, setPage, paged: pagedOrders, from, to, total, totalPages } = usePagination(orders);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [acting, setActing] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -194,7 +197,7 @@ export default function AdminOrdersPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {orders.map((order) => {
+          {pagedOrders.map((order) => {
             const status = STATUS_CONFIG[order.status] ?? {
               label: order.status,
               dot: "bg-gray-400",
@@ -391,6 +394,14 @@ export default function AdminOrdersPage() {
               </div>
             );
           })}
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            from={from}
+            to={to}
+            total={total}
+            onPageChange={setPage}
+          />
         </div>
       )}
     </div>

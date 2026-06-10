@@ -15,6 +15,7 @@ import {
 } from "@entities/audit";
 import { formatDate } from "@shared/lib/utils";
 import { Shield, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { TablePagination } from "@shared/components/ui/table-pagination";
 
 // ============================================================
 // AuditStats — tarjetas de resumen
@@ -77,7 +78,7 @@ export function AuditStats({ entries }: { entries: AuditLog[] }) {
 // AuditLogTable — tabla filtrable, paginada y con filas expandibles
 // ============================================================
 export function AuditLogTable() {
-  const [filters, setFilters] = useState<AuditFilters>({ page: 1, page_size: 50 });
+  const [filters, setFilters] = useState<AuditFilters>({ page: 1, page_size: 5 });
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const { entries, loading, error, total, totalPages, refetch } = useAuditLog(filters);
@@ -299,38 +300,14 @@ export function AuditLogTable() {
         </div>
       )}
 
-      {/* ── Paginación ── */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{total} eventos totales</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() =>
-                setFilters((p) => ({ ...p, page: Math.max(1, (p.page ?? 1) - 1) }))
-              }
-              disabled={(filters.page ?? 1) <= 1}
-              className="rounded-full border border-border px-3 py-1 font-medium hover:bg-muted disabled:opacity-40 transition-colors"
-            >
-              Anterior
-            </button>
-            <span>
-              Página {filters.page ?? 1} de {totalPages}
-            </span>
-            <button
-              onClick={() =>
-                setFilters((p) => ({
-                  ...p,
-                  page: Math.min(totalPages, (p.page ?? 1) + 1),
-                }))
-              }
-              disabled={(filters.page ?? 1) >= totalPages}
-              className="rounded-full border border-border px-3 py-1 font-medium hover:bg-muted disabled:opacity-40 transition-colors"
-            >
-              Siguiente
-            </button>
-          </div>
-        </div>
-      )}
+      <TablePagination
+        page={filters.page ?? 1}
+        totalPages={totalPages}
+        from={total === 0 ? 0 : ((filters.page ?? 1) - 1) * (filters.page_size ?? 5) + 1}
+        to={Math.min((filters.page ?? 1) * (filters.page_size ?? 5), total)}
+        total={total}
+        onPageChange={(p) => setFilters((prev) => ({ ...prev, page: p }))}
+      />
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
   type PosProduct,
   type PosPaymentMethod,
   type PosCustomer,
+  type PosCartItem,
 } from "@features/pos";
 import { formatCurrency } from "@shared/lib/utils";
 import {
@@ -32,6 +33,8 @@ import {
   X,
   AlertCircle,
   Zap,
+  FileText,
+  Printer,
 } from "lucide-react";
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -201,6 +204,210 @@ function CartRow({
   );
 }
 
+// ─── Invoice Modal ───────────────────────────────────────────────────────────
+
+type InvoiceData = {
+  orderId: string;
+  createdAt: Date;
+  customer: PosCustomer;
+  operatorName: string;
+  items: PosCartItem[];
+  total: number;
+  paymentMethod: PosPaymentMethod;
+  amountReceived: number;
+  change: number;
+};
+
+function posPickupCode(orderId: string) {
+  return "PAU-" + orderId.replace(/-/g, "").substring(0, 8).toUpperCase();
+}
+
+function printInvoice(data: InvoiceData) {
+  const fmt = (n: number) =>
+    n.toLocaleString("es-EC", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
+  const dateStr = data.createdAt.toLocaleString("es-EC", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+  const code = posPickupCode(data.orderId);
+
+  const rows = data.items.map((i) => `
+    <tr>
+      <td style="padding:4px 6px;border-bottom:1px solid #eee;">${i.name}</td>
+      <td style="padding:4px 6px;border-bottom:1px solid #eee;text-align:center;">${i.quantity} ${i.sales_unit_name}</td>
+      <td style="padding:4px 6px;border-bottom:1px solid #eee;text-align:right;">${fmt(i.price)}</td>
+      <td style="padding:4px 6px;border-bottom:1px solid #eee;text-align:right;font-weight:700;">${fmt(i.price * i.quantity)}</td>
+    </tr>`).join("");
+
+  const payRow = data.paymentMethod === "EFECTIVO"
+    ? `<tr><td colspan="3" style="padding:3px 6px;text-align:right;font-size:12px;">Recibido</td><td style="padding:3px 6px;text-align:right;">${fmt(data.amountReceived)}</td></tr>
+       <tr><td colspan="3" style="padding:3px 6px;text-align:right;font-size:12px;">Cambio</td><td style="padding:3px 6px;text-align:right;">${fmt(data.change)}</td></tr>`
+    : "";
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Comprobante ${code}</title>
+  <style>body{font-family:monospace,sans-serif;font-size:13px;color:#111;max-width:380px;margin:0 auto;padding:16px}
+  h1{font-size:15px;text-align:center;margin:0}h2{font-size:12px;text-align:center;color:#555;margin:2px 0 12px}
+  .divider{border:none;border-top:1px dashed #aaa;margin:8px 0}table{width:100%;border-collapse:collapse}
+  th{font-size:11px;text-align:left;padding:4px 6px;border-bottom:2px solid #333}
+  .footer{text-align:center;margin-top:14px;font-size:11px;color:#888}
+  .code{text-align:center;font-size:18px;font-weight:900;letter-spacing:4px;margin:10px 0}
+  @media print{@page{margin:8mm}}</style></head><body>
+  <h1>PAuleam · Planta de Alimentos</h1>
+  <h2>NOTA DE VENTA — CONSUMIDOR FINAL</h2>
+  <hr class="divider">
+  <div style="font-size:12px;margin-bottom:8px;">
+    <div><strong>Código:</strong> ${code}</div>
+    <div><strong>Fecha:</strong> ${dateStr}</div>
+    <div><strong>Cliente:</strong> ${data.customer.full_name} ${data.customer.cedula ? `· ${data.customer.cedula}` : ""}</div>
+    <div><strong>Operador:</strong> ${data.operatorName}</div>
+    <div><strong>Pago:</strong> ${data.paymentMethod === "EFECTIVO" ? "Efectivo" : "QR Deuna"}</div>
+  </div>
+  <hr class="divider">
+  <table>
+    <thead><tr>
+      <th>Producto</th><th style="text-align:center">Cant.</th>
+      <th style="text-align:right">P.U.</th><th style="text-align:right">Total</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot>
+      <tr style="background:#f5f5f5">
+        <td colspan="3" style="padding:6px;font-weight:900;text-align:right">TOTAL</td>
+        <td style="padding:6px;font-weight:900;text-align:right">${fmt(data.total)}</td>
+      </tr>
+      ${payRow}
+    </tfoot>
+  </table>
+  <hr class="divider">
+  <div class="code">${code}</div>
+  <div class="footer">Gracias por su compra · Extensión ULEAM Chone</div>
+  <script>window.onload=function(){window.print();}</script>
+  </body></html>`;
+
+  const w = window.open("", "_blank", "width=420,height=600");
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+function InvoiceModal({ data, onClose }: { data: InvoiceData; onClose: () => void }) {
+  const fmt = (n: number) =>
+    n.toLocaleString("es-EC", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
+  const code = posPickupCode(data.orderId);
+  const dateStr = data.createdAt.toLocaleString("es-EC", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative flex flex-col w-full max-w-sm max-h-[92vh] rounded-2xl bg-white dark:bg-[#1a1a1a] shadow-2xl border border-neutral-200 dark:border-white/10 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-white/10 shrink-0">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-brand-600" aria-hidden="true" />
+            <span className="text-sm font-bold text-neutral-900 dark:text-white">Comprobante de Venta</span>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Cerrar comprobante"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/10 hover:text-neutral-700 dark:hover:text-white transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4 font-mono text-xs text-neutral-800 dark:text-neutral-200">
+          {/* Empresa */}
+          <div className="text-center space-y-0.5">
+            <p className="text-sm font-black text-neutral-900 dark:text-white tracking-tight">PAuleam</p>
+            <p className="text-[10px] text-neutral-500">Planta de Alimentos · Extensión ULEAM Chone</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 dark:text-neutral-400 mt-1">Nota de Venta — Consumidor Final</p>
+          </div>
+
+          <div className="border-t border-dashed border-neutral-300 dark:border-white/15" />
+
+          {/* Meta */}
+          <div className="space-y-1 text-[11px]">
+            <div className="flex justify-between"><span className="text-neutral-500">Código</span><span className="font-bold tracking-widest text-brand-600 dark:text-brand-400">{code}</span></div>
+            <div className="flex justify-between"><span className="text-neutral-500">Fecha</span><span>{dateStr}</span></div>
+            <div className="flex justify-between"><span className="text-neutral-500">Cliente</span><span className="truncate max-w-[180px] text-right">{data.customer.full_name}</span></div>
+            {data.customer.cedula && (
+              <div className="flex justify-between"><span className="text-neutral-500">Cédula</span><span>{data.customer.cedula}</span></div>
+            )}
+            <div className="flex justify-between"><span className="text-neutral-500">Operador</span><span className="truncate max-w-[180px] text-right">{data.operatorName}</span></div>
+            <div className="flex justify-between"><span className="text-neutral-500">Pago</span><span>{data.paymentMethod === "EFECTIVO" ? "Efectivo" : "QR Deuna"}</span></div>
+          </div>
+
+          <div className="border-t border-dashed border-neutral-300 dark:border-white/15" />
+
+          {/* Items */}
+          <div className="space-y-1.5">
+            <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 text-[9px] font-bold uppercase tracking-widest text-neutral-400 pb-1 border-b border-neutral-200 dark:border-white/10">
+              <span>Producto</span><span className="text-right">Cant.</span><span className="text-right">Total</span>
+            </div>
+            {data.items.map((item) => (
+              <div key={item.product_id} className="grid grid-cols-[1fr_auto_auto] gap-x-3 text-[11px]">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-neutral-900 dark:text-white">{item.name}</p>
+                  <p className="text-[9px] text-neutral-400">{fmt(item.price)} / {item.sales_unit_name}</p>
+                </div>
+                <span className="text-right text-neutral-600 dark:text-neutral-400 whitespace-nowrap">{item.quantity} {item.sales_unit_name}</span>
+                <span className="text-right font-bold text-neutral-900 dark:text-white whitespace-nowrap">{fmt(item.price * item.quantity)}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-dashed border-neutral-300 dark:border-white/15" />
+
+          {/* Totals */}
+          <div className="space-y-1 text-[11px]">
+            <div className="flex justify-between font-black text-sm text-neutral-900 dark:text-white">
+              <span>TOTAL</span><span className="tabular-nums">{fmt(data.total)}</span>
+            </div>
+            {data.paymentMethod === "EFECTIVO" && (
+              <>
+                <div className="flex justify-between text-neutral-500"><span>Recibido</span><span className="tabular-nums">{fmt(data.amountReceived)}</span></div>
+                <div className="flex justify-between text-accent-700 dark:text-accent-400 font-bold"><span>Cambio</span><span className="tabular-nums">{fmt(data.change)}</span></div>
+              </>
+            )}
+          </div>
+
+          <div className="border-t border-dashed border-neutral-300 dark:border-white/15" />
+
+          {/* Code */}
+          <div className="text-center">
+            <p className="text-[9px] text-neutral-400 uppercase tracking-widest mb-1">Código de retiro</p>
+            <p className="text-2xl font-black tracking-[6px] text-brand-600 dark:text-brand-400">{code}</p>
+          </div>
+
+          <p className="text-center text-[9px] text-neutral-400">Gracias por su compra</p>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-neutral-200 dark:border-white/10 shrink-0">
+          <button
+            onClick={onClose}
+            className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-2 text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors"
+          >
+            Cerrar
+          </button>
+          <button
+            onClick={() => printInvoice(data)}
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-500 transition-colors"
+          >
+            <Printer className="h-4 w-4" /> Imprimir
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main POS Page ───────────────────────────────────────────────────────────
 
 export default function PosPage() {
@@ -222,6 +429,8 @@ export default function PosPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
   const [deunaPending, setDeunaPending] = useState(false);
+  const [generateInvoice, setGenerateInvoice] = useState(false);
+  const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
 
   const amountRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -269,31 +478,65 @@ export default function PosPage() {
   const handleSubmit = useCallback(async () => {
     if (!user?.id || !canSubmit) return;
 
+    // Snapshot before async so values are stable
+    const saleItems = [...items];
+    const saleCustomer = { ...customer };
+    const salePayment = paymentMethod;
+    const saleTotal = total;
+    const saleReceived = parseFloat(amountReceived) || 0;
+    const saleChange = saleReceived - saleTotal;
+    const saleOperator = user.email ?? user.id;
+
     const { orderId, error } = await submitSale({
       operatorId: user.id,
-      customerId: customer.id,
-      paymentMethod,
-      items,
-      total,
+      customerId: saleCustomer.id,
+      paymentMethod: salePayment,
+      items: saleItems,
+      total: saleTotal,
     });
 
-    if (error || !orderId) return; // el error se muestra desde checkoutError
+    if (error || !orderId) return;
 
-    // Éxito → reset completo
+    // Reset
     clearCart();
     setCustomer({ id: CONSUMIDOR_FINAL_ID, full_name: CONSUMIDOR_FINAL_NAME, cedula: CONSUMIDOR_FINAL_CEDULA });
     setPaymentMethod("EFECTIVO");
     setAmountReceived("");
     setDeunaPending(false);
-    setSuccessMessage(`✓ Venta procesada — Orden #${orderId.substring(0, 8).toUpperCase()}`);
-    refetch(); // actualizar stock en grilla
+    refetch();
 
-    setTimeout(() => setSuccessMessage(null), 4000);
-  }, [user, canSubmit, submitSale, customer, paymentMethod, items, total, clearCart, refetch]);
+    if (generateInvoice) {
+      setInvoiceData({
+        orderId,
+        createdAt: new Date(),
+        customer: saleCustomer,
+        operatorName: saleOperator,
+        items: saleItems,
+        total: saleTotal,
+        paymentMethod: salePayment,
+        amountReceived: saleReceived,
+        change: saleChange,
+      });
+    } else {
+      setSuccessMessage(`✓ Venta procesada — Orden #${orderId.substring(0, 8).toUpperCase()}`);
+      setTimeout(() => setSuccessMessage(null), 4000);
+    }
+  }, [user, canSubmit, submitSale, customer, paymentMethod, items, total, amountReceived, generateInvoice, clearCart, refetch]);
 
   // ─────────────────────────────────────────────────────────
   return (
     <div className="flex h-full overflow-hidden">
+
+      {invoiceData && (
+        <InvoiceModal
+          data={invoiceData}
+          onClose={() => {
+            setInvoiceData(null);
+            setSuccessMessage(`✓ Venta procesada — Orden #${invoiceData.orderId.substring(0, 8).toUpperCase()}`);
+            setTimeout(() => setSuccessMessage(null), 4000);
+          }}
+        />
+      )}
 
       {/* ══════════════════════════════════════════
           LEFT — Product Grid (60%)
@@ -696,6 +939,38 @@ export default function PosPage() {
               <p className="text-sm font-bold text-accent-700 dark:text-accent-300">{successMessage}</p>
             </div>
           )}
+
+          {/* ── Invoice toggle ── */}
+          <div className="px-4 pb-2">
+            <button
+              id="pos-invoice-toggle"
+              onClick={() => setGenerateInvoice((v) => !v)}
+              className={`flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 transition-all duration-200 cursor-pointer
+                ${generateInvoice
+                  ? "border-brand-500/50 bg-brand-500/8 dark:bg-brand-500/12"
+                  : "border-neutral-200 dark:border-white/8 bg-white dark:bg-white/4 hover:border-neutral-300 dark:hover:border-white/15"
+                }`}
+            >
+              <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors
+                ${generateInvoice ? "border-brand-600 bg-brand-600" : "border-neutral-300 dark:border-white/25"}`}
+              >
+                {generateInvoice && (
+                  <svg viewBox="0 0 10 8" className="h-2.5 w-2.5 fill-white" aria-hidden="true">
+                    <path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <FileText className={`h-4 w-4 shrink-0 transition-colors ${generateInvoice ? "text-brand-600 dark:text-brand-400" : "text-neutral-400 dark:text-neutral-500"}`} aria-hidden="true" />
+              <div className="flex-1 text-left">
+                <p className={`text-xs font-semibold transition-colors ${generateInvoice ? "text-brand-700 dark:text-brand-300" : "text-neutral-600 dark:text-neutral-400"}`}>
+                  Generar comprobante
+                </p>
+                <p className="text-[9px] text-neutral-400 dark:text-neutral-600">
+                  {generateInvoice ? "Se mostrará nota de venta al finalizar" : "Sin comprobante"}
+                </p>
+              </div>
+            </button>
+          </div>
 
           {/* ── Final CTA ── */}
           <div className="px-4 pb-4">

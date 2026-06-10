@@ -6,6 +6,7 @@ import { SupplierSelect } from "@features/suppliers/components";
 import { useSupplierActions } from "@features/suppliers/hooks";
 import { useRole } from "@features/auth/hooks";
 import { Tag, AlertTriangle, Pencil, Trash2, Star, ImagePlus, X as XIcon } from "lucide-react";
+import { TablePagination } from "@shared/components/ui/table-pagination";
 import Image from "next/image";
 
 type ProductType = "MATERIA_PRIMA" | "INSUMO" | "ENVASE_EMPAQUE" | "PRODUCTO_A_GRANEL" | "PRODUCTO_TERMINADO" | "OTRO";
@@ -111,10 +112,12 @@ export default function AdminProductsPage() {
   const [replacementProductId, setReplacementProductId] = useState("");
   const [conflictSaving, setConflictSaving] = useState(false);
 
+  const [productPages, setProductPages] = useState<Partial<Record<ProductType, number>>>({});
   const insforge = getInsforge();
   const { linkSuppliersToProduct } = useSupplierActions();
   const { role } = useRole();
   const isAdmin = role === "admin";
+  const PROD_PAGE_SIZE = 5;
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -1335,6 +1338,11 @@ export default function AdminProductsPage() {
             const typeProducts = products.filter((p) => p.type === typeValue);
             const typeArchived = archivedProducts.filter((p) => p.type === typeValue);
             const isPurchasable = PURCHASABLE_TYPES.includes(typeValue);
+            const typeTotalPages = Math.max(1, Math.ceil(typeProducts.length / PROD_PAGE_SIZE));
+            const typePage = Math.min(Math.max(1, productPages[typeValue] ?? 1), typeTotalPages);
+            const pagedTypeProducts = typeProducts.slice((typePage - 1) * PROD_PAGE_SIZE, typePage * PROD_PAGE_SIZE);
+            const typeFrom = typeProducts.length === 0 ? 0 : (typePage - 1) * PROD_PAGE_SIZE + 1;
+            const typeTo = Math.min(typePage * PROD_PAGE_SIZE, typeProducts.length);
             return (
               <div key={typeValue} className="space-y-3">
                 <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
@@ -1363,7 +1371,7 @@ export default function AdminProductsPage() {
                           </td>
                         </tr>
                       ) : (
-                        typeProducts.map((p) => (
+                        pagedTypeProducts.map((p) => (
                           <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
                             <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
                             <td className="px-4 py-3">
@@ -1407,6 +1415,14 @@ export default function AdminProductsPage() {
                       )}
                     </tbody>
                   </table>
+                  <TablePagination
+                    page={typePage}
+                    totalPages={typeTotalPages}
+                    from={typeFrom}
+                    to={typeTo}
+                    total={typeProducts.length}
+                    onPageChange={(p) => setProductPages((prev) => ({ ...prev, [typeValue]: p }))}
+                  />
                 </div>
                 {showArchived && !loadingArchived && typeArchived.length > 0 && (
                   <div className="overflow-x-auto rounded-xl border border-amber-200/60 dark:border-amber-800/40 bg-muted/20 shadow-sm">

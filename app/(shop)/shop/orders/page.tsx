@@ -18,6 +18,8 @@ import {
   X,
   Download,
 } from "lucide-react";
+import { usePagination } from "@shared/hooks/use-pagination";
+import { TablePagination } from "@shared/components/ui/table-pagination";
 import { formatDate, formatCurrency } from "@shared/lib/utils";
 
 const STATUS_CONFIG: Record<
@@ -71,6 +73,7 @@ const STATUS_CONFIG: Record<
 export default function MyOrdersPage() {
   const { isAuthenticated } = useAuth();
   const { orders, loading } = useUserOrders();
+  const { page, setPage, paged: pagedOrders, from, to, total, totalPages } = usePagination(orders);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [preview, setPreview] = useState<{
@@ -244,7 +247,7 @@ export default function MyOrdersPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map((order) => {
+          {pagedOrders.map((order) => {
             const status = STATUS_CONFIG[order.status] ?? {
               label: order.status,
               dot: "bg-gray-400",
@@ -396,6 +399,14 @@ export default function MyOrdersPage() {
               </div>
             );
           })}
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            from={from}
+            to={to}
+            total={total}
+            onPageChange={setPage}
+          />
         </div>
       )}
     </div>

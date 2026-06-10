@@ -3,6 +3,8 @@
 import { useStockSummary, useInventoryLedger, useInventoryActions, useRealtimeStock } from "@features/inventory/hooks";
 import { useSuppliers } from "@features/suppliers/hooks";
 import { useState, useEffect, useCallback, Fragment } from "react";
+import { usePagination } from "@shared/hooks/use-pagination";
+import { TablePagination } from "@shared/components/ui/table-pagination";
 import { getInsforge } from "@shared/lib/insforge/client";
 import { RefreshCw, Zap, PackagePlus, FileDown, Handshake as HandshakeIcon, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Package, Hash } from "lucide-react";
 
@@ -26,6 +28,7 @@ function StockSubTable({
   label: string;
   accentColor: string;
 }) {
+  const { page, setPage, paged, from, to, total, totalPages } = usePagination(items);
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -59,7 +62,7 @@ function StockSubTable({
                 </td>
               </tr>
             ) : (
-              items.map((item) => {
+              paged.map((item) => {
                 const stock = Number(item.stock_actual);
                 const statusColor = stock <= 0
                   ? "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
@@ -93,6 +96,14 @@ function StockSubTable({
             )}
           </tbody>
         </table>
+        <TablePagination
+          page={page}
+          totalPages={totalPages}
+          from={from}
+          to={to}
+          total={total}
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );
@@ -523,9 +534,6 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
   );
 }
 
-const LEDGER_DEFAULT = 5;
-const LEDGER_STEP = 10;
-
 const REF_TYPES = ["COMPRA", "AJUSTE", "DEVOLUCION", "PRODUCCION", "EMPAQUE", "MERMA"] as const;
 
 interface LedgerEntry {
@@ -588,7 +596,6 @@ export function InventoryLedgerTable({
   const [refType, setRefType] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [visible, setVisible] = useState(LEDGER_DEFAULT);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
 
@@ -598,8 +605,22 @@ export function InventoryLedgerTable({
     }
   }, [refreshTrigger, refetch]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setVisible(LEDGER_DEFAULT); }, [movType, refType, dateFrom, dateTo]);
+  const filtered = (entries as LedgerEntry[]).filter((e) => {
+    if (movType && e.movement_type !== movType) return false;
+    if (refType && e.reference_type !== refType) return false;
+    if (dateFrom && new Date(e.created_at) < new Date(dateFrom)) return false;
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59, 999);
+      if (new Date(e.created_at) > end) return false;
+    }
+    return true;
+  });
+  const displayItems = buildDisplayItems(filtered);
+  const { page, setPage, paged: shownItems, from, to, total: totalDisplayItems, totalPages } = usePagination(displayItems);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setPage(1); }, [movType, refType, dateFrom, dateTo]);
 
   function toggleGroup(id: string) {
     setExpandedGroups((prev) => {
@@ -657,21 +678,6 @@ export function InventoryLedgerTable({
     );
   }
 
-  const filtered = (entries as LedgerEntry[]).filter((e) => {
-    if (movType && e.movement_type !== movType) return false;
-    if (refType && e.reference_type !== refType) return false;
-    if (dateFrom && new Date(e.created_at) < new Date(dateFrom)) return false;
-    if (dateTo) {
-      const end = new Date(dateTo);
-      end.setHours(23, 59, 59, 999);
-      if (new Date(e.created_at) > end) return false;
-    }
-    return true;
-  });
-
-  const displayItems = buildDisplayItems(filtered);
-  const shownItems = displayItems.slice(0, visible);
-  const hasMore = visible < displayItems.length;
   const hasActiveFilter = movType || refType || dateFrom || dateTo;
 
   const fmtQty = (n: number, unit?: string | null) => {
@@ -1080,32 +1086,14 @@ export function InventoryLedgerTable({
         </table>
       </div>
 
-      {/* Pagination */}
-      {(hasMore || visible > LEDGER_DEFAULT) && (
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-muted-foreground/60 tabular-nums">
-            {shownItems.length} de {displayItems.length} entradas
-          </span>
-          <div className="flex gap-1.5">
-            {hasMore && (
-              <button
-                onClick={() => setVisible((v) => v + LEDGER_STEP)}
-                className="rounded-full border border-border bg-background px-3 py-1 text-[11px] font-medium text-foreground hover:bg-muted transition-colors"
-              >
-                Ver más
-              </button>
-            )}
-            {visible > LEDGER_DEFAULT && (
-              <button
-                onClick={() => setVisible(LEDGER_DEFAULT)}
-                className="rounded-full border border-border bg-background px-3 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted transition-colors"
-              >
-                Contraer
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        from={from}
+        to={to}
+        total={totalDisplayItems}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

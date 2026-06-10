@@ -10,6 +10,8 @@ import React, { useState, useEffect } from "react";
 import { useRole } from "@features/auth/hooks";
 import { Printer, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { usePagination } from "@shared/hooks/use-pagination";
+import { TablePagination } from "@shared/components/ui/table-pagination";
 
 // ─────────────────────────────────────────────────────────────
 // Sistema de unidades
@@ -195,6 +197,9 @@ export default function AdminProductionPage() {
     }
     return true;
   });
+  const { page: prodPage, setPage: setProdPage, paged: pagedOrders, from: prodFrom, to: prodTo, total: prodTotal, totalPages: prodTotalPages } = usePagination(filteredOrders);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setProdPage(1); }, [filterDate, filterStatus]);
 
   const showPreview = form.recipe_id !== "" && targetYieldForPreview > 0;
 
@@ -502,7 +507,7 @@ export default function AdminProductionPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredOrders.map((order) => {
+                  pagedOrders.map((order) => {
                     const status = STATUS_LABELS[order.status] ?? { label: order.status, dot: "bg-gray-400" };
                     const recipe = recipes.find((r) => r.id === order.recipe_id);
 
@@ -666,6 +671,14 @@ export default function AdminProductionPage() {
             </table>
           </div>
         )}
+        <TablePagination
+          page={prodPage}
+          totalPages={prodTotalPages}
+          from={prodFrom}
+          to={prodTo}
+          total={prodTotal}
+          onPageChange={setProdPage}
+        />
       </div>
     </>
   );

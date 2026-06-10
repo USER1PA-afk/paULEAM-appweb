@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useSuppliers, useSupplierActions } from "@features/suppliers/hooks";
 import type { Supplier, CreateSupplier } from "@entities/supplier";
 import { Plus, X, Handshake } from "lucide-react";
+import { usePagination } from "@shared/hooks/use-pagination";
+import { TablePagination } from "@shared/components/ui/table-pagination";
 
 // ─────────────────────────────────────────────────────────
 // SupplierQuickAddForm — inline modal para crear proveedor sin salir del form
@@ -317,6 +319,7 @@ export function SuppliersTable({
   onToggle: (id: string, current: boolean) => void;
   onEdit: (s: Supplier) => void;
 }) {
+  const { page, setPage, paged, from, to, total, totalPages } = usePagination(suppliers);
   if (suppliers.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
@@ -341,7 +344,7 @@ export function SuppliersTable({
           </tr>
         </thead>
         <tbody>
-          {suppliers.map((s) => (
+          {paged.map((s) => (
             <tr
               key={s.id}
               className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
@@ -408,6 +411,14 @@ export function SuppliersTable({
           ))}
         </tbody>
       </table>
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        from={from}
+        to={to}
+        total={total}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

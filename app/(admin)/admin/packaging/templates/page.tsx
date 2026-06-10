@@ -4,12 +4,15 @@ import { usePackagingTemplates, usePackagingTemplateMutations } from "@features/
 import { useRole } from "@features/auth/hooks";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
+import { usePagination } from "@shared/hooks/use-pagination";
+import { TablePagination } from "@shared/components/ui/table-pagination";
 
 export default function AdminPackagingTemplatesPage() {
   const { templates, loading, error, refetch } = usePackagingTemplates();
   const { updateTemplate } = usePackagingTemplateMutations(refetch);
   const { role } = useRole();
   const isAdmin = role === "admin";
+  const { page, setPage, paged: pagedTemplates, from, to, total, totalPages } = usePagination(templates);
 
   async function handleDeactivate(id: string, name: string) {
     if (!confirm(`¿Desactivar la plantilla "${name}"?`)) return;
@@ -81,7 +84,7 @@ export default function AdminPackagingTemplatesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {templates.map((t) => (
+              {pagedTemplates.map((t) => (
                 <tr key={t.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3 font-medium">{t.name}</td>
                   <td className="px-4 py-3 text-center text-muted-foreground">
@@ -133,6 +136,14 @@ export default function AdminPackagingTemplatesPage() {
               ))}
             </tbody>
           </table>
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            from={from}
+            to={to}
+            total={total}
+            onPageChange={setPage}
+          />
         </div>
       )}
     </div>
