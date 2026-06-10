@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRecipe } from "../hooks";
-import { InstructionStep } from "@entities/recipe";
+import { InstructionStep, INGREDIENT_ROLE_LABELS } from "@entities/recipe";
 import { ArrowLeft, Printer, Pencil, Beaker, Thermometer, Clock, FileText } from "lucide-react";
 
 interface RecipeDetailProps {
@@ -42,9 +42,10 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
   const instructions = (recipe.instructions ?? []) as InstructionStep[];
 
   return (
-    <div className="space-y-8">
+    <>
+    <div className="space-y-8 print:hidden">
       {/* Header */}
-      <div className="flex items-center justify-between print:hidden">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push("/admin/recipes")}
@@ -75,20 +76,6 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
             <Pencil className="h-4 w-4" />
             Editar
           </button>
-        </div>
-      </div>
-
-      {/* Print Header — solo visible al imprimir */}
-      <div className="hidden print:block print:mb-4">
-        <div className="flex items-center justify-between border-b-2 border-gray-800 pb-3">
-          <div>
-            <h1 className="text-2xl font-bold">Planta de Alimentos Uleam</h1>
-            <p className="text-sm font-medium">FICHA TÉCNICA DE PRODUCCIÓN</p>
-          </div>
-          <div className="text-right text-sm">
-            <p className="font-bold">{recipe.name}</p>
-            <p>Fecha: {new Date().toLocaleDateString("es-EC")}</p>
-          </div>
         </div>
       </div>
 
@@ -282,5 +269,226 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
         </section>
       )}
     </div>
+
+    {/* ════════════════════════════════════════════════════
+        FICHA TÉCNICA DE PRODUCCIÓN — solo visible al imprimir
+        Sin clases Tailwind de tarjeta/sombra/color web.
+        ════════════════════════════════════════════════════ */}
+    <div className="hidden print:block ficha-tecnica">
+
+      {/* ── MEMBRETE ─────────────────────────────────────── */}
+      <div className="ficha-header">
+        <div className="ficha-header-inner">
+          <div className="ficha-header-logo">
+            <div style={{ fontWeight: "bold", fontSize: "13pt", lineHeight: 1.2 }}>
+              PLANTA DE ALIMENTOS ULEAM
+            </div>
+            <div style={{ fontSize: "9pt", marginTop: 2 }}>
+              Universidad Laica Eloy Alfaro de Manabí — Extensión Chone
+            </div>
+          </div>
+          <div className="ficha-header-meta">
+            <div style={{ fontSize: "8.5pt", lineHeight: 1.7 }}>
+              <div><strong>Código:</strong> FT-{recipeId.slice(0, 8).toUpperCase()}</div>
+              <div><strong>Versión:</strong> 1.0</div>
+              <div>
+                <strong>Fecha:</strong>{" "}
+                {new Date().toLocaleDateString("es-EC", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="ficha-doc-title">FICHA TÉCNICA DE PRODUCCIÓN</div>
+      </div>
+
+      {/* ── 1. INFORMACIÓN GENERAL ───────────────────────── */}
+      <div className="ficha-section-title" style={{ marginTop: 10 }}>
+        1. Información General
+      </div>
+      <table className="ficha-table">
+        <tbody>
+          <tr>
+            <td className="ficha-label">Nombre de la Receta:</td>
+            <td className="ficha-value" colSpan={3}>{recipe.name}</td>
+          </tr>
+          <tr>
+            <td className="ficha-label">Producto Final:</td>
+            <td className="ficha-value">
+              {outputProduct?.name ?? "—"}
+              {outputProduct?.sku ? ` (SKU: ${outputProduct.sku})` : ""}
+            </td>
+            <td className="ficha-label">Estado:</td>
+            <td className="ficha-value">{recipe.is_active ? "Activa" : "Inactiva"}</td>
+          </tr>
+          <tr>
+            <td className="ficha-label">Rendimiento Base:</td>
+            <td className="ficha-value">
+              {Number(recipe.yield_base).toLocaleString("es-EC", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+                useGrouping: false,
+              })}{" "}{recipe.yield_unit}
+            </td>
+            <td className="ficha-label">Fecha Emisión:</td>
+            <td className="ficha-value">
+              {new Date().toLocaleDateString("es-EC", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })}
+            </td>
+          </tr>
+          {recipe.description && (
+            <tr>
+              <td className="ficha-label">Descripción:</td>
+              <td className="ficha-value" colSpan={3}>{recipe.description}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      {/* ── 2. INGREDIENTES ──────────────────────────────── */}
+      <div className="ficha-section-title">2. Ingredientes</div>
+      {ingredients.length === 0 ? (
+        <div style={{
+          border: "1px solid black",
+          borderTop: "none",
+          padding: "6px 8px",
+          fontSize: "10pt",
+          fontStyle: "italic",
+        }}>
+          No se han configurado ingredientes para esta receta.
+        </div>
+      ) : (
+        <table className="ficha-table">
+          <thead>
+            <tr>
+              <th style={{ width: "5%" }}>#</th>
+              <th style={{ width: "35%", textAlign: "left" }}>Ingrediente</th>
+              <th style={{ width: "18%" }}>SKU</th>
+              <th style={{ width: "14%" }}>Cantidad</th>
+              <th style={{ width: "10%" }}>Unidad</th>
+              <th style={{ width: "18%" }}>Tipo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ingredients.map((ing, idx) => {
+              const prod = ingredientProducts[ing.product_id];
+              return (
+                <tr key={ing.id}>
+                  <td style={{ textAlign: "center", fontWeight: "bold" }}>{idx + 1}</td>
+                  <td>{prod?.name ?? ing.product_id}</td>
+                  <td style={{ textAlign: "center", fontFamily: "monospace", fontSize: "9pt" }}>
+                    {prod?.sku ?? "—"}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    {Number(ing.quantity).toLocaleString("es-EC", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                      useGrouping: false,
+                    })}
+                  </td>
+                  <td style={{ textAlign: "center" }}>{ing.unit}</td>
+                  <td style={{ textAlign: "center", fontSize: "9pt" }}>
+                    {INGREDIENT_ROLE_LABELS[ing.ingredient_role] ?? ing.ingredient_role}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+
+      {/* ── 3. INSTRUCCIONES DE PREPARACIÓN ─────────────── */}
+      {instructions.length > 0 && (
+        <>
+          <div className="ficha-section-title">3. Instrucciones de Preparación</div>
+          <div style={{ border: "1px solid black" }}>
+            {/* Encabezado de columnas */}
+            <div style={{
+              display: "table",
+              width: "100%",
+              borderBottom: "1px solid black",
+              background: "#e5e5e5",
+            }}>
+              <div style={{
+                display: "table-cell",
+                width: 32,
+                padding: "3px 6px",
+                borderRight: "1px solid black",
+                fontWeight: "bold",
+                textAlign: "center",
+                fontSize: "9pt",
+              }}>
+                Paso
+              </div>
+              <div style={{
+                display: "table-cell",
+                padding: "3px 8px",
+                fontWeight: "bold",
+                fontSize: "9pt",
+              }}>
+                Descripción del Procedimiento
+              </div>
+            </div>
+            {instructions.map((step) => (
+              <div key={step.step} className="ficha-step">
+                <div className="ficha-step-num">{step.step}</div>
+                <div className="ficha-step-body">
+                  <div>{step.description}</div>
+                  {(step.temperature || step.duration) && (
+                    <div className="ficha-step-meta">
+                      {step.temperature && <span>Temperatura: {step.temperature}</span>}
+                      {step.temperature && step.duration && (
+                        <span style={{ margin: "0 8px" }}>|</span>
+                      )}
+                      {step.duration && <span>Duración: {step.duration}</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ── 4. OBSERVACIONES (condicional) ───────────────── */}
+      {recipe.notes && (
+        <>
+          <div className="ficha-section-title" style={{ marginTop: 10 }}>
+            {instructions.length > 0 ? "4." : "3."} Observaciones
+          </div>
+          <div className="ficha-obs">{recipe.notes}</div>
+        </>
+      )}
+
+      {/* ── PIE DE FIRMAS ────────────────────────────────── */}
+      <div className="ficha-signatures">
+        <div className="ficha-sig-cell">
+          <div style={{ fontWeight: "bold", marginBottom: 4 }}>Elaborado por:</div>
+          <div className="ficha-sig-line">Firma / Fecha</div>
+        </div>
+        <div className="ficha-sig-cell">
+          <div style={{ fontWeight: "bold", marginBottom: 4 }}>Revisado por:</div>
+          <div className="ficha-sig-line">Firma / Fecha</div>
+        </div>
+        <div className="ficha-sig-cell">
+          <div style={{ fontWeight: "bold", marginBottom: 4 }}>Aprobado por:</div>
+          <div className="ficha-sig-line">Firma / Fecha</div>
+        </div>
+      </div>
+
+      {/* ── Nota al pie ──────────────────────────────────── */}
+      <div className="ficha-footer-note">
+        Código: FT-{recipeId.slice(0, 8).toUpperCase()} — Generado el{" "}
+        {new Date().toLocaleString("es-EC")} — PAuleam ERP / Planta de Alimentos ULEAM
+      </div>
+
+    </div>
+    </>
   );
 }

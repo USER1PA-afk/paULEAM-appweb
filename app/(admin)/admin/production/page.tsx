@@ -5,6 +5,7 @@ import {
   useRecipes,
   ProductionScalePreview,
 } from "@features/production";
+import { usePackagingTemplates } from "@features/packaging";
 import { formatDate } from "@shared/lib/utils";
 import React, { useState, useEffect } from "react";
 import { useRole } from "@features/auth/hooks";
@@ -72,6 +73,9 @@ export default function AdminProductionPage() {
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
   const [displayUnit, setDisplayUnit] = useState<string>("");
+  const [packagingSelections, setPackagingSelections] = useState<
+    { templateId: string; units: string }[]
+  >([]);
 
   // Merma
   const [wasteOrderId, setWasteOrderId] = useState<string | null>(null);
@@ -89,6 +93,10 @@ export default function AdminProductionPage() {
 
   // ── Receta seleccionada ───────────────────────────────────
   const selectedRecipe = recipes.find((r) => r.id === form.recipe_id);
+  const { templates: allPackagingTemplates } = usePackagingTemplates();
+  const relevantTemplates = allPackagingTemplates.filter(
+    (t) => t.finished_product_id === selectedRecipe?.output_product_id
+  );
   const recipeUnit = selectedRecipe?.yield_unit?.toLowerCase() || "";
   const recipeUnitFactor = getUnitFactor(recipeUnit);
   const unitGroup = recipeUnit ? getUnitGroup(recipeUnit) : null;
@@ -98,6 +106,7 @@ export default function AdminProductionPage() {
   useEffect(() => {
     if (recipeUnit) setDisplayUnit(recipeUnit);
     else setDisplayUnit("");
+    setPackagingSelections([]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.recipe_id]);
 
@@ -186,6 +195,21 @@ export default function AdminProductionPage() {
     setWasteOrderId(null);
     setWasteQty("");
     setWasteNotes("");
+  }
+
+  function togglePackagingSelection(templateId: string) {
+    setPackagingSelections((prev) => {
+      const exists = prev.find((s) => s.templateId === templateId);
+      return exists
+        ? prev.filter((s) => s.templateId !== templateId)
+        : [...prev, { templateId, units: "" }];
+    });
+  }
+
+  function setPackagingUnits(templateId: string, value: string) {
+    setPackagingSelections((prev) =>
+      prev.map((s) => s.templateId === templateId ? { ...s, units: value } : s)
+    );
   }
 
   const completedOrders = orders.filter((o) => o.status === "COMPLETADA");
@@ -395,6 +419,71 @@ export default function AdminProductionPage() {
                   </div>
                 </div>
 
+                {/* Sección 3: Empaque planificado (opcional) */}
+                {relevantTemplates.length > 0 && <div className="border-t border-border/60" />}
+                {relevantTemplates.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Empaque Planificado
+                      </p>
+                      <span className="text-[10px] text-muted-foreground font-normal normal-case tracking-normal">(opcional)</span>
+                    </div>
+                    <div className="space-y-2">
+                      {relevantTemplates.map((template) => {
+                        const sel = packagingSelections.find((s) => s.templateId === template.id);
+                        const isChecked = !!sel;
+                        return (
+                          <div
+                            key={template.id}
+                            className={`rounded-lg border px-3 py-2.5 transition-colors ${
+                              isChecked
+                                ? "border-brand-400 bg-brand-50/40 dark:bg-brand-950/20"
+                                : "border-border bg-background hover:border-brand-300"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                id={`pkg-${template.id}`}
+                                checked={isChecked}
+                                onChange={() => togglePackagingSelection(template.id)}
+                                className="h-4 w-4 rounded border-border accent-brand-600"
+                              />
+                              <label
+                                htmlFor={`pkg-${template.id}`}
+                                className="flex-1 text-sm font-medium text-foreground cursor-pointer select-none"
+                              >
+                                {template.name}
+                                <span className="ml-2 text-xs text-muted-foreground font-normal">
+                                  {template.output_product_name}
+                                </span>
+                              </label>
+                              {isChecked && (
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    value={sel!.units}
+                                    onChange={(e) => setPackagingUnits(template.id, e.target.value)}
+                                    placeholder="0"
+                                    className="w-20 rounded-md border border-border bg-background px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-ring tabular-nums transition-colors"
+                                    aria-label={`Unidades a empacar de ${template.name}`}
+                                  />
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                    {template.output_unit}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Error */}
                 {formError && (
                   <div role="alert" className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive flex items-start gap-2">
@@ -425,6 +514,9 @@ export default function AdminProductionPage() {
               <ProductionScalePreview
                 recipeId={form.recipe_id}
                 targetYield={targetYieldForPreview}
+                packagingSelections={packagingSelections
+                  .filter((s) => s.units !== "" && Number(s.units) > 0)
+                  .map((s) => ({ templateId: s.templateId, units: Number(s.units) }))}
               />
             )}
           </div>

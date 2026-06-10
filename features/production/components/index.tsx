@@ -1,17 +1,173 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useScalePreview } from "../hooks";
 import { formatScaledQuantity } from "../lib";
 import { Check, X, ArrowDown, ArrowUp } from "lucide-react";
+import { usePackagingPreview } from "@features/packaging";
+
+// ── Packaging cost sub-components ──────────────────────────────────────────
+
+interface PackagingPreviewItemProps {
+  templateId: string;
+  units: number;
+  onCostChange: (cost: number) => void;
+}
+
+function PackagingPreviewItem({ templateId, units, onCostChange }: PackagingPreviewItemProps) {
+  const { preview, loading, error } = usePackagingPreview(templateId, units);
+  const prevCostRef = useRef<number>(-1);
+
+  useEffect(() => {
+    const cost = preview?.estimated_packaging_cost ?? 0;
+    if (cost !== prevCostRef.current) {
+      prevCostRef.current = cost;
+      onCostChange(cost);
+    }
+  }, [preview?.estimated_packaging_cost, onCostChange]);
+
+  useEffect(() => {
+    return () => {
+      prevCostRef.current = -1;
+      onCostChange(0);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateId]);
+
+  if (loading) {
+    return (
+      <div className="py-2 text-xs text-muted-foreground flex items-center gap-2">
+        <span className="h-3 w-3 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600 shrink-0" />
+        Calculando materiales...
+      </div>
+    );
+  }
+
+  if (error) return <div className="py-1 text-xs text-destructive">{error}</div>;
+  if (!preview) return null;
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-foreground">
+        {preview.template.name}
+        <span className="ml-2 font-normal text-muted-foreground">
+          ({units} {preview.template.output_unit})
+        </span>
+      </p>
+      {preview.materials.length > 0 ? (
+        <ul className="space-y-0.5 pl-3">
+          {preview.materials.map((mat) => (
+            <li key={mat.material_product_id} className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{mat.material_name}</span>
+              <span className="tabular-nums">
+                {mat.quantity_needed.toLocaleString("es-EC", { maximumFractionDigits: 4 })} {mat.unit}
+                {mat.cost_per_unit > 0 && (
+                  <span className="ml-2 text-foreground">${mat.estimated_cost.toFixed(2)}</span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="pl-3 text-xs text-muted-foreground italic">Sin materiales configurados</p>
+      )}
+      {preview.estimated_packaging_cost > 0 && (
+        <div className="flex items-center justify-between pl-3 pt-1 border-t border-border/40 text-xs">
+          <span className="text-muted-foreground">Subtotal materiales</span>
+          <span className="font-semibold tabular-nums">${preview.estimated_packaging_cost.toFixed(2)}</span>
+        </div>
+      )}
+      {!preview.can_package && (
+        <p className="pl-3 text-[10px] text-amber-600">⚠ Stock insuficiente para empacar</p>
+      )}
+    </div>
+  );
+}
+
+interface PackagingCostSectionProps {
+  selections: { templateId: string; units: number }[];
+  productionCost: number;
+}
+
+function PackagingCostSection({ selections, productionCost }: PackagingCostSectionProps) {
+  const [costMap, setCostMap] = useState<Record<string, number>>({});
+
+  const handleCostChange = useCallback((templateId: string, cost: number) => {
+    setCostMap((prev) => {
+      if (prev[templateId] === cost) return prev;
+      return { ...prev, [templateId]: cost };
+    });
+  }, []);
+
+  useEffect(() => {
+    const activeIds = new Set(selections.map((s) => s.templateId));
+    setCostMap((prev) => {
+      const filtered = Object.fromEntries(
+        Object.entries(prev).filter(([id]) => activeIds.has(id))
+      );
+      if (Object.keys(filtered).length === Object.keys(prev).length) return prev;
+      return filtered;
+    });
+  }, [selections]);
+
+  const totalPackaging = Object.values(costMap).reduce((sum, c) => sum + c, 0);
+  const grandTotal = productionCost + totalPackaging;
+
+  return (
+    <div className="space-y-4 mt-4 pt-4 border-t border-border">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Materiales de Empaque
+      </p>
+      <div className="space-y-3">
+        {selections.map((sel) => (
+          <PackagingPreviewItem
+            key={sel.templateId}
+            templateId={sel.templateId}
+            units={sel.units}
+            onCostChange={(cost) => handleCostChange(sel.templateId, cost)}
+          />
+        ))}
+      </div>
+      <div className="space-y-1.5 rounded-lg bg-muted/40 border border-border/50 px-4 py-3">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Costo ingredientes</span>
+          <span className="tabular-nums text-foreground">
+            {productionCost.toLocaleString("es-EC", { style: "currency", currency: "USD", minimumFractionDigits: 2 })}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Costo materiales de empaque</span>
+          <span className="tabular-nums text-foreground">
+            {totalPackaging.toLocaleString("es-EC", { style: "currency", currency: "USD", minimumFractionDigits: 2 })}
+          </span>
+        </div>
+        <div className="border-t border-border/60 my-1" />
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold text-foreground">Total estimado</span>
+          <span className="text-sm font-bold tabular-nums text-brand-700">
+            {grandTotal.toLocaleString("es-EC", { style: "currency", currency: "USD", minimumFractionDigits: 2 })}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Componente principal ────────────────────────────────────────────────────
+
+interface ProductionScalePreviewProps {
+  recipeId: string | null;
+  targetYield: number;
+  packagingSelections?: { templateId: string; units: number }[];
+}
 
 /**
  * Componente: Preview de Escalado de Producción
- * 
+ *
  * Muestra la tabla pivote con cantidades base, escaladas y el stock actual.
  */
-export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: string | null; targetYield: number }) {
+export function ProductionScalePreview({ recipeId, targetYield, packagingSelections }: ProductionScalePreviewProps) {
   const { recipe, scaleFactor, scaledIngredients, loading, error, canProduce, estimatedCost } = useScalePreview(recipeId, targetYield);
 
   if (!recipeId) return null;
@@ -124,13 +280,20 @@ export function ProductionScalePreview({ recipeId, targetYield }: { recipeId: st
         </table>
       </div>
 
-      {estimatedCost > 0 && (
-        <div className="flex items-center justify-between rounded-lg bg-muted/40 border border-border/50 px-4 py-2.5">
-          <span className="text-sm text-muted-foreground font-medium">Costo estimado de materiales</span>
-          <span className="text-sm font-bold tabular-nums text-foreground">
-            {estimatedCost.toLocaleString("es-EC", { style: "currency", currency: "USD", minimumFractionDigits: 2 })}
-          </span>
-        </div>
+      {packagingSelections && packagingSelections.length > 0 ? (
+        <PackagingCostSection
+          selections={packagingSelections}
+          productionCost={estimatedCost}
+        />
+      ) : (
+        estimatedCost > 0 && (
+          <div className="flex items-center justify-between rounded-lg bg-muted/40 border border-border/50 px-4 py-2.5">
+            <span className="text-sm text-muted-foreground font-medium">Costo estimado de materiales</span>
+            <span className="text-sm font-bold tabular-nums text-foreground">
+              {estimatedCost.toLocaleString("es-EC", { style: "currency", currency: "USD", minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        )
       )}
 
       {!canProduce && (
