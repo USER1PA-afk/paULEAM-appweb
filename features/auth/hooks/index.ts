@@ -67,8 +67,8 @@ export function useAuth() {
         // stays in sync when the SDK refreshes its internal token
         insforge.auth.refreshSession().then((res) => {
           const freshToken = (
-            res?.data as { session?: { access_token?: string } } | null
-          )?.session?.access_token;
+            res?.data as { accessToken?: string } | null
+          )?.accessToken;
           if (freshToken && active) {
             fetch("/api/auth/set-cookie", {
               method: "POST",
@@ -104,8 +104,8 @@ export function useAuth() {
 
         // Set httpOnly session cookie server-side before returning
         const token = (
-          data as { session?: { access_token?: string } } | null
-        )?.session?.access_token;
+          data as { accessToken?: string } | null
+        )?.accessToken;
         if (token) {
           await fetch("/api/auth/set-cookie", {
             method: "POST",
@@ -152,8 +152,8 @@ export function useAuth() {
 
         // Set httpOnly session cookie server-side
         const regToken = (
-          loginRes.data as { session?: { access_token?: string } } | null
-        )?.session?.access_token;
+          loginRes.data as { accessToken?: string } | null
+        )?.accessToken;
         if (regToken) {
           await fetch("/api/auth/set-cookie", {
             method: "POST",

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useAuth } from "@features/auth/hooks";
 import { getInsforge } from "@shared/lib/insforge/client";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -13,7 +12,6 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const { signIn, loading, error } = useAuth();
   const [redirecting, setRedirecting] = useState(false);
-  const router = useRouter();
   const insforge = getInsforge();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -38,17 +36,18 @@ export function LoginForm() {
         role = (profile as { role: string } | null)?.role ?? "cliente";
       }
 
-      // Redirigir según rol
+      // Hard navigation so the browser sends a fresh request carrying
+      // the pauleam-session httpOnly cookie the proxy depends on.
       if (role === "sales_kiosk") {
-        router.push("/pos");
+        window.location.href = "/pos";
       } else if (role === "admin" || role === "operario") {
-        router.push("/admin/dashboard");
+        window.location.href = "/admin/dashboard";
       } else {
-        router.push("/shop/catalog");
+        window.location.href = "/shop/catalog";
       }
     } catch {
       // Si falla la consulta del rol, enviamos a dashboard (el layout se encarga de proteger)
-      router.push("/admin/dashboard");
+      window.location.href = "/admin/dashboard";
     }
   }
 
@@ -141,7 +140,6 @@ export function RegisterForm() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [phone, setPhone] = useState("");
   const { signUp, loading, error } = useAuth();
-  const router = useRouter();
   const [localError, setLocalError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -166,9 +164,9 @@ export function RegisterForm() {
       // El trigger SQL handle_new_user() crea el perfil con rol 'cliente' por defecto.
       
       setSuccess(true);
-      // Redirigir a la tienda después de un breve mensaje de éxito
+      // Hard navigation so the proxy sees the pauleam-session cookie
       setTimeout(() => {
-        router.push("/shop/catalog");
+        window.location.href = "/shop/catalog";
       }, 1500);
     }
   }
