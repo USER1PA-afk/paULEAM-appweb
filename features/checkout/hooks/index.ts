@@ -276,7 +276,22 @@ export function useCheckout() {
         if (!userData?.user?.id) throw new Error("No autenticado");
 
         // 1. Subir comprobante a Storage
-        const fileExt = params.paymentReceipt.name.split(".").pop();
+        const ALLOWED_EXTENSIONS = ["pdf", "jpg", "jpeg", "png", "webp"];
+        const ALLOWED_MIME_TYPES  = [
+          "application/pdf",
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+        ];
+        const fileExt = params.paymentReceipt.name.split(".").pop()?.toLowerCase() ?? "";
+        if (
+          !ALLOWED_EXTENSIONS.includes(fileExt) ||
+          !ALLOWED_MIME_TYPES.includes(params.paymentReceipt.type)
+        ) {
+          throw new Error(
+            "Solo se permiten archivos PDF, JPG, PNG o WEBP como comprobante de pago"
+          );
+        }
         const filePath = `${userData.user.id}/${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await insforge.storage

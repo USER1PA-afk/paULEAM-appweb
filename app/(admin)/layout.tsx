@@ -129,7 +129,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!authLoading && !isAuthenticated) { router.replace("/login"); return; }
     if (!role) return;
-    document.cookie = `pauleam-role=${role}; path=/; max-age=3600; SameSite=Lax`;
     if (role === "cliente") router.replace("/shop/catalog");
     if (role === "sales_kiosk") router.replace("/pos");
   }, [role, router, authLoading, isAuthenticated]);

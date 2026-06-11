@@ -7,13 +7,12 @@ import { createClient } from "@insforge/sdk";
  * Authenticated server-side proxy for the private `payment-receipts` bucket.
  *
  * Security flow:
- *  1. Extract the Bearer token from the Authorization header (forwarded by
- *     the browser Insforge client from its in-memory session).
- *  2. Create a per-request Insforge server client using `edgeFunctionToken`,
- *     which automatically injects the token into all SDK requests.
+ *  1. Token: prefer httpOnly `pauleam-session` cookie; fall back to Bearer header.
+ *  2. Create a per-request Insforge server client using `edgeFunctionToken`.
  *  3. Call auth.getCurrentUser() — returns null/error → 401.
- *  4. Download the file from the private bucket via storage.download().
- *  5. Return it with correct Content-Type + Content-Disposition.
+ *  4. Ownership check: path userId must match caller, unless admin/operario → 403.
+ *  5. Download the file from the private bucket via storage.download().
+ *  6. Return it with correct Content-Type + Content-Disposition + nosniff.
  *
  * File path encoding:
  *  Files are stored as `{userId}/{timestamp}.{ext}` — the catch-all [...path]
@@ -30,9 +29,11 @@ export async function GET(
   }
   const filePath = segments.join("/");
 
-  // ── 2. Extract Bearer token from Authorization header ─────────────────────
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  // ── 2. Obtain token: prefer httpOnly session cookie, fall back to Bearer header
+  const sessionCookie = request.cookies.get("pauleam-session")?.value ?? null;
+  const authHeader   = request.headers.get("authorization");
+  const bearerToken  = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const token        = sessionCookie ?? bearerToken;
 
   if (!token) {
     return new Response(
@@ -67,7 +68,25 @@ export async function GET(
     );
   }
 
-  // ── 5. Download the file from the private bucket ──────────────────────────
+  // ── 5. Ownership check — path must start with authenticated user's id,
+  //       unless the caller is admin or operario
+  const pathUserId = filePath.split("/")[0];
+  if (pathUserId !== userData.user.id) {
+    const { data: profile } = await insforge.database
+      .from("profiles")
+      .select("role")
+      .eq("id", userData.user.id)
+      .single();
+    const callerRole = (profile as { role: string } | null)?.role;
+    if (!callerRole || !["admin", "operario"].includes(callerRole)) {
+      return new Response(
+        JSON.stringify({ error: "Sin acceso a este comprobante" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
+
+  // ── 6. Download the file from the private bucket ──────────────────────────
   const { data: blob, error: storageError } = await insforge.storage
     .from("payment-receipts")
     .download(filePath);
@@ -80,7 +99,7 @@ export async function GET(
     );
   }
 
-  // ── 6. Infer Content-Type from extension ──────────────────────────────────
+  // ── 7. Infer Content-Type from extension ──────────────────────────────────
   const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
   const MIME_MAP: Record<string, string> = {
     pdf:  "application/pdf",
@@ -90,7 +109,7 @@ export async function GET(
     webp: "image/webp",
     gif:  "image/gif",
   };
-  const contentType = MIME_MAP[ext] ?? blob.type ?? "application/octet-stream";
+  const contentType = MIME_MAP[ext] ?? "application/octet-stream";
 
   // Viewable types open inline; everything else forces download
   const isViewable = contentType.startsWith("image/") || contentType === "application/pdf";
@@ -104,7 +123,8 @@ export async function GET(
       "Content-Type":        contentType,
       "Content-Disposition": disposition,
       // Private — never cache in shared proxies; no-store prevents stale tokens
-      "Cache-Control":       "private, no-store",
+      "Cache-Control":          "private, no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

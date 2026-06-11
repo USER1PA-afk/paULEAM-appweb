@@ -13,26 +13,21 @@ import { createClient } from "@insforge/sdk";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Detectar cookie de sesión activa de Insforge (access_token o *-auth-token)
-  const tokenCookie = request.cookies.getAll().find(
-    (cookie) =>
-      cookie.name.includes("-auth-token") ||
-      cookie.name.includes("access_token")
-  );
-  const token = tokenCookie?.value;
+  // Primary: httpOnly session cookie set by /api/auth/set-cookie (server-side only)
+  const sessionCookie = request.cookies.get("pauleam-session")?.value ?? null;
+  // Fallback: Insforge SDK cookies for backwards compatibility
+  const sdkCookie =
+    request.cookies
+      .getAll()
+      .find(
+        (c) =>
+          c.name.includes("-auth-token") || c.name.includes("access_token")
+      )?.value ?? null;
 
-  let hasSession = !!token;
+  const token = sessionCookie ?? sdkCookie ?? null;
+
+  let hasSession = false;
   let userRole: string | null = null;
-
-  // Fast path: role cookie set by the admin layout after client-side role fetch.
-  // The SDK stores tokens in localStorage (not cookies), so the token cookie is
-  // absent on most navigations. The role cookie is our server-readable signal.
-  const roleCookie = request.cookies.get("pauleam-role")?.value ?? null;
-  const validRoleValues = ["admin", "operario", "operator", "sales_kiosk", "cliente"];
-  if (!token && roleCookie && validRoleValues.includes(roleCookie)) {
-    hasSession = true;
-    userRole = roleCookie;
-  }
 
   if (token) {
     try {
@@ -62,26 +57,6 @@ export async function proxy(request: NextRequest) {
       console.error("Error al obtener sesión/rol en el proxy:", error);
       hasSession = false;
       userRole = null;
-    }
-  }
-
-  // Escape hatch: first navigation after login before the layout has a chance
-  // to set the pauleam-role cookie. Without this the post-login redirect to
-  // /admin/dashboard would itself get kicked back to /login.
-  if (!hasSession) {
-    const referer = request.headers.get("referer") ?? "";
-    try {
-      if (referer) {
-        const refererUrl = new URL(referer);
-        if (refererUrl.pathname.endsWith("/login") || refererUrl.pathname.endsWith("/register")) {
-          return NextResponse.next();
-        }
-      }
-    } catch (e) {
-      // Fallback si el referer no es una URL válida
-      if (referer.endsWith("/login") || referer.endsWith("/register")) {
-        return NextResponse.next();
-      }
     }
   }
 

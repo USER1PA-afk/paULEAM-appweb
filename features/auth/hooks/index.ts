@@ -62,6 +62,21 @@ export function useAuth() {
           loading: false,
           error: null,
         });
+
+        // Silently refresh the httpOnly session cookie so the proxy
+        // stays in sync when the SDK refreshes its internal token
+        insforge.auth.refreshSession().then((res) => {
+          const freshToken = (
+            res?.data as { session?: { access_token?: string } } | null
+          )?.session?.access_token;
+          if (freshToken && active) {
+            fetch("/api/auth/set-cookie", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ token: freshToken }),
+            }).catch(() => {});
+          }
+        }).catch(() => {});
       } catch (err) {
         if (!active) return;
         console.warn("La verificación de sesión falló o expiró:", err);
@@ -86,6 +101,19 @@ export function useAuth() {
           logEvent("LOGIN_FAILED", "auth_session", null, `Login fallido: ${email}`);
           throw error;
         }
+
+        // Set httpOnly session cookie server-side before returning
+        const token = (
+          data as { session?: { access_token?: string } } | null
+        )?.session?.access_token;
+        if (token) {
+          await fetch("/api/auth/set-cookie", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token }),
+          }).catch((e) => console.warn("set-cookie failed:", e));
+        }
+
         setState({
           user: data?.user as unknown as AuthUser ?? null,
           loading: false,
@@ -122,6 +150,18 @@ export function useAuth() {
         
         if (loginRes.error) throw loginRes.error;
 
+        // Set httpOnly session cookie server-side
+        const regToken = (
+          loginRes.data as { session?: { access_token?: string } } | null
+        )?.session?.access_token;
+        if (regToken) {
+          await fetch("/api/auth/set-cookie", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: regToken }),
+          }).catch((e) => console.warn("set-cookie failed:", e));
+        }
+
         // El trigger handle_new_user() crea el perfil con rol 'cliente' por defecto
         setState({
           user: loginRes.data?.user as unknown as AuthUser ?? null,
@@ -143,29 +183,22 @@ export function useAuth() {
     // Registrar antes de cerrar sesión para capturar el user_id activo
     logEvent("LOGOUT", "auth_session", null, "Cierre de sesión");
     try {
+      // Clear httpOnly cookies server-side (JS cannot clear httpOnly cookies directly)
+      await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
       await insforge.auth.signOut();
     } catch (err) {
       console.warn("Logout warning:", err);
     } finally {
       setState({ user: null, loading: false, error: null });
-      // Limpiar cookie de rol y posibles cookies del SDK
-      document.cookie = 'pauleam-role=; path=/; max-age=0; SameSite=Lax';
-      document.cookie.split(";").forEach((c) => {
-        const name = c.split("=")[0].trim();
-        if (name.includes("-auth-token") || name.includes("access_token")) {
-          document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
-        }
-      });
-      // Limpiar localStorage
+      // Clear any remaining SDK localStorage tokens
       if (typeof window !== "undefined") {
-        for (let i = 0; i < localStorage.length; i++) {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
           const key = localStorage.key(i);
           if (key && (key.includes("-auth-token") || key.includes("access_token"))) {
             localStorage.removeItem(key);
           }
         }
       }
-      // Redirigir al index principal tras cerrar sesión si se requiere
       if (shouldRedirect) {
         router.push("/");
       }

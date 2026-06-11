@@ -21,12 +21,6 @@ export default function ShopLayout({
   const { role } = useRole();
   const { itemCount } = useCart();
 
-  // Escribir el rol en cookie para que el proxy pueda hacer redirects correctos
-  useEffect(() => {
-    if (role) {
-      document.cookie = `pauleam-role=${role}; path=/; max-age=3600; SameSite=Lax`;
-    }
-  }, [role]);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
