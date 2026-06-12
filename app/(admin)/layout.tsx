@@ -24,6 +24,7 @@ import {
   PackageOpen,
   Bell,
   Shield,
+  Settings,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -36,6 +37,7 @@ const NAV_ITEMS = [
   { label: "Empaque",     href: "/admin/packaging",   icon: PackageOpen,     roles: ["admin", "operario"] },
   { label: "Usuarios",    href: "/admin/users",       icon: Users,           roles: ["admin"] },
   { label: "Auditoría",  href: "/admin/audit",       icon: Shield,          roles: ["admin"] },
+  { label: "Pagos",      href: "/admin/settings",    icon: Settings,        roles: ["admin"] },
 ];
 
 const SUB_ITEMS = [

@@ -328,6 +328,10 @@ export default function AdminProductsPage() {
     e.preventDefault();
 
     const isPurchasable = PURCHASABLE_TYPES.includes(formData.type);
+    if (isPurchasable && selectedSupplierIds.length === 0) {
+      setError("Debes seleccionar al menos un proveedor para este tipo de producto.");
+      return;
+    }
     if (isPurchasable && selectedSupplierIds.length > 1 && !primarySupplierId) {
       setError("Debes seleccionar un proveedor principal.");
       return;
@@ -360,7 +364,7 @@ export default function AdminProductsPage() {
         unit: formData.unit,
         price: Number(formData.price) || 0,
         cost_per_unit: Number(formData.cost_per_unit) || 0,
-        min_stock_alert: formData.min_stock_alert ? Number(formData.min_stock_alert) : null,
+        min_stock_alert: formData.min_stock_alert !== "" ? Number(formData.min_stock_alert) : 0,
         description: formData.description || null,
         capacity: formData.capacity ? Number(formData.capacity) : null,
       };
@@ -395,7 +399,7 @@ export default function AdminProductsPage() {
           unit: formData.unit,
           price: Number(formData.price) || 0,
           cost_per_unit: Number(formData.cost_per_unit) || 0,
-          min_stock_alert: formData.min_stock_alert ? Number(formData.min_stock_alert) : null,
+          min_stock_alert: formData.min_stock_alert !== "" ? Number(formData.min_stock_alert) : 0,
           description: formData.description || null,
           image_url: uploadedImageUrl ?? null,
           capacity: formData.capacity ? Number(formData.capacity) : null,
@@ -1358,6 +1362,9 @@ export default function AdminProductsPage() {
                         <th className="px-4 py-3 font-medium text-muted-foreground w-28">SKU</th>
                         <th className="px-4 py-3 font-medium text-muted-foreground">Nombre</th>
                         <th className="px-4 py-3 font-medium text-muted-foreground w-32">Unidad</th>
+                        <th className="px-4 py-3 font-medium text-muted-foreground w-32 text-right">
+                          {typeValue === "PRODUCTO_TERMINADO" ? "Precio venta" : "Costo/u"}
+                        </th>
                         <th className="px-4 py-3 font-medium text-muted-foreground w-28 text-center">Estado</th>
                         <th className="px-4 py-3 font-medium text-muted-foreground w-44 text-right">Acciones</th>
                       </tr>
@@ -1365,7 +1372,7 @@ export default function AdminProductsPage() {
                     <tbody>
                       {typeProducts.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                          <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                             <Tag className="h-6 w-6 mx-auto mb-1 opacity-25" />
                             No hay {typeLabel.toLowerCase()} registrados.
                           </td>
@@ -1387,14 +1394,19 @@ export default function AdminProductsPage() {
                                     {s.company ?? s.name}
                                   </span>
                                 ))}
-                                {typeValue === "PRODUCTO_TERMINADO" && (
-                                  <span className="text-[10px] font-medium text-muted-foreground tabular-nums">
-                                    {Number(p.price).toLocaleString('es-EC', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })}
-                                  </span>
-                                )}
                               </div>
                             </td>
                             <td className="px-4 py-3 text-sm text-muted-foreground">{p.unit}</td>
+                            <td className="px-4 py-3 text-right font-mono text-xs tabular-nums text-foreground">
+                              {typeValue === "PRODUCTO_TERMINADO"
+                                ? Number(p.price) > 0
+                                  ? Number(p.price).toLocaleString('es-EC', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })
+                                  : <span className="text-muted-foreground/40">—</span>
+                                : Number(p.cost_per_unit) > 0
+                                  ? Number(p.cost_per_unit).toLocaleString('es-EC', { style: 'currency', currency: 'USD', minimumFractionDigits: 4 })
+                                  : <span className="text-muted-foreground/40">—</span>
+                              }
+                            </td>
                             <td className="px-4 py-3 text-center">
                               <span className={`inline-flex h-2.5 w-2.5 rounded-full ${p.is_active ? 'bg-accent-500' : 'bg-red-500'}`} />
                             </td>

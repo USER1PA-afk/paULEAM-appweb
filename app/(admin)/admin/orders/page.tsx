@@ -2,9 +2,10 @@
 
 import { useOrderManagement, pickupCode, receiptProxyUrl } from "@features/checkout/hooks";
 import { formatDate, formatCurrency } from "@shared/lib/utils";
+import { PAYMENT_METHOD_LABELS } from "@entities/order";
 import { useState } from "react";
 import { getInsforge } from "@shared/lib/insforge/client";
-import { ChevronDown, ChevronUp, Receipt, X, Download, Eye, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Receipt, X, Download, Eye, Loader2, Truck } from "lucide-react";
 import { usePagination } from "@shared/hooks/use-pagination";
 import { TablePagination } from "@shared/components/ui/table-pagination";
 
@@ -229,14 +230,29 @@ export default function AdminOrdersPage() {
                         {status.label}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {formatDate(order.created_at)}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(order.created_at)}
+                      </span>
                       {itemCount > 0 && (
-                        <span className="ml-2">
+                        <span className="text-xs text-muted-foreground">
                           · {itemCount} producto{itemCount !== 1 ? "s" : ""}
                         </span>
                       )}
-                    </p>
+                      {order.payment_method && (
+                        <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          {PAYMENT_METHOD_LABELS[order.payment_method as keyof typeof PAYMENT_METHOD_LABELS] ?? order.payment_method}
+                        </span>
+                      )}
+                      {order.delivery_date && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Truck aria-hidden="true" className="h-3 w-3" />
+                          {new Date(order.delivery_date + "T12:00:00Z").toLocaleDateString("es-EC", {
+                            weekday: "short", day: "numeric", month: "short",
+                          })}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Total */}
@@ -383,12 +399,23 @@ export default function AdminOrdersPage() {
                       )}
                     </div>
 
-                    {/* Approved info */}
-                    {order.approved_at && (
-                      <p className="text-xs text-muted-foreground">
-                        Aprobado el {formatDate(order.approved_at)}
-                      </p>
-                    )}
+                    {/* Delivery date + approved info */}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      {order.delivery_date && (
+                        <span className="inline-flex items-center gap-1">
+                          <Truck aria-hidden="true" className="h-3.5 w-3.5" />
+                          Entrega programada:{" "}
+                          <strong className="font-medium text-foreground">
+                            {new Date(order.delivery_date + "T12:00:00Z").toLocaleDateString("es-EC", {
+                              weekday: "long", day: "numeric", month: "long", year: "numeric",
+                            })}
+                          </strong>
+                        </span>
+                      )}
+                      {order.approved_at && (
+                        <span>Aprobado el {formatDate(order.approved_at)}</span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

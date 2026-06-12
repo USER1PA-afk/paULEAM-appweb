@@ -8,12 +8,19 @@ import { TablePagination } from "@shared/components/ui/table-pagination";
 import { getInsforge } from "@shared/lib/insforge/client";
 import { RefreshCw, Zap, PackagePlus, FileDown, Handshake as HandshakeIcon, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Package, Hash } from "lucide-react";
 
+interface ProductSupplierLink {
+  supplier_id: string;
+  is_primary: boolean;
+  supplier: { id: string; name: string; company: string | null };
+}
+
 interface Product {
   id: string;
   name: string;
   sku: string;
   unit: string;
   type: string;
+  productSuppliers: ProductSupplierLink[];
 }
 
 /**
@@ -24,7 +31,7 @@ function StockSubTable({
   label,
   accentColor,
 }: {
-  items: { product_id: string; sku: string; name: string; unit: string; stock_actual: number }[];
+  items: { product_id: string; sku: string; name: string; unit: string; stock_actual: number; min_stock_alert: number | null }[];
   label: string;
   accentColor: string;
 }) {
@@ -64,19 +71,21 @@ function StockSubTable({
             ) : (
               paged.map((item) => {
                 const stock = Number(item.stock_actual);
+                const alertThreshold = item.min_stock_alert ?? 0;
+                const isLow = stock > 0 && stock <= alertThreshold;
                 const statusColor = stock <= 0
                   ? "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
-                  : stock < 10
+                  : isLow
                   ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
                   : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400";
-                const statusLabel = stock <= 0 ? "Sin stock" : stock < 10 ? "Stock bajo" : "OK";
+                const statusLabel = stock <= 0 ? "Sin stock" : isLow ? "Stock bajo" : "OK";
 
                 return (
                   <tr key={item.product_id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{item.sku}</td>
                     <td className="px-4 py-3 text-sm font-medium">{item.name}</td>
                     <td className={`px-4 py-3 text-right font-mono font-semibold tabular-nums ${
-                      stock <= 0 ? "text-rose-600 dark:text-rose-400" : stock < 10 ? "text-amber-600 dark:text-amber-400" : "text-foreground"
+                      stock <= 0 ? "text-rose-600 dark:text-rose-400" : isLow ? "text-amber-600 dark:text-amber-400" : "text-foreground"
                     }`}>
                       {stock.toLocaleString("es-EC", {
                         minimumFractionDigits: ["kg", "lt"].includes(item.unit?.toLowerCase()) ? 2 : 0,
@@ -272,7 +281,7 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
   useEffect(() => {
     insforge.database
       .from("products")
-      .select("id, name, sku, unit, type")
+      .select("id, name, sku, unit, type, productSuppliers:product_suppliers(supplier_id, is_primary, supplier:suppliers(id, name, company))")
       .eq("is_active", true)
       .order("name")
       .then(
@@ -390,12 +399,16 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
                 required
                 value={form.product_id}
                 onChange={(e) => {
-                  const pType = products.find((pr) => pr.id === e.target.value)?.type ?? "";
+                  const prod = products.find((pr) => pr.id === e.target.value);
+                  const pType = prod?.type ?? "";
                   const nonPurchasable = ["PRODUCTO_A_GRANEL", "PRODUCTO_TERMINADO"].includes(pType);
+                  const primary = prod?.productSuppliers?.find((ps) => ps.is_primary);
+                  const firstSupplier = prod?.productSuppliers?.[0];
+                  const autoSupplier = primary ?? firstSupplier;
                   setForm((p) => ({
                     ...p,
                     product_id: e.target.value,
-                    supplier_id: "",
+                    supplier_id: autoSupplier?.supplier_id ?? "",
                     reference_type: nonPurchasable ? "AJUSTE" : p.reference_type,
                   }));
                 }}
@@ -481,12 +494,24 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="">Seleccionar proveedor...</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.company ?? s.name}
-                    </option>
-                  ))}
+                  {selectedProduct?.productSuppliers?.length
+                    ? selectedProduct.productSuppliers.map((ps) => (
+                        <option key={ps.supplier_id} value={ps.supplier_id}>
+                          {ps.supplier.company ?? ps.supplier.name}
+                          {ps.is_primary ? " (principal)" : ""}
+                        </option>
+                      ))
+                    : suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.company ?? s.name}
+                        </option>
+                      ))}
                 </select>
+                {selectedProduct?.productSuppliers?.length === 0 && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                    Este producto no tiene proveedores vinculados. Asigna uno en Productos.
+                  </p>
+                )}
               </div>
             )}
 

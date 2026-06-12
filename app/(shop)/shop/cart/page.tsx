@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart } from "@features/checkout/hooks";
+import { DeliveryInfoBanner } from "@features/checkout/components/DeliveryInfoBanner";
 import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, Package, X } from "lucide-react";
@@ -103,6 +104,8 @@ export default function CartPage() {
 
         {/* Summary */}
         <div className="space-y-4">
+          <DeliveryInfoBanner />
+
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <h3 className="font-semibold text-foreground">Resumen</h3>
             <div className="mt-4 space-y-2 border-t border-border pt-4">

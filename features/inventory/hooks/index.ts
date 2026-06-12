@@ -30,6 +30,7 @@ interface StockSummary {
   type: string;
   unit: string;
   stock_actual: number;
+  min_stock_alert: number | null;
 }
 
 /**

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart, useCheckout, pickupCode, type CartItem } from "@features/checkout/hooks";
+import { PaymentMethodSelector } from "@features/checkout/components/PaymentMethodSelector";
 import { useAuth } from "@features/auth/hooks";
 import { useState } from "react";
 import Link from "next/link";
@@ -33,6 +34,7 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [receiptData, setReceiptData] = useState<ReceiptSnapshot | null>(null);
 
@@ -199,6 +201,7 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (!receipt) return;
     if (!address.trim()) return;
+    if (!paymentMethod) return;
 
     const snapshot = [...items];
 
@@ -207,6 +210,7 @@ export default function CheckoutPage() {
       total,
       shippingAddress: address,
       paymentReceipt: receipt,
+      paymentMethod,
       notes,
     });
 
@@ -269,10 +273,13 @@ export default function CheckoutPage() {
           />
         </div>
 
+        {/* Payment method selector */}
+        <PaymentMethodSelector value={paymentMethod} onChange={setPaymentMethod} />
+
         {/* Payment receipt upload */}
         <div className="space-y-1.5">
           <label htmlFor="checkout-receipt" className="text-sm font-medium text-foreground">
-            Comprobante de Transferencia <span className="text-destructive">*</span>
+            Comprobante de Pago <span className="text-destructive">*</span>
           </label>
           <div className="rounded-xl border-2 border-dashed border-border bg-muted/30 p-6 text-center hover:border-brand-300 transition-colors">
             <input
@@ -329,7 +336,7 @@ export default function CheckoutPage() {
 
         <button
           type="submit"
-          disabled={loading || !receipt || !address.trim()}
+          disabled={loading || !receipt || !address.trim() || !paymentMethod}
           className="w-full rounded-lg bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-brand-700 disabled:opacity-50 transition-all"
         >
           {loading ? "Procesando..." : "Confirmar Orden"}

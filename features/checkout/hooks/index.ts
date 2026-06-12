@@ -1,6 +1,7 @@
 "use client";
 
 import { getInsforge } from "@shared/lib/insforge/client";
+import { getNextDeliveryWindow } from "@shared/lib/utils";
 import { useState, useEffect, useCallback } from "react";
 
 export interface CartItem {
@@ -16,12 +17,31 @@ export interface CartItem {
   sales_unit_name?: string | null;
 }
 
+export interface PaymentConfig {
+  id: number;
+  pichincha_holder:       string | null;
+  pichincha_account:      string | null;
+  pichincha_account_type: string | null;
+  pichincha_cedula:       string | null;
+  pichincha_qr_path:      string | null;
+  guayaquil_holder:       string | null;
+  guayaquil_account:      string | null;
+  guayaquil_account_type: string | null;
+  guayaquil_cedula:       string | null;
+  paypal_email:           string | null;
+  paypal_me:              string | null;
+  updated_at:             string | null;
+  updated_by:             string | null;
+}
+
 interface Order {
   id: string;
   user_id: string;
   status: string;
   total: number;
   payment_receipt_url: string | null;
+  payment_method: string | null;
+  delivery_date: string | null;
   shipping_address: string | null;
   notes: string | null;
   approved_by: string | null;
@@ -267,6 +287,7 @@ export function useCheckout() {
       total: number;
       shippingAddress: string;
       paymentReceipt: File;
+      paymentMethod: string;
       notes?: string;
     }) => {
       setLoading(true);
@@ -304,7 +325,11 @@ export function useCheckout() {
         //    El bucket es privado — el acceso se hace a través del proxy /api/receipts/*.
         const publicUrl = filePath;
 
-        // 3. Crear la orden
+        // 3. Calcular fecha de entrega (próximo viernes tras corte del jueves 5 PM Ecuador)
+        const { deliveryDate } = getNextDeliveryWindow();
+        const deliveryDateStr = deliveryDate.toISOString().split("T")[0];
+
+        // 4. Crear la orden
         const { data: order, error: orderError } = await insforge.database
           .from("orders")
           .insert({
@@ -312,6 +337,8 @@ export function useCheckout() {
             status: "PAGADO",
             total: params.total,
             payment_receipt_url: publicUrl,
+            payment_method: params.paymentMethod,
+            delivery_date: deliveryDateStr,
             shipping_address: params.shippingAddress,
             notes: params.notes ?? null,
           })
@@ -322,7 +349,7 @@ export function useCheckout() {
 
         const orderId = (order as Order).id;
 
-        // 4. Crear los items
+        // 5. Crear los items
         const orderItems = params.items.map((item) => ({
           order_id: orderId,
           product_id: item.product_id,
@@ -337,7 +364,7 @@ export function useCheckout() {
 
         if (itemsError) throw itemsError;
 
-        // 5. Limpiar reservas del usuario
+        // 6. Limpiar reservas del usuario
         await insforge.database
           .from("stock_reservations")
           .delete()
@@ -462,6 +489,63 @@ export function useOrderManagement() {
   );
 
   return { orders, loading, approveOrder, rejectOrder, refetch: fetchOrders };
+}
+
+/**
+ * Hook para leer la configuración de métodos de pago.
+ * Todos los usuarios autenticados pueden leer; solo admins pueden escribir (RLS).
+ */
+export function usePaymentConfig() {
+  const [config, setConfig] = useState<PaymentConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const insforge = getInsforge();
+
+  useEffect(() => {
+    insforge.database
+      .from("payment_config")
+      .select("*")
+      .eq("id", 1)
+      .then(
+        ({ data, error }) => {
+          if (!error && data?.[0]) setConfig(data[0] as PaymentConfig);
+          setLoading(false);
+        },
+        () => setLoading(false)
+      );
+  }, [insforge]);
+
+  return { config, loading };
+}
+
+/**
+ * Hook para que el admin actualice la configuración de métodos de pago.
+ * El RLS de la DB rechaza llamadas de usuarios sin rol admin.
+ */
+export function usePaymentConfigMutations() {
+  const insforge = getInsforge();
+
+  const saveConfig = useCallback(
+    async (values: Partial<PaymentConfig>) => {
+      const { data: userData } = await insforge.auth.getCurrentUser();
+      const payload = {
+        ...values,
+        updated_at: new Date().toISOString(),
+        updated_by: userData?.user?.id ?? null,
+      };
+      // Remove read-only id field if present
+      delete (payload as Partial<PaymentConfig> & { id?: unknown }).id;
+
+      const { error } = await insforge.database
+        .from("payment_config")
+        .update(payload)
+        .eq("id", 1);
+
+      return { error: error ? (error instanceof Error ? error.message : String(error)) : null };
+    },
+    [insforge]
+  );
+
+  return { saveConfig };
 }
 
 /**

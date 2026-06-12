@@ -329,7 +329,7 @@ export default function CatalogPage() {
                       step="1"
                       value={quantities[product.id] || 1}
                       onChange={(e) =>
-                        setQuantities({ ...quantities, [product.id]: Math.max(1, parseInt(e.target.value) || 1) })
+                        setQuantities({ ...quantities, [product.id]: Math.max(1, parseFloat(e.target.value) || 1) })
                       }
                       aria-label={`Cantidad de ${product.name}`}
                       className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -514,7 +514,7 @@ export default function CatalogPage() {
                         step="1"
                         value={quantities[selectedProduct.id] || 1}
                         onChange={(e) =>
-                          setQuantities({ ...quantities, [selectedProduct.id]: Math.max(1, parseInt(e.target.value) || 1) })
+                          setQuantities({ ...quantities, [selectedProduct.id]: Math.max(1, parseFloat(e.target.value) || 1) })
                         }
                         className="w-24 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
                       />

@@ -18,6 +18,27 @@ export const OrderStatusEnum = z.enum([
 ]);
 export type OrderStatus = z.infer<typeof OrderStatusEnum>;
 
+export const PaymentMethodEnum = z.enum([
+  "EFECTIVO",
+  "QR_DEUNA",
+  "TRANSFERENCIA",
+  "TRANSFERENCIA_PICHINCHA",
+  "QR_PICHINCHA",
+  "TRANSFERENCIA_GUAYAQUIL",
+  "PAYPAL",
+]);
+export type PaymentMethod = z.infer<typeof PaymentMethodEnum>;
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  EFECTIVO:                "Efectivo",
+  QR_DEUNA:               "QR DeUna",
+  TRANSFERENCIA:           "Transferencia",
+  TRANSFERENCIA_PICHINCHA: "Pichincha — Transferencia",
+  QR_PICHINCHA:            "Pichincha — QR",
+  TRANSFERENCIA_GUAYAQUIL: "Guayaquil — Transferencia",
+  PAYPAL:                  "PayPal",
+};
+
 export const OrderItemSchema = z.object({
   id: z.string().uuid(),
   order_id: z.string().uuid(),
@@ -34,7 +55,9 @@ export const OrderSchema = z.object({
   user_id: z.string().uuid(),
   status: OrderStatusEnum,
   total: z.number().nonnegative(),
-  payment_receipt_url: z.string().url().optional(), // URL del comprobante en Insforge Storage
+  payment_receipt_url: z.string().url().optional(),
+  payment_method: PaymentMethodEnum.nullable().optional(),
+  delivery_date: z.string().nullable().optional(),
   items: z.array(OrderItemSchema).optional(),
   notes: z.string().optional(),
   created_at: z.string().datetime().optional(),
