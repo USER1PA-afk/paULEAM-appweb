@@ -300,7 +300,7 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
   }
 
   // Tipos que se pueden comprar externamente y tener proveedor
-  const PURCHASABLE = ["MATERIA_PRIMA", "INSUMO", "ENVASE_EMPAQUE", "OTRO"];
+  const PURCHASABLE = ["MATERIA_PRIMA", "INSUMO", "ENVASE_EMPAQUE", "MATERIAL_SECUNDARIO"];
 
   const selectedProduct = products.find((p) => p.id === form.product_id);
   const selectedUnit = selectedProduct?.unit?.toLowerCase() || "";

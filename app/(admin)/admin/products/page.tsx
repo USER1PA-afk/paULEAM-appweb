@@ -9,7 +9,7 @@ import { Tag, AlertTriangle, Pencil, Trash2, Star, ImagePlus, X as XIcon } from 
 import { TablePagination } from "@shared/components/ui/table-pagination";
 import Image from "next/image";
 
-type ProductType = "MATERIA_PRIMA" | "INSUMO" | "ENVASE_EMPAQUE" | "PRODUCTO_A_GRANEL" | "PRODUCTO_TERMINADO" | "OTRO";
+type ProductType = "MATERIA_PRIMA" | "INSUMO" | "ENVASE_EMPAQUE" | "PRODUCTO_A_GRANEL" | "PRODUCTO_TERMINADO" | "MATERIAL_SECUNDARIO";
 
 interface Product {
   id: string;
@@ -44,16 +44,22 @@ interface ProductWithSuppliers extends Product {
 type FormMode = "create" | "edit";
 
 const PRODUCT_TYPE_OPTIONS: { value: ProductType; label: string; color: string }[] = [
-  { value: "MATERIA_PRIMA",      label: "Materia Prima",        color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-  { value: "INSUMO",             label: "Insumo / Auxiliar",    color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
-  { value: "ENVASE_EMPAQUE",     label: "Envase / Empaque",     color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
-  { value: "PRODUCTO_A_GRANEL",  label: "Producto a Granel",    color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400" },
-  { value: "PRODUCTO_TERMINADO", label: "Producto Terminado",   color: "bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400" },
-  { value: "OTRO",               label: "Otro",                 color: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" },
+  { value: "MATERIA_PRIMA",        label: "Materia Prima",              color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  { value: "INSUMO",               label: "Insumo / Auxiliar",          color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+  { value: "ENVASE_EMPAQUE",       label: "Envase / Empaque",           color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  { value: "PRODUCTO_A_GRANEL",    label: "Producto a Granel",          color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400" },
+  { value: "PRODUCTO_TERMINADO",   label: "Producto Terminado",         color: "bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400" },
+  { value: "MATERIAL_SECUNDARIO",  label: "Material Secundario / Otro", color: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" },
 ];
 
 // Tipos que requieren proveedor y pueden comprarse externamente
-const PURCHASABLE_TYPES: ProductType[] = ["MATERIA_PRIMA", "INSUMO", "ENVASE_EMPAQUE", "OTRO"];
+const PURCHASABLE_TYPES: ProductType[] = ["MATERIA_PRIMA", "INSUMO", "ENVASE_EMPAQUE", "MATERIAL_SECUNDARIO"];
+
+// Tipos cuyo costo se auto-calcula (no editable manualmente)
+const AUTO_COST_TYPES: ProductType[] = ["PRODUCTO_A_GRANEL", "PRODUCTO_TERMINADO"];
+
+// Tipos que NO admiten capacidad de envase
+const NO_CAPACITY_TYPES: ProductType[] = ["MATERIA_PRIMA", "INSUMO", "PRODUCTO_A_GRANEL", "PRODUCTO_TERMINADO", "MATERIAL_SECUNDARIO"];
 
 const EMPTY_FORM = {
   name: "",
@@ -356,17 +362,21 @@ export default function AdminProductsPage() {
       uploadedImageUrl = insforge.storage.from("product-images").getPublicUrl(path);
     }
 
+    const isAutoCost = AUTO_COST_TYPES.includes(formData.type);
+    const hasCapacity = formData.type === "ENVASE_EMPAQUE";
+
     if (formMode === "edit" && editingId) {
       const updatePayload: Record<string, unknown> = {
         name: formData.name,
         sku: formData.sku,
         type: formData.type,
+        // ENVASE_EMPAQUE: `unit` = capacity unit; stock unit is implicitly "unidades"
         unit: formData.unit,
         price: Number(formData.price) || 0,
-        cost_per_unit: Number(formData.cost_per_unit) || 0,
+        cost_per_unit: isAutoCost ? 0 : (Number(formData.cost_per_unit) || 0),
         min_stock_alert: formData.min_stock_alert !== "" ? Number(formData.min_stock_alert) : 0,
         description: formData.description || null,
-        capacity: formData.capacity ? Number(formData.capacity) : null,
+        capacity: hasCapacity && formData.capacity ? Number(formData.capacity) : null,
       };
       if (uploadedImageUrl !== undefined) {
         updatePayload.image_url = uploadedImageUrl;
@@ -398,11 +408,11 @@ export default function AdminProductsPage() {
           type: formData.type,
           unit: formData.unit,
           price: Number(formData.price) || 0,
-          cost_per_unit: Number(formData.cost_per_unit) || 0,
+          cost_per_unit: isAutoCost ? 0 : (Number(formData.cost_per_unit) || 0),
           min_stock_alert: formData.min_stock_alert !== "" ? Number(formData.min_stock_alert) : 0,
           description: formData.description || null,
           image_url: uploadedImageUrl ?? null,
-          capacity: formData.capacity ? Number(formData.capacity) : null,
+          capacity: hasCapacity && formData.capacity ? Number(formData.capacity) : null,
         })
         .select()
         .single();
@@ -584,13 +594,14 @@ export default function AdminProductsPage() {
       </div>
 
       {/* ─── Tipos de productos ─── */}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {[
-          { value: "MATERIA_PRIMA",      color: "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800/40 dark:text-blue-400",      title: "Materia Prima",       desc: "Ingredientes crudos que entran al proceso de producción. Ej: leche, harina, ajonjolí." },
-          { value: "INSUMO",             color: "bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800/40 dark:text-purple-400", title: "Insumo / Auxiliar",   desc: "Materiales auxiliares del proceso. Ej: cuajo, sal, cloruro de calcio." },
-          { value: "ENVASE_EMPAQUE",     color: "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800/40 dark:text-amber-400",   title: "Envase / Empaque",    desc: "Contenedores y embalajes usados al envasar. Ej: fundas de vacío, tarros, etiquetas." },
-          { value: "PRODUCTO_A_GRANEL",  color: "bg-teal-50 border-teal-200 text-teal-700 dark:bg-teal-900/20 dark:border-teal-800/40 dark:text-teal-400",        title: "Producto a Granel",   desc: "Resultado intermedio de producción. Ej: queso fresco sin envasar." },
-          { value: "PRODUCTO_TERMINADO", color: "bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/20 dark:border-brand-800/40 dark:text-brand-400",  title: "Producto Terminado",  desc: "Listo para la venta. Entra al inventario mediante empaque o ajuste." },
+          { value: "MATERIA_PRIMA",       color: "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800/40 dark:text-blue-400",      title: "Materia Prima",              desc: "Ingredientes crudos que entran al proceso de producción. Ej: leche, harina, ajonjolí." },
+          { value: "INSUMO",              color: "bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800/40 dark:text-purple-400", title: "Insumo / Auxiliar",          desc: "Materiales auxiliares del proceso. Ej: cuajo, sal, cloruro de calcio." },
+          { value: "ENVASE_EMPAQUE",      color: "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800/40 dark:text-amber-400",   title: "Envase / Empaque",           desc: "Contenedores con capacidad definida. Ej: tarros, fundas de vacío, botellas." },
+          { value: "PRODUCTO_A_GRANEL",   color: "bg-teal-50 border-teal-200 text-teal-700 dark:bg-teal-900/20 dark:border-teal-800/40 dark:text-teal-400",        title: "Producto a Granel",          desc: "Resultado intermedio de producción. Ej: queso fresco sin envasar." },
+          { value: "PRODUCTO_TERMINADO",  color: "bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/20 dark:border-brand-800/40 dark:text-brand-400",  title: "Producto Terminado",         desc: "Listo para la venta. Entra al inventario mediante empaque o ajuste." },
+          { value: "MATERIAL_SECUNDARIO", color: "bg-zinc-50 border-zinc-200 text-zinc-600 dark:bg-zinc-900/20 dark:border-zinc-700/40 dark:text-zinc-400",        title: "Material Secundario / Otro", desc: "Etiquetas, cajas, materiales de apoyo. Se controlan por unidades o piezas." },
         ].map(({ value, color, title, desc }) => {
           const count = products.filter((p) => p.type === value).length;
           return (
@@ -820,8 +831,12 @@ export default function AdminProductsPage() {
                   setFormData((p) => ({
                     ...p,
                     type: newType,
-                    unit: newType === "ENVASE_EMPAQUE" ? "unidades" : p.unit,
+                    // For ENVASE_EMPAQUE, `unit` = capacity unit (g/kg/ml/etc), default "g"
+                    // For all others, keep current unit or default to "kg"
+                    unit: newType === "ENVASE_EMPAQUE" ? "g" : (p.type === "ENVASE_EMPAQUE" ? "kg" : p.unit),
                     capacity: "",
+                    // Auto-cost types: reset cost to 0
+                    cost_per_unit: (newType === "PRODUCTO_A_GRANEL" || newType === "PRODUCTO_TERMINADO") ? "0" : p.cost_per_unit,
                   }));
                   if (!PURCHASABLE_TYPES.includes(newType)) {
                     setSelectedSupplierIds([]);
@@ -837,12 +852,17 @@ export default function AdminProductsPage() {
               </select>
               {formData.type === "PRODUCTO_A_GRANEL" && (
                 <p className="text-[10px] text-teal-600 dark:text-teal-400">
-                  El producto a granel solo ingresa al inventario mediante producción (o ajuste).
+                  Solo ingresa al inventario mediante producción (o ajuste). Costo calculado automáticamente.
                 </p>
               )}
               {formData.type === "PRODUCTO_TERMINADO" && (
                 <p className="text-[10px] text-amber-600 dark:text-amber-400">
-                  El producto terminado solo ingresa al inventario mediante empaque (o ajuste).
+                  Solo ingresa al inventario mediante empaque (o ajuste). Costo calculado automáticamente.
+                </p>
+              )}
+              {formData.type === "MATERIAL_SECUNDARIO" && (
+                <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                  Etiquetas, cajas, suministros y materiales de apoyo. Se controlan por unidades o piezas sueltas.
                 </p>
               )}
             </div>
@@ -856,6 +876,15 @@ export default function AdminProductsPage() {
               {/* Info banner */}
               <div className="rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-900/10 dark:border-amber-800/40 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">
                 Los envases/empaques se consumen durante el proceso de empaque. Define su capacidad para facilitar la gestión de plantillas.
+              </div>
+
+              {/* Stock unit locked notice */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Unidad de inventario:</span>
+                <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2.5 py-0.5 text-xs font-semibold">
+                  Unidades (no editable)
+                </span>
+                <span className="text-[10px] text-muted-foreground">— el stock se gestiona en piezas</span>
               </div>
 
               <div className="grid gap-4">
@@ -889,31 +918,33 @@ export default function AdminProductsPage() {
                   />
                 </div>
 
-                {/* Capacidad del envase */}
+                {/* Capacidad del envase — obligatoria */}
                 <div className="space-y-1.5">
                   <label htmlFor="env-capacity" className="text-xs font-medium text-muted-foreground">
-                    Capacidad del Envase
+                    Capacidad del Envase *
                   </label>
                   <input
                     id="env-capacity"
                     type="number"
-                    min="0"
+                    min="0.001"
                     step="0.001"
+                    required
                     value={formData.capacity}
                     onChange={(e) => setFormData((p) => ({ ...p, capacity: e.target.value }))}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
                     placeholder="500"
                   />
-                  <p className="text-[10px] text-muted-foreground">Cantidad que soporta (ej: 500 para 500g)</p>
+                  <p className="text-[10px] text-muted-foreground">Cantidad que contiene (ej: 500 para un tarro de 500 g)</p>
                 </div>
 
-                {/* Unidad de la capacidad */}
+                {/* Unidad de la capacidad — obligatoria */}
                 <div className="space-y-1.5">
                   <label htmlFor="env-unit" className="text-xs font-medium text-muted-foreground">
                     Unidad de la Capacidad *
                   </label>
                   <select
                     id="env-unit"
+                    required
                     value={formData.unit}
                     onChange={(e) => setFormData((p) => ({ ...p, unit: e.target.value }))}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
@@ -928,12 +959,8 @@ export default function AdminProductsPage() {
                       <option value="ml">Mililitros (ml)</option>
                       <option value="lt">Litros (lt)</option>
                     </optgroup>
-                    <optgroup label="Unidades">
-                      <option value="unidades">Unidades</option>
-                      <option value="paquete">Paquete</option>
-                      <option value="rollo">Rollo</option>
-                    </optgroup>
                   </select>
+                  <p className="text-[10px] text-muted-foreground">Unidad de medida del contenido del envase</p>
                 </div>
 
                 {/* Costo unitario */}
@@ -1128,26 +1155,37 @@ export default function AdminProductsPage() {
                 )}
 
                 {/* Costo unitario */}
-                {formData.type !== "PRODUCTO_TERMINADO" && (
-                  <div className="space-y-1.5">
-                    <label htmlFor="prod-cost" className="text-xs font-medium text-muted-foreground">
-                      Costo unitario (USD)
-                    </label>
-                    <input
-                      id="prod-cost"
-                      type="number"
-                      min="0"
-                      step="0.0001"
-                      value={formData.cost_per_unit}
-                      onChange={(e) => setFormData((p) => ({ ...p, cost_per_unit: e.target.value }))}
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-                      placeholder="0.00"
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Se usa para calcular el costo de producción automáticamente.
-                    </p>
-                  </div>
-                )}
+                <div className="space-y-1.5">
+                  <label htmlFor="prod-cost" className="text-xs font-medium text-muted-foreground">
+                    Costo unitario (USD)
+                    {AUTO_COST_TYPES.includes(formData.type) && (
+                      <span className="ml-2 inline-flex items-center rounded-full bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 px-2 py-0 text-[10px] font-semibold">
+                        Auto-calculado
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    id="prod-cost"
+                    type="number"
+                    min="0"
+                    step="0.0001"
+                    value={AUTO_COST_TYPES.includes(formData.type) ? (formData.cost_per_unit || "0") : formData.cost_per_unit}
+                    onChange={(e) => {
+                      if (!AUTO_COST_TYPES.includes(formData.type))
+                        setFormData((p) => ({ ...p, cost_per_unit: e.target.value }));
+                    }}
+                    disabled={AUTO_COST_TYPES.includes(formData.type)}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-muted"
+                    placeholder="0.00"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    {AUTO_COST_TYPES.includes(formData.type)
+                      ? formData.type === "PRODUCTO_A_GRANEL"
+                        ? "Se calcula automáticamente al completar la orden de producción."
+                        : "Se calcula automáticamente al completar la orden de empaque."
+                      : "Se usa para calcular el costo de producción automáticamente."}
+                  </p>
+                </div>
 
                 {/* Alerta de stock mínimo */}
                 {PURCHASABLE_TYPES.includes(formData.type) && (

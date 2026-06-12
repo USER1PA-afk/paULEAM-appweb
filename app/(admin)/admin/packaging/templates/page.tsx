@@ -70,41 +70,47 @@ export default function AdminPackagingTemplatesPage() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nombre</th>
-                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Producto Granel</th>
-                <th className="px-4 py-3 text-center font-medium text-muted-foreground">→ Presentación</th>
-                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Por Unidad</th>
-                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Nombre</th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground whitespace-nowrap hidden sm:table-cell">Granel</th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground whitespace-nowrap">Presentación</th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">Por Unidad</th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground whitespace-nowrap">Estado</th>
                 {isAdmin && (
-                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">Acciones</th>
+                  <th className="px-4 py-3 text-center font-medium text-muted-foreground whitespace-nowrap">Acciones</th>
                 )}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {pagedTemplates.map((t) => (
                 <tr key={t.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 font-medium">{t.name}</td>
-                  <td className="px-4 py-3 text-center text-muted-foreground">
-                    {t.finished_product_name ?? "—"}
+                  <td className="px-4 py-3 font-medium">
+                    <div className="max-w-[180px] truncate" title={t.name}>{t.name}</div>
+                  </td>
+                  <td className="px-4 py-3 text-center text-muted-foreground hidden sm:table-cell">
+                    <div className="max-w-[140px] mx-auto truncate" title={t.finished_product_name ?? ""}>
+                      {t.finished_product_name ?? "—"}
+                    </div>
                     {t.finished_product_sku && (
                       <div className="text-[10px] font-mono">{t.finished_product_sku}</div>
                     )}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {t.output_product_name ?? "—"}
+                    <div className="max-w-[140px] mx-auto truncate" title={t.output_product_name ?? ""}>
+                      {t.output_product_name ?? "—"}
+                    </div>
                     {t.output_product_sku && (
                       <div className="text-[10px] font-mono text-muted-foreground">{t.output_product_sku}</div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-center font-semibold tabular-nums">
+                  <td className="px-4 py-3 text-center font-semibold tabular-nums whitespace-nowrap hidden md:table-cell">
                     {Number(t.bulk_qty_per_unit)} {t.bulk_unit}
                     <div className="text-[10px] text-muted-foreground font-normal">por {t.output_unit}</div>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${
                       t.is_active
                         ? "bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400"
                         : "bg-muted text-muted-foreground"
@@ -114,17 +120,17 @@ export default function AdminPackagingTemplatesPage() {
                   </td>
                   {isAdmin && (
                     <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-2 flex-nowrap">
                         <Link
                           href={`/admin/packaging/templates/${t.id}`}
-                          className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
+                          className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors whitespace-nowrap"
                         >
-                          <Pencil className="h-3 w-3" /> Editar
+                          <Pencil className="h-3 w-3 shrink-0" /> Editar
                         </Link>
                         {t.is_active && (
                           <button
                             onClick={() => handleDeactivate(t.id, t.name)}
-                            className="rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                            className="rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors whitespace-nowrap"
                           >
                             Desactivar
                           </button>
