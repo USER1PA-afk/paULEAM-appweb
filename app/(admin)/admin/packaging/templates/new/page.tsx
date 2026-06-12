@@ -18,7 +18,7 @@ interface MaterialRow {
 const EMPTY_MATERIAL: MaterialRow = {
   material_product_id: "",
   quantity_per_unit: "",
-  unit: "unidades",
+  unit: "",
   notes: "",
 };
 
@@ -59,7 +59,7 @@ export default function NewPackagingTemplatePage() {
     const all = (data as Product[]) ?? [];
     setFinishedProducts(all.filter((p) => p.type === "PRODUCTO_A_GRANEL"));
     setOutputProducts(all.filter((p) => p.type === "PRODUCTO_TERMINADO"));
-    setPackagingMaterials(all.filter((p) => p.type === "ENVASE_EMPAQUE"));
+    setPackagingMaterials(all.filter((p) => p.type === "ENVASE_EMPAQUE" || p.type === "MATERIAL_SECUNDARIO"));
     setLoadingProducts(false);
   }, [insforge]);
 
@@ -78,10 +78,10 @@ export default function NewPackagingTemplatePage() {
     setMaterials((prev) =>
       prev.map((m, i) => {
         if (i !== index) return m;
-        // Auto-fill unit from selected material
         if (field === "material_product_id") {
           const mat = packagingMaterials.find((p) => p.id === value);
-          return { ...m, [field]: value as string, unit: mat?.unit ?? m.unit };
+          // Unit is read-only and always derived from the selected product
+          return { ...m, [field]: value as string, unit: mat?.unit ?? "" };
         }
         return { ...m, [field]: value };
       })
@@ -411,11 +411,9 @@ export default function NewPackagingTemplatePage() {
                         placeholder="1"
                         className="w-14 rounded-lg border border-border bg-background px-1.5 py-1.5 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-ring shrink-0"
                       />
-                      <input value={mat.unit}
-                        onChange={(e) => updateMaterial(index, "unit", e.target.value)}
-                        placeholder="und"
-                        className="w-12 rounded-lg border border-border bg-background px-1.5 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-ring shrink-0"
-                      />
+                      <span className="w-12 shrink-0 inline-flex items-center justify-center rounded-md bg-muted border border-border/60 px-1 py-1.5 text-xs font-mono text-muted-foreground select-none" title="Unidad del producto seleccionado">
+                        {mat.unit || "—"}
+                      </span>
                       <button type="button" onClick={() => removeMaterial(index)} disabled={materials.length === 1}
                         className="shrink-0 rounded-lg border border-border bg-background p-1.5 text-muted-foreground hover:text-destructive hover:border-destructive/50 disabled:opacity-30 transition-colors"
                         aria-label="Eliminar">

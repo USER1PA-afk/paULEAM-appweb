@@ -22,7 +22,7 @@ interface MaterialRow {
 const EMPTY_MATERIAL: MaterialRow = {
   material_product_id: "",
   quantity_per_unit: "",
-  unit: "unidades",
+  unit: "",
   notes: "",
 };
 
@@ -69,16 +69,20 @@ export default function EditPackagingTemplatePage() {
     const all = (data as Product[]) ?? [];
     setFinishedProducts(all.filter((p) => p.type === "PRODUCTO_A_GRANEL"));
     setOutputProducts(all.filter((p) => p.type === "PRODUCTO_TERMINADO"));
-    setPackagingMaterials(all.filter((p) => p.type === "ENVASE_EMPAQUE"));
+    setPackagingMaterials(all.filter((p) => p.type === "ENVASE_EMPAQUE" || p.type === "MATERIAL_SECUNDARIO"));
     setLoadingProducts(false);
   }, [insforge]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  // Pre-llenar form cuando carga la plantilla
+  // Pre-llenar form cuando carga la plantilla.
+  // Guard con loadingTemplate: el hook setea loading=false en el finally block,
+  // DESPUÉS de que tanto template como materials hayan sido actualizados.
+  // Sin este guard, el effect corre con existingMaterials=[] (template llega antes
+  // que los materiales), marca initialized=true y nunca vuelve a cargar los materiales.
   useEffect(() => {
-    if (!template || initialized) return;
+    if (loadingTemplate || !template || initialized) return;
     setForm({
       name: template.name,
       finished_product_id: template.finished_product_id,
@@ -88,18 +92,18 @@ export default function EditPackagingTemplatePage() {
       output_unit: template.output_unit,
       description: template.description ?? "",
     });
-    if (existingMaterials.length > 0) {
-      setMaterials(
-        existingMaterials.map((m) => ({
-          material_product_id: m.material_product_id,
-          quantity_per_unit: Number(m.quantity_per_unit),
-          unit: m.unit,
-          notes: m.notes ?? "",
-        }))
-      );
-    }
+    setMaterials(
+      existingMaterials.length > 0
+        ? existingMaterials.map((m) => ({
+            material_product_id: m.material_product_id,
+            quantity_per_unit: Number(m.quantity_per_unit),
+            unit: m.unit,
+            notes: m.notes ?? "",
+          }))
+        : [{ ...EMPTY_MATERIAL }]
+    );
     setInitialized(true);
-  }, [template, existingMaterials, initialized]);
+  }, [loadingTemplate, template, existingMaterials, initialized]);
 
   function addMaterial() {
     setMaterials((prev) => [...prev, { ...EMPTY_MATERIAL }]);
@@ -115,7 +119,8 @@ export default function EditPackagingTemplatePage() {
         if (i !== index) return m;
         if (field === "material_product_id") {
           const mat = packagingMaterials.find((p) => p.id === value);
-          return { ...m, [field]: value as string, unit: mat?.unit ?? m.unit };
+          // Unit is read-only and always derived from the selected product
+          return { ...m, [field]: value as string, unit: mat?.unit ?? "" };
         }
         return { ...m, [field]: value };
       })
@@ -435,9 +440,9 @@ export default function EditPackagingTemplatePage() {
                         onChange={(e) => updateMaterial(index, "quantity_per_unit", e.target.value)}
                         placeholder="1"
                         className="w-14 rounded-lg border border-border bg-background px-1.5 py-1.5 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-ring shrink-0" />
-                      <input value={mat.unit} onChange={(e) => updateMaterial(index, "unit", e.target.value)}
-                        placeholder="und"
-                        className="w-12 rounded-lg border border-border bg-background px-1.5 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-ring shrink-0" />
+                      <span className="w-12 shrink-0 inline-flex items-center justify-center rounded-md bg-muted border border-border/60 px-1 py-1.5 text-xs font-mono text-muted-foreground select-none" title="Unidad del producto seleccionado">
+                        {mat.unit || "—"}
+                      </span>
                       <button type="button" onClick={() => removeMaterial(index)} disabled={materials.length === 1}
                         className="shrink-0 rounded-lg border border-border bg-background p-1.5 text-muted-foreground hover:text-destructive hover:border-destructive/50 disabled:opacity-30 transition-colors"
                         aria-label="Eliminar">

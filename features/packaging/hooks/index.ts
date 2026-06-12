@@ -301,7 +301,10 @@ export function usePackagingTemplateMutations(refetch: () => void) {
       refetch();
       return { data: template, error: null };
     } catch (err: unknown) {
-      return { data: null, error: err instanceof Error ? err.message : "Error al crear plantilla" };
+      const msg = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message ?? "Error al crear plantilla";
+      return { data: null, error: msg };
     }
   }, [insforge, refetch]);
 
@@ -354,7 +357,10 @@ export function usePackagingTemplateMutations(refetch: () => void) {
       refetch();
       return { error: null };
     } catch (err: unknown) {
-      return { error: err instanceof Error ? err.message : "Error al actualizar plantilla" };
+      const msg = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message ?? "Error al actualizar plantilla";
+      return { error: msg };
     }
   }, [insforge, refetch]);
 

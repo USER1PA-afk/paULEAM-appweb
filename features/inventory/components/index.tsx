@@ -20,6 +20,7 @@ interface Product {
   sku: string;
   unit: string;
   type: string;
+  cost_per_unit: number;
   productSuppliers: ProductSupplierLink[];
 }
 
@@ -281,7 +282,7 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
   useEffect(() => {
     insforge.database
       .from("products")
-      .select("id, name, sku, unit, type, productSuppliers:product_suppliers(supplier_id, is_primary, supplier:suppliers(id, name, company))")
+      .select("id, name, sku, unit, type, cost_per_unit, productSuppliers:product_suppliers(supplier_id, is_primary, supplier:suppliers(id, name, company))")
       .eq("is_active", true)
       .order("name")
       .then(
@@ -402,6 +403,7 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
                   const prod = products.find((pr) => pr.id === e.target.value);
                   const pType = prod?.type ?? "";
                   const nonPurchasable = ["PRODUCTO_A_GRANEL", "PRODUCTO_TERMINADO"].includes(pType);
+                  const isPurchasableType = PURCHASABLE.includes(pType);
                   const primary = prod?.productSuppliers?.find((ps) => ps.is_primary);
                   const firstSupplier = prod?.productSuppliers?.[0];
                   const autoSupplier = primary ?? firstSupplier;
@@ -410,6 +412,10 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
                     product_id: e.target.value,
                     supplier_id: autoSupplier?.supplier_id ?? "",
                     reference_type: nonPurchasable ? "AJUSTE" : p.reference_type,
+                    // Pre-fill cost from catalog for purchasable types; keep blank for others
+                    unit_cost: isPurchasableType && prod?.cost_per_unit
+                      ? String(prod.cost_per_unit)
+                      : "",
                   }));
                 }}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -450,7 +456,7 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
                 id="entry-cost"
                 type="number"
                 min="0"
-                step="0.01"
+                step="0.0001"
                 value={form.unit_cost}
                 onChange={(e) => setForm((p) => ({ ...p, unit_cost: e.target.value }))}
                 placeholder="0.00"

@@ -17,6 +17,7 @@ interface Product {
   sku: string;
   type: ProductType;
   unit: string;
+  capacity_unit: string | null;
   category_id: string | null;
   description: string | null;
   price: number;
@@ -66,6 +67,7 @@ const EMPTY_FORM = {
   sku: "",
   type: "MATERIA_PRIMA" as ProductType,
   unit: "kg",
+  capacity_unit: "",
   price: "",
   cost_per_unit: "",
   min_stock_alert: "",
@@ -289,6 +291,7 @@ export default function AdminProductsPage() {
       sku: p.sku,
       type: p.type,
       unit: p.unit,
+      capacity_unit: p.capacity_unit ?? "",
       price: p.price ? String(p.price) : "",
       cost_per_unit: p.cost_per_unit ? String(p.cost_per_unit) : "",
       min_stock_alert: p.min_stock_alert != null ? String(p.min_stock_alert) : "",
@@ -370,8 +373,9 @@ export default function AdminProductsPage() {
         name: formData.name,
         sku: formData.sku,
         type: formData.type,
-        // ENVASE_EMPAQUE: `unit` = capacity unit; stock unit is implicitly "unidades"
-        unit: formData.unit,
+        // ENVASE_EMPAQUE: inventory unit is always "unidades"; capacity unit is separate
+        unit: hasCapacity ? "unidades" : formData.unit,
+        capacity_unit: hasCapacity ? (formData.capacity_unit || null) : null,
         price: Number(formData.price) || 0,
         cost_per_unit: isAutoCost ? 0 : (Number(formData.cost_per_unit) || 0),
         min_stock_alert: formData.min_stock_alert !== "" ? Number(formData.min_stock_alert) : 0,
@@ -406,7 +410,8 @@ export default function AdminProductsPage() {
           name: formData.name,
           sku: formData.sku,
           type: formData.type,
-          unit: formData.unit,
+          unit: hasCapacity ? "unidades" : formData.unit,
+          capacity_unit: hasCapacity ? (formData.capacity_unit || null) : null,
           price: Number(formData.price) || 0,
           cost_per_unit: isAutoCost ? 0 : (Number(formData.cost_per_unit) || 0),
           min_stock_alert: formData.min_stock_alert !== "" ? Number(formData.min_stock_alert) : 0,
@@ -831,11 +836,11 @@ export default function AdminProductsPage() {
                   setFormData((p) => ({
                     ...p,
                     type: newType,
-                    // For ENVASE_EMPAQUE, `unit` = capacity unit (g/kg/ml/etc), default "g"
-                    // For all others, keep current unit or default to "kg"
-                    unit: newType === "ENVASE_EMPAQUE" ? "g" : (p.type === "ENVASE_EMPAQUE" ? "kg" : p.unit),
+                    // unit = stock/inventory unit; always "unidades" for ENVASE_EMPAQUE
+                    unit: newType === "ENVASE_EMPAQUE" ? "unidades" : (p.type === "ENVASE_EMPAQUE" ? "kg" : p.unit),
+                    // capacity_unit = physical content unit (g/kg/ml/lb); only for ENVASE_EMPAQUE
+                    capacity_unit: newType === "ENVASE_EMPAQUE" ? "g" : "",
                     capacity: "",
-                    // Auto-cost types: reset cost to 0
                     cost_per_unit: (newType === "PRODUCTO_A_GRANEL" || newType === "PRODUCTO_TERMINADO") ? "0" : p.cost_per_unit,
                   }));
                   if (!PURCHASABLE_TYPES.includes(newType)) {
@@ -937,16 +942,16 @@ export default function AdminProductsPage() {
                   <p className="text-[10px] text-muted-foreground">Cantidad que contiene (ej: 500 para un tarro de 500 g)</p>
                 </div>
 
-                {/* Unidad de la capacidad — obligatoria */}
+                {/* Unidad de la capacidad — obligatoria, distinta de la unidad de inventario */}
                 <div className="space-y-1.5">
-                  <label htmlFor="env-unit" className="text-xs font-medium text-muted-foreground">
+                  <label htmlFor="env-capacity-unit" className="text-xs font-medium text-muted-foreground">
                     Unidad de la Capacidad *
                   </label>
                   <select
-                    id="env-unit"
+                    id="env-capacity-unit"
                     required
-                    value={formData.unit}
-                    onChange={(e) => setFormData((p) => ({ ...p, unit: e.target.value }))}
+                    value={formData.capacity_unit}
+                    onChange={(e) => setFormData((p) => ({ ...p, capacity_unit: e.target.value }))}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
                   >
                     <optgroup label="Masa">
@@ -960,7 +965,7 @@ export default function AdminProductsPage() {
                       <option value="lt">Litros (lt)</option>
                     </optgroup>
                   </select>
-                  <p className="text-[10px] text-muted-foreground">Unidad de medida del contenido del envase</p>
+                  <p className="text-[10px] text-muted-foreground">Unidad del contenido — independiente de la unidad de inventario (unidades)</p>
                 </div>
 
                 {/* Costo unitario */}
@@ -1424,7 +1429,7 @@ export default function AdminProductsPage() {
                               {/* Extra info inline bajo el nombre */}
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {typeValue === "ENVASE_EMPAQUE" && p.capacity != null && (
-                                  <span className="text-[10px] text-muted-foreground">Cap: {p.capacity} {p.unit}</span>
+                                  <span className="text-[10px] text-muted-foreground">Cap: {p.capacity} {p.capacity_unit ?? p.unit}</span>
                                 )}
                                 {isPurchasable && p.suppliers.length > 0 && p.suppliers.map((s, i) => (
                                   <span key={i} className={`inline-flex items-center rounded-full px-2 py-0 text-[10px] font-medium ${s.is_primary ? 'bg-brand-100 text-brand-700' : 'bg-muted text-muted-foreground'}`}>

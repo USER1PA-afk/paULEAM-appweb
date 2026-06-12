@@ -79,6 +79,7 @@ export const ProductSchema = z.object({
   min_stock_alert: z.number().nonnegative().nullable().optional(),
   cost_per_unit: z.number().nonnegative().default(0).optional(),
   capacity: z.number().positive().nullable().optional(),
+  capacity_unit: z.string().nullable().optional(),
   created_at: z.string().datetime().optional(),
   updated_at: z.string().datetime().optional(),
 });
