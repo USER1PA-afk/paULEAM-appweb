@@ -22,6 +22,7 @@ interface CatalogProduct {
   commercial_details: string | null;
   price: number;
   unit: string;
+  capacity_unit: string | null;
   image_url: string | null;
   is_active: boolean;
   featured: boolean;
@@ -71,9 +72,10 @@ export default function CatalogPage() {
 
     const { data } = await insforge.database
       .from("products")
-      .select("id, name, sku, description, short_description, long_description, price, unit, image_url, is_active, featured, weight, ingredients, specifications, nutritional_info, commercial_details, conversion_factor, sales_unit_name")
+      .select("id, name, sku, description, short_description, long_description, price, unit, capacity_unit, image_url, is_active, featured, weight, ingredients, specifications, nutritional_info, commercial_details, conversion_factor, sales_unit_name")
       .eq("type", "PRODUCTO_TERMINADO")
       .eq("is_active", true)
+      .gt("price", 0)
       .order("name");
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -94,6 +96,7 @@ export default function CatalogPage() {
       commercial_details: p.commercial_details,
       price: Number(p.price),
       unit: p.unit,
+      capacity_unit: p.capacity_unit ?? null,
       image_url: p.image_url,
       is_active: p.is_active,
       featured: p.featured,
@@ -314,6 +317,9 @@ export default function CatalogPage() {
                         currency: "USD",
                         minimumFractionDigits: 2,
                       })}
+                      {product.capacity_unit && (
+                        <span className="text-sm font-normal text-muted-foreground ml-1">/ {product.capacity_unit}</span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -479,6 +485,9 @@ export default function CatalogPage() {
                         currency: "USD",
                         minimumFractionDigits: 2,
                       })}
+                      {selectedProduct.capacity_unit && (
+                        <span className="text-base font-normal text-muted-foreground ml-1">/ {selectedProduct.capacity_unit}</span>
+                      )}
                     </p>
                   </div>
                   <div>

@@ -19,6 +19,7 @@ export interface PosProduct {
   unit: string;                      // unidad física de almacén (kg, lt…)
   price: number;                     // precio por unidad comercial
   image_url: string | null;
+  capacity_unit: string | null;
   conversion_factor: number;         // kg por unidad comercial (ej: 2.20462)
   sales_unit_name: string;           // "Libra" | "Unidad" | etc.
   stock_actual: number;              // stock físico total en kg
@@ -64,7 +65,7 @@ export function usePosProducts() {
       const { data, error: dbError } = await db.database
         .from("stock_summary")
         .select(
-          "product_id, name, sku, unit, price, image_url, conversion_factor, sales_unit_name, stock_actual, stock_available"
+          "product_id, name, sku, unit, price, image_url, capacity_unit, conversion_factor, sales_unit_name, stock_actual, stock_available"
         )
         .eq("type", "PRODUCTO_TERMINADO")
         .eq("is_active", true)

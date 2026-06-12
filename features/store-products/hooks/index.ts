@@ -23,6 +23,7 @@ export interface StoreProduct {
   image_url: string | null;
   is_active: boolean;
   featured: boolean;
+  capacity_unit?: string | null;
   conversion_factor?: number;
   sales_unit_name?: string | null;
   created_at: string;

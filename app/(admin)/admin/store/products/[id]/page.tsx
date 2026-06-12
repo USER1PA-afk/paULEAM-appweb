@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
+import { getInsforge } from "@shared/lib/insforge/client";
 import {
   ChevronLeft, ShoppingBag, Pencil, Save, X as XIcon,
   Eye, EyeOff, Sparkles, Package, TrendingUp, Boxes,
@@ -108,14 +109,14 @@ export default function StoreProductDetailPage() {
   const [activeImage, setActiveImage] = useState(0);
 
   // Form state
-  const [name,        setName]        = useState("");
-  const [sku,         setSku]         = useState("");
-  const [unit,        setUnit]        = useState("unidades");
-  const [price,       setPrice]       = useState("");
-  const [weight,      setWeight]      = useState("");
-  const [categoryId,  setCategoryId]  = useState("");
-  const [isActive,    setIsActive]    = useState(true);
-  const [featured,    setFeatured]    = useState(false);
+  const [name,           setName]           = useState("");
+  const [sku,            setSku]            = useState("");
+  const [price,          setPrice]          = useState("");
+  const [capacityUnit,   setCapacityUnit]   = useState("");
+  const [packagingWeight, setPackagingWeight] = useState<number | null>(null);
+  const [categoryId,     setCategoryId]     = useState("");
+  const [isActive,       setIsActive]       = useState(true);
+  const [featured,       setFeatured]       = useState(false);
   const [shortDesc,   setShortDesc]   = useState("");
   const [desc,        setDesc]        = useState("");
   const [longDesc,    setLongDesc]    = useState("");
@@ -130,9 +131,8 @@ export default function StoreProductDetailPage() {
     /* eslint-disable react-hooks/set-state-in-effect */
     setName(product.name);
     setSku(product.sku);
-    setUnit(product.unit);
     setPrice(String(product.price || 0));
-    setWeight(product.weight ? String(product.weight) : "");
+    setCapacityUnit(product.capacity_unit ?? "");
     setCategoryId(product.category_id ?? "");
     setIsActive(product.is_active);
     setFeatured(product.featured);
@@ -146,13 +146,28 @@ export default function StoreProductDetailPage() {
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [product]);
 
+  // Fetch bulk_qty_per_unit from the packaging template linked to this product (as output)
+  useEffect(() => {
+    if (!productId) return;
+    const db = getInsforge();
+    db.database
+      .from("packaging_templates")
+      .select("bulk_qty_per_unit")
+      .eq("output_product_id", productId)
+      .eq("is_active", true)
+      .limit(1)
+      .then(({ data }) => {
+        const first = (data as { bulk_qty_per_unit: number }[] | null)?.[0];
+        setPackagingWeight(first ? Number(first.bulk_qty_per_unit) : null);
+      }, () => {});
+  }, [productId]);
+
   function cancelEdit() {
     if (product) {
       setName(product.name);
       setSku(product.sku);
-      setUnit(product.unit);
       setPrice(String(product.price || 0));
-      setWeight(product.weight ? String(product.weight) : "");
+      setCapacityUnit(product.capacity_unit ?? "");
       setCategoryId(product.category_id ?? "");
       setIsActive(product.is_active);
       setFeatured(product.featured);
@@ -175,9 +190,10 @@ export default function StoreProductDetailPage() {
     const ok = await updateProduct(productId, {
       name:               name.trim(),
       sku:                sku.trim().toUpperCase(),
-      unit,
+      unit:               "unidades",
       price:              Number(price),
-      weight:             weight ? Number(weight) : null,
+      capacity_unit:      capacityUnit || null,
+      weight:             packagingWeight,
       category_id:        categoryId || null,
       is_active:          isActive,
       featured,
@@ -352,17 +368,42 @@ export default function StoreProductDetailPage() {
                       <input type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} className={inputCls + " pl-7"} />
                     </div>
                   </Field>
-                  <Field label="Unidad">
-                    <select value={unit} onChange={(e) => setUnit(e.target.value)} className={inputCls}>
-                      <option value="unidades">Unidades</option>
-                      <option value="kg">Kilogramos (kg)</option>
-                      <option value="gr">Gramos (gr)</option>
-                      <option value="lt">Litros (lt)</option>
-                      <option value="ml">Mililitros (ml)</option>
+                  <Field label="Unidad de inventario">
+                    <div className={inputCls + " bg-muted cursor-not-allowed text-muted-foreground select-none"}>
+                      Unidades
+                    </div>
+                  </Field>
+                  <Field label="Unidad de venta pública">
+                    <select value={capacityUnit} onChange={(e) => setCapacityUnit(e.target.value)} className={inputCls}>
+                      <option value="">— sin especificar —</option>
+                      <optgroup label="Masa">
+                        <option value="lb">Libras (lb)</option>
+                        <option value="kg">Kilogramos (kg)</option>
+                        <option value="g">Gramos (g)</option>
+                        <option value="oz">Onzas (oz)</option>
+                      </optgroup>
+                      <optgroup label="Volumen">
+                        <option value="lt">Litros (lt)</option>
+                        <option value="ml">Mililitros (ml)</option>
+                      </optgroup>
+                      <optgroup label="Otro">
+                        <option value="unidad">Unidad</option>
+                        <option value="paquete">Paquete</option>
+                      </optgroup>
                     </select>
+                    <p className="text-[10px] text-muted-foreground mt-1">Se muestra como &ldquo;$Precio / lb&rdquo; en la tienda y el POS.</p>
                   </Field>
                   <Field label="Peso (kg)">
-                    <input type="number" min="0" step="0.01" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="0.50" className={inputCls} />
+                    <div className={inputCls + " bg-muted cursor-not-allowed flex items-center gap-2"}>
+                      {packagingWeight !== null ? (
+                        <>
+                          <span className="font-mono tabular-nums">{packagingWeight}</span>
+                          <span className="text-[10px] text-muted-foreground">kg · desde plantilla de empaque</span>
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Sin plantilla de empaque vinculada</span>
+                      )}
+                    </div>
                   </Field>
                   {categories.length > 0 && (
                     <Field label="Categoría">
@@ -523,7 +564,7 @@ export default function StoreProductDetailPage() {
 
                     <div className="flex items-end gap-1">
                       <span className="text-3xl font-bold text-brand-600">{fmt(product.price || 0)}</span>
-                      <span className="text-sm text-muted-foreground mb-1">/ {product.unit}</span>
+                      <span className="text-sm text-muted-foreground mb-1">/ {product.capacity_unit || product.unit}</span>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

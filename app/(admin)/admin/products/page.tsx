@@ -75,6 +75,13 @@ const EMPTY_FORM = {
   capacity: "",
 };
 
+/** Shows 2 decimals when that's lossless (e.g. 1.50 → $1.50), otherwise 4 (e.g. 0.015 → $0.0150). */
+function formatCost(value: number): string {
+  const s2 = value.toFixed(2);
+  const s4 = value.toFixed(4);
+  return `$${parseFloat(s2) === parseFloat(s4) ? s2 : s4}`;
+}
+
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductWithSuppliers[]>([]);
   const [loading, setLoading] = useState(true);
@@ -310,7 +317,7 @@ export default function AdminProductsPage() {
     setEditingId(p.id);
     setFormMode("edit");
     setShowForm(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.getElementById("main-content")?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function handleSupplierChange(ids: string[], primary: string) {
@@ -377,7 +384,8 @@ export default function AdminProductsPage() {
         unit: hasCapacity ? "unidades" : formData.unit,
         capacity_unit: hasCapacity ? (formData.capacity_unit || null) : null,
         price: Number(formData.price) || 0,
-        cost_per_unit: isAutoCost ? 0 : (Number(formData.cost_per_unit) || 0),
+        // Auto-cost types: omit cost_per_unit from UPDATE — DB trigger owns it
+        ...(!isAutoCost && { cost_per_unit: Number(formData.cost_per_unit) || 0 }),
         min_stock_alert: formData.min_stock_alert !== "" ? Number(formData.min_stock_alert) : 0,
         description: formData.description || null,
         capacity: hasCapacity && formData.capacity ? Number(formData.capacity) : null,
@@ -1405,9 +1413,13 @@ export default function AdminProductsPage() {
                         <th className="px-4 py-3 font-medium text-muted-foreground w-28">SKU</th>
                         <th className="px-4 py-3 font-medium text-muted-foreground">Nombre</th>
                         <th className="px-4 py-3 font-medium text-muted-foreground w-32">Unidad</th>
-                        <th className="px-4 py-3 font-medium text-muted-foreground w-32 text-right">
-                          {typeValue === "PRODUCTO_TERMINADO" ? "Precio venta" : "Costo/u"}
-                        </th>
+                        <th className="px-4 py-3 font-medium text-muted-foreground w-32 text-right">Costo/u</th>
+                        {typeValue === "PRODUCTO_TERMINADO" && (
+                          <>
+                            <th className="px-4 py-3 font-medium text-muted-foreground w-32 text-right">Precio venta</th>
+                            <th className="px-4 py-3 font-medium text-muted-foreground w-28 text-right">Margen bruto</th>
+                          </>
+                        )}
                         <th className="px-4 py-3 font-medium text-muted-foreground w-28 text-center">Estado</th>
                         <th className="px-4 py-3 font-medium text-muted-foreground w-44 text-right">Acciones</th>
                       </tr>
@@ -1415,58 +1427,78 @@ export default function AdminProductsPage() {
                     <tbody>
                       {typeProducts.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                          <td colSpan={typeValue === "PRODUCTO_TERMINADO" ? 8 : 6} className="px-4 py-8 text-center text-muted-foreground">
                             <Tag className="h-6 w-6 mx-auto mb-1 opacity-25" />
                             No hay {typeLabel.toLowerCase()} registrados.
                           </td>
                         </tr>
                       ) : (
-                        pagedTypeProducts.map((p) => (
-                          <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
-                            <td className="px-4 py-3">
-                              <p className="font-medium text-foreground">{p.name}</p>
-                              {/* Extra info inline bajo el nombre */}
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {typeValue === "ENVASE_EMPAQUE" && p.capacity != null && (
-                                  <span className="text-[10px] text-muted-foreground">Cap: {p.capacity} {p.capacity_unit ?? p.unit}</span>
-                                )}
-                                {isPurchasable && p.suppliers.length > 0 && p.suppliers.map((s, i) => (
-                                  <span key={i} className={`inline-flex items-center rounded-full px-2 py-0 text-[10px] font-medium ${s.is_primary ? 'bg-brand-100 text-brand-700' : 'bg-muted text-muted-foreground'}`}>
-                                    {s.is_primary && <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />}
-                                    {s.company ?? s.name}
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-muted-foreground">{p.unit}</td>
-                            <td className="px-4 py-3 text-right font-mono text-xs tabular-nums text-foreground">
-                              {typeValue === "PRODUCTO_TERMINADO"
-                                ? Number(p.price) > 0
-                                  ? Number(p.price).toLocaleString('es-EC', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })
-                                  : <span className="text-muted-foreground/40">—</span>
-                                : Number(p.cost_per_unit) > 0
-                                  ? Number(p.cost_per_unit).toLocaleString('es-EC', { style: 'currency', currency: 'USD', minimumFractionDigits: 4 })
-                                  : <span className="text-muted-foreground/40">—</span>
-                              }
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <span className={`inline-flex h-2.5 w-2.5 rounded-full ${p.is_active ? 'bg-accent-500' : 'bg-red-500'}`} />
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <div className="inline-flex items-center gap-2">
-                                <button onClick={() => openEdit(p)} className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors">
-                                  <Pencil className="h-3 w-3" /> Editar
-                                </button>
-                                {isAdmin && (
-                                  <button onClick={() => openDeleteConfirm(p)} className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition-colors">
-                                    <Trash2 className="h-3 w-3" /> Eliminar
+                        pagedTypeProducts.map((p) => {
+                          const price  = Number(p.price);
+                          const cost   = Number(p.cost_per_unit);
+                          const margin = typeValue === "PRODUCTO_TERMINADO" && price > 0
+                            ? ((price - cost) / price) * 100
+                            : null;
+                          const marginLow = margin !== null && margin < 30;
+                          return (
+                            <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+                              <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
+                              <td className="px-4 py-3">
+                                <p className="font-medium text-foreground">{p.name}</p>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {typeValue === "ENVASE_EMPAQUE" && p.capacity != null && (
+                                    <span className="text-[10px] text-muted-foreground">Cap: {p.capacity} {p.capacity_unit ?? p.unit}</span>
+                                  )}
+                                  {isPurchasable && p.suppliers.length > 0 && p.suppliers.map((s, i) => (
+                                    <span key={i} className={`inline-flex items-center rounded-full px-2 py-0 text-[10px] font-medium ${s.is_primary ? 'bg-brand-100 text-brand-700' : 'bg-muted text-muted-foreground'}`}>
+                                      {s.is_primary && <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />}
+                                      {s.company ?? s.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-muted-foreground">{p.unit}</td>
+                              {/* Costo/u — always */}
+                              <td className="px-4 py-3 text-right font-mono text-xs tabular-nums text-foreground">
+                                {cost > 0
+                                  ? formatCost(cost)
+                                  : <span className="text-muted-foreground/40">—</span>}
+                              </td>
+                              {/* Precio venta + Margen — PRODUCTO_TERMINADO only */}
+                              {typeValue === "PRODUCTO_TERMINADO" && (
+                                <>
+                                  <td className="px-4 py-3 text-right font-mono text-xs tabular-nums text-foreground">
+                                    {price > 0
+                                      ? price.toLocaleString('es-EC', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })
+                                      : <span className="text-muted-foreground/40">—</span>}
+                                  </td>
+                                  <td className="px-4 py-3 text-right font-mono text-xs tabular-nums">
+                                    {margin === null
+                                      ? <span className="text-muted-foreground/40">—</span>
+                                      : <span className={marginLow ? "font-semibold text-orange-600 dark:text-orange-400" : "text-foreground"}>
+                                          {margin.toFixed(1)}%
+                                        </span>}
+                                  </td>
+                                </>
+                              )}
+                              <td className="px-4 py-3 text-center">
+                                <span className={`inline-flex h-2.5 w-2.5 rounded-full ${p.is_active ? 'bg-accent-500' : 'bg-red-500'}`} />
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="inline-flex items-center gap-2">
+                                  <button onClick={() => openEdit(p)} className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors">
+                                    <Pencil className="h-3 w-3" /> Editar
                                   </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                                  {isAdmin && (
+                                    <button onClick={() => openDeleteConfirm(p)} className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition-colors">
+                                      <Trash2 className="h-3 w-3" /> Eliminar
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>

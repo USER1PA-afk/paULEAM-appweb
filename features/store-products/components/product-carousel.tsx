@@ -46,10 +46,11 @@ export function ProductCarousel() {
     db.database
       .from("products")
       .select(
-        "id,name,sku,type,unit,price,image_url,short_description,featured,is_active,description,long_description,specifications,ingredients,nutritional_info,weight,commercial_details,category_id,created_at,updated_at"
+        "id,name,sku,type,unit,capacity_unit,price,image_url,short_description,featured,is_active,description,long_description,specifications,ingredients,nutritional_info,weight,commercial_details,category_id,created_at,updated_at"
       )
       .eq("type", "PRODUCTO_TERMINADO")
       .eq("is_active", true)
+      .gt("price", 0)
       .order("featured", { ascending: false })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .then(({ data, error }: { data: any; error: any }) => {

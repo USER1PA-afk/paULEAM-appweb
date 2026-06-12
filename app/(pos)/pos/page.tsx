@@ -114,7 +114,7 @@ function ProductCard({
               {formatCurrency(product.price)}
             </p>
             <p className="text-[9px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-              / {product.sales_unit_name}
+              / {product.capacity_unit || product.sales_unit_name}
             </p>
           </div>
           <div className="text-right">
