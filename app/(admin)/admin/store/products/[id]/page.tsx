@@ -9,7 +9,7 @@ import {
   ChevronLeft, ShoppingBag, Pencil, Save, X as XIcon,
   Eye, EyeOff, Sparkles, Package, TrendingUp, Boxes,
   Info, FileText, Image as ImageIcon, FlaskConical, Briefcase,
-  CheckCircle2, RotateCcw,
+  CheckCircle2, RotateCcw, Monitor, MonitorOff,
 } from "lucide-react";
 import {
   useStoreProductDetail,
@@ -100,7 +100,7 @@ export default function StoreProductDetailPage() {
 
   const { product, images, stock, salesStats, loading, refetch } =
     useStoreProductDetail(productId);
-  const { updateProduct, toggleActive, toggleFeatured, saving, error, setError } =
+  const { updateProduct, toggleActive, toggleFeatured, togglePosVisibility, saving, error, setError } =
     useStoreProductMutations();
   const { categories } = useCategories();
 
@@ -224,6 +224,12 @@ export default function StoreProductDetailPage() {
     await refetch();
   }
 
+  async function handleTogglePos() {
+    if (!product) return;
+    await togglePosVisibility(productId, product.show_in_pos !== false);
+    await refetch();
+  }
+
   // ─── Loading ───
   if (loading) {
     return (
@@ -294,6 +300,20 @@ export default function StoreProductDetailPage() {
           >
             <Sparkles className="h-3.5 w-3.5" />
             {product.featured ? "Quitar destacado" : "Destacar"}
+          </button>
+          <button
+            onClick={handleTogglePos}
+            title={product.show_in_pos !== false ? "Visible en POS — clic para ocultar" : "Oculto en POS — clic para mostrar"}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium border transition-colors ${
+              product.show_in_pos !== false
+                ? "border-teal-400 bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-900/20 dark:border-teal-700 dark:text-teal-400"
+                : "border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+          >
+            {product.show_in_pos !== false
+              ? <Monitor className="h-3.5 w-3.5" />
+              : <MonitorOff className="h-3.5 w-3.5" />}
+            {product.show_in_pos !== false ? "En POS" : "Oculto en POS"}
           </button>
 
           {/* Edit toggle */}

@@ -24,6 +24,7 @@ export interface StoreProduct {
   is_active: boolean;
   featured: boolean;
   capacity_unit?: string | null;
+  show_in_pos?: boolean;
   conversion_factor?: number;
   sales_unit_name?: string | null;
   created_at: string;
@@ -317,7 +318,17 @@ export function useStoreProductMutations() {
     return true;
   }
 
-  return { createProduct, updateProduct, toggleActive, toggleFeatured, softDelete, saving, error, setError };
+  async function togglePosVisibility(id: string, current: boolean): Promise<boolean> {
+    const db = getInsforge();
+    const { error: err } = await db.database
+      .from("products")
+      .update({ show_in_pos: !current })
+      .eq("id", id);
+    if (err) { setError((err as Error).message); return false; }
+    return true;
+  }
+
+  return { createProduct, updateProduct, toggleActive, toggleFeatured, togglePosVisibility, softDelete, saving, error, setError };
 }
 
 // ─── useProductImages ─────────────────────────────────────────────────────────

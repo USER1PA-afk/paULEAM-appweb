@@ -20,6 +20,7 @@ export interface PosProduct {
   price: number;                     // precio por unidad comercial
   image_url: string | null;
   capacity_unit: string | null;
+  show_in_pos: boolean;
   conversion_factor: number;         // kg por unidad comercial (ej: 2.20462)
   sales_unit_name: string;           // "Libra" | "Unidad" | etc.
   stock_actual: number;              // stock físico total en kg
@@ -65,10 +66,12 @@ export function usePosProducts() {
       const { data, error: dbError } = await db.database
         .from("stock_summary")
         .select(
-          "product_id, name, sku, unit, price, image_url, capacity_unit, conversion_factor, sales_unit_name, stock_actual, stock_available"
+          "product_id, name, sku, unit, price, image_url, capacity_unit, show_in_pos, conversion_factor, sales_unit_name, stock_actual, stock_available"
         )
         .eq("type", "PRODUCTO_TERMINADO")
         .eq("is_active", true)
+        .eq("show_in_pos", true)
+        .gt("price", 0)
         .order("name");
 
       if (dbError) throw dbError;
@@ -77,7 +80,6 @@ export function usePosProducts() {
 
       setProducts(
         rows
-          .filter((p) => p.sales_unit_name) // solo productos con unidad comercial configurada
           .map((p) => {
             const cf = p.conversion_factor ?? 1;
             const stockCommercial = Math.floor((p.stock_available ?? 0) * cf * 10000) / 10000;
