@@ -286,7 +286,7 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
       .eq("is_active", true)
       .order("name")
       .then(
-        ({ data }) => setProducts((data as Product[]) ?? []),
+        ({ data }) => setProducts((data as unknown as Product[]) ?? []),
         () => {}
       );
   }, [insforge]);
