@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { InstructionStep } from "@entities/recipe";
 import { useProducts, useRecipeMutations, useRecipe } from "../hooks";
 import { getAllUnits } from "../lib";
-import { ArrowLeft, Plus, Trash2, GripVertical, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, GripVertical, Save, Thermometer, Clock, X } from "lucide-react";
 
 interface RecipeFormProps {
   /** Si se pasa un ID, se carga la receta para edición */
@@ -24,6 +24,8 @@ interface StepRow {
   description: string;
   temperature: string;
   duration: string;
+  showTemperature: boolean;
+  showDuration: boolean;
 }
 
 function generateKey() {
@@ -81,6 +83,8 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
         description: s.description,
         temperature: s.temperature ?? "",
         duration: s.duration ?? "",
+        showTemperature: !!s.temperature,
+        showDuration: !!s.duration,
       }));
       setStepRows(sRows.length > 0 ? sRows : []);
 
@@ -120,8 +124,19 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
   function addStepRow() {
     setStepRows((prev) => [
       ...prev,
-      { key: generateKey(), description: "", temperature: "", duration: "" },
+      { key: generateKey(), description: "", temperature: "", duration: "", showTemperature: false, showDuration: false },
     ]);
+  }
+
+  function toggleStepField(key: string, field: "showTemperature" | "showDuration") {
+    setStepRows((prev) =>
+      prev.map((r) => {
+        if (r.key !== key) return r;
+        const next = !r[field];
+        const valueField = field === "showTemperature" ? "temperature" : "duration";
+        return { ...r, [field]: next, [valueField]: next ? r[valueField] : "" };
+      })
+    );
   }
 
   function updateStepRow(key: string, field: keyof StepRow, value: string) {
@@ -550,51 +565,101 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                       </span>
                     </div>
 
-                    {/* Content: description | temp + duration (side by side on lg) */}
-                    <div className="flex-1 grid gap-3 xl:grid-cols-[1fr_260px]">
-                      {/* Description */}
-                      <textarea
-                        aria-label={`Paso ${idx + 1}: descripción de la instrucción`}
-                        value={step.description}
-                        onChange={(e) => updateStepRow(step.key, "description", e.target.value)}
-                        rows={2}
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none transition-shadow"
-                        placeholder={`Paso ${idx + 1}: Describir la instrucción...`}
-                      />
-
-                      {/* Temperature + Duration — siempre side by side */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <label
-                            htmlFor={`step-${step.key}-temp`}
-                            className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
-                          >
-                            Temperatura
-                          </label>
-                          <input
-                            id={`step-${step.key}-temp`}
-                            value={step.temperature}
-                            onChange={(e) => updateStepRow(step.key, "temperature", e.target.value)}
-                            className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
-                            placeholder="Ej: 70°C"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label
-                            htmlFor={`step-${step.key}-dur`}
-                            className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
-                          >
-                            Duración
-                          </label>
-                          <input
-                            id={`step-${step.key}-dur`}
-                            value={step.duration}
-                            onChange={(e) => updateStepRow(step.key, "duration", e.target.value)}
-                            className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
-                            placeholder="Ej: 10 min"
-                          />
+                    {/* Content: description | optional fields (side by side on xl when active) */}
+                    <div className={`flex-1 grid gap-3 ${step.showTemperature || step.showDuration ? "xl:grid-cols-[1fr_260px]" : ""}`}>
+                      {/* Description + toggle chips */}
+                      <div className="space-y-1.5">
+                        <textarea
+                          aria-label={`Paso ${idx + 1}: descripción de la instrucción`}
+                          value={step.description}
+                          onChange={(e) => updateStepRow(step.key, "description", e.target.value)}
+                          rows={2}
+                          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none transition-shadow"
+                          placeholder={`Paso ${idx + 1}: Describir la instrucción...`}
+                        />
+                        <div className="flex flex-wrap gap-1.5">
+                          {!step.showTemperature && (
+                            <button
+                              type="button"
+                              onClick={() => toggleStepField(step.key, "showTemperature")}
+                              className="inline-flex items-center gap-1 rounded-full border border-dashed border-amber-400 dark:border-amber-600 px-2.5 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                            >
+                              <Thermometer aria-hidden="true" className="h-3 w-3" />
+                              + Temperatura
+                            </button>
+                          )}
+                          {!step.showDuration && (
+                            <button
+                              type="button"
+                              onClick={() => toggleStepField(step.key, "showDuration")}
+                              className="inline-flex items-center gap-1 rounded-full border border-dashed border-sky-400 dark:border-sky-600 px-2.5 py-0.5 text-[11px] font-medium text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-colors"
+                            >
+                              <Clock aria-hidden="true" className="h-3 w-3" />
+                              + Duración
+                            </button>
+                          )}
                         </div>
                       </div>
+
+                      {/* Active optional fields */}
+                      {(step.showTemperature || step.showDuration) && (
+                        <div className="grid grid-cols-2 gap-2 content-start">
+                          {step.showTemperature && (
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <label
+                                  htmlFor={`step-${step.key}-temp`}
+                                  className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
+                                >
+                                  Temperatura
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleStepField(step.key, "showTemperature")}
+                                  aria-label="Quitar campo temperatura"
+                                  className="rounded p-0.5 text-muted-foreground/60 hover:text-destructive transition-colors"
+                                >
+                                  <X aria-hidden="true" className="h-3 w-3" />
+                                </button>
+                              </div>
+                              <input
+                                id={`step-${step.key}-temp`}
+                                value={step.temperature}
+                                onChange={(e) => updateStepRow(step.key, "temperature", e.target.value)}
+                                className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
+                                placeholder="Ej: 70°C"
+                              />
+                            </div>
+                          )}
+                          {step.showDuration && (
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <label
+                                  htmlFor={`step-${step.key}-dur`}
+                                  className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
+                                >
+                                  Duración
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleStepField(step.key, "showDuration")}
+                                  aria-label="Quitar campo duración"
+                                  className="rounded p-0.5 text-muted-foreground/60 hover:text-destructive transition-colors"
+                                >
+                                  <X aria-hidden="true" className="h-3 w-3" />
+                                </button>
+                              </div>
+                              <input
+                                id={`step-${step.key}-dur`}
+                                value={step.duration}
+                                onChange={(e) => updateStepRow(step.key, "duration", e.target.value)}
+                                className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
+                                placeholder="Ej: 10 min"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Delete */}
