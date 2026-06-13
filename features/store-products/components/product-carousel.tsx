@@ -173,25 +173,23 @@ export function ProductCarousel() {
                     </span>
                   )}
 
-                  {/* Bottom gradient overlay */}
-                  <div
-                    aria-hidden="true"
-                    className="absolute bottom-0 left-0 right-0 h-28 bg-linear-to-t from-card/95 to-transparent"
-                  />
-
-                  {/* Info overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 space-y-0.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-accent-500">
-                      {product.unit}
-                    </p>
-                    <h3 className="font-extrabold text-lg leading-tight text-foreground line-clamp-1">
-                      {product.name}
-                    </h3>
-                    {product.short_description && (
-                      <p className="text-xs text-muted-foreground line-clamp-1">
-                        {product.short_description}
-                      </p>
-                    )}
+                  {/* Liquid glass info panel */}
+                  <div className="absolute bottom-0 left-0 right-0 m-3 rounded-2xl overflow-hidden">
+                    <div className="backdrop-blur-md bg-white/25 dark:bg-black/40 border border-white/40 dark:border-white/10 shadow-lg px-4 py-3 space-y-0.5">
+                      {(product.capacity_unit || product.unit) && (
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/90 drop-shadow-sm">
+                          {product.capacity_unit || product.unit}
+                        </p>
+                      )}
+                      <h3 className="font-extrabold text-lg leading-tight text-white drop-shadow-sm line-clamp-1">
+                        {product.name}
+                      </h3>
+                      {product.short_description && (
+                        <p className="text-xs text-white/75 drop-shadow-sm line-clamp-1">
+                          {product.short_description}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -199,6 +197,9 @@ export function ProductCarousel() {
                 <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-card">
                   <span className="text-xl font-extrabold text-brand-600 dark:text-brand-400">
                     {fmt.format(product.price)}
+                    {product.capacity_unit && (
+                      <span className="text-sm font-semibold text-muted-foreground ml-1">/ {product.capacity_unit}</span>
+                    )}
                   </span>
                   <span className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-brand-700 transition-colors">
                     Ver en tienda

@@ -66,16 +66,16 @@ export default function CartPage() {
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-foreground truncate">{item.name}</h3>
                 <p className="text-xs text-muted-foreground">
-                  {item.sku} · {item.unit}
+                  {item.sku}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {formatCurrency(item.price)} / {item.unit}
+                  {formatCurrency(item.price)} / {item.capacity_unit || item.sales_unit_name || item.unit}
                 </p>
               </div>
 
               <div className="text-center">
                 <p className="text-sm font-bold tabular-nums">{item.quantity}</p>
-                <p className="text-[10px] text-muted-foreground">{item.unit}</p>
+                <p className="text-[10px] text-muted-foreground">{item.capacity_unit || item.sales_unit_name || item.unit}</p>
               </div>
 
               <div className="text-right w-28">

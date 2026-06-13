@@ -15,6 +15,7 @@ export interface CartItem {
   reservation_id: string | null;
   conversion_factor?: number;
   sales_unit_name?: string | null;
+  capacity_unit?: string | null;
 }
 
 export interface PaymentConfig {
@@ -169,6 +170,7 @@ export function useCart() {
         image_url: string | null;
         conversion_factor?: number;
         sales_unit_name?: string | null;
+        capacity_unit?: string | null;
       },
       quantity: number = 1
     ) => {
@@ -198,6 +200,7 @@ export function useCart() {
                   reservation_id: data as string,
                   conversion_factor: product.conversion_factor,
                   sales_unit_name: product.sales_unit_name,
+                  capacity_unit: product.capacity_unit,
                 }
               : i
           );
@@ -215,6 +218,7 @@ export function useCart() {
               reservation_id: data as string,
               conversion_factor: product.conversion_factor,
               sales_unit_name: product.sales_unit_name,
+              capacity_unit: product.capacity_unit,
             },
           ];
         }

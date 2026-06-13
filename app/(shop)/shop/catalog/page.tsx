@@ -194,6 +194,7 @@ export default function CatalogPage() {
         image_url: product.image_url,
         conversion_factor: product.conversion_factor,
         sales_unit_name: product.sales_unit_name,
+        capacity_unit: product.capacity_unit,
       },
       Number(qty)
     );
