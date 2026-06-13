@@ -45,23 +45,23 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
     <>
     <div className="space-y-8 print:hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => router.push("/admin/recipes")}
-            className="flex items-center gap-1.5 rounded-lg bg-zinc-600 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-600 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Volver
           </button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{recipe.name}</h1>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{recipe.name}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               Ficha técnica de producción
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => window.print()}
             className="flex items-center gap-2 rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"

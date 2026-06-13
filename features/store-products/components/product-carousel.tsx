@@ -173,14 +173,9 @@ export function ProductCarousel() {
                     </span>
                   )}
 
-                  {/* Liquid glass info panel */}
+                  {/* Liquid glass info panel — includes price */}
                   <div className="absolute bottom-0 left-0 right-0 m-3 rounded-2xl overflow-hidden">
-                    <div className="backdrop-blur-md bg-white/25 dark:bg-black/40 border border-white/40 dark:border-white/10 shadow-lg px-4 py-3 space-y-0.5">
-                      {(product.capacity_unit || product.unit) && (
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/90 drop-shadow-sm">
-                          {product.capacity_unit || product.unit}
-                        </p>
-                      )}
+                    <div className="backdrop-blur-md bg-white/25 dark:bg-black/45 border border-white/40 dark:border-white/10 shadow-lg px-4 py-3 space-y-0.5">
                       <h3 className="font-extrabold text-lg leading-tight text-white drop-shadow-sm line-clamp-1">
                         {product.name}
                       </h3>
@@ -189,21 +184,21 @@ export function ProductCarousel() {
                           {product.short_description}
                         </p>
                       )}
+                      <div className="flex items-center justify-between pt-1.5">
+                        <span className="text-xl font-extrabold text-white drop-shadow-sm">
+                          {fmt.format(product.price)}
+                          {(product.capacity_unit || product.unit) && (
+                            <span className="text-sm font-semibold ml-1 text-white/75">
+                              / {product.capacity_unit || product.unit}
+                            </span>
+                          )}
+                        </span>
+                        <span className="rounded-full bg-brand-600/90 border border-white/20 px-3 py-1 text-[11px] font-bold text-white shadow-sm">
+                          Ver →
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Price bar */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-card">
-                  <span className="text-xl font-extrabold text-brand-600 dark:text-brand-400">
-                    {fmt.format(product.price)}
-                    {product.capacity_unit && (
-                      <span className="text-sm font-semibold text-muted-foreground ml-1">/ {product.capacity_unit}</span>
-                    )}
-                  </span>
-                  <span className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-brand-700 transition-colors">
-                    Ver en tienda
-                  </span>
                 </div>
               </Link>
             </div>

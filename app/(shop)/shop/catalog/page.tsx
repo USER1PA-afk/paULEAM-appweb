@@ -288,11 +288,13 @@ export default function CatalogPage() {
                       <ImageOff aria-hidden="true" className="h-12 w-12 opacity-20" />
                     </div>
                   )}
-                  <div className="absolute top-3 right-3">
-                    <span className="rounded-full bg-brand-600/90 px-2.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
-                      {product.unit}
-                    </span>
-                  </div>
+                  {product.featured && (
+                    <div className="absolute top-3 left-3">
+                      <span className="rounded-full bg-amber-500/90 px-2.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+                        ✦ Destacado
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Info */}
@@ -305,12 +307,6 @@ export default function CatalogPage() {
                       {product.short_description || product.description}
                     </p>
                   )}
-                  {product.featured && (
-                    <span className="inline-flex items-center gap-1 mt-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-400">
-                      ✦ Destacado
-                    </span>
-                  )}
-
                   <div className="mt-auto pt-4">
                     <p className="text-xl font-bold tabular-nums text-foreground">
                       {Number(product.price).toLocaleString("es-EC", {
@@ -318,8 +314,8 @@ export default function CatalogPage() {
                         currency: "USD",
                         minimumFractionDigits: 2,
                       })}
-                      {product.capacity_unit && (
-                        <span className="text-sm font-normal text-muted-foreground ml-1">/ {product.capacity_unit}</span>
+                      {(product.capacity_unit || product.unit) && (
+                        <span className="text-sm font-normal text-muted-foreground ml-1">/ {product.capacity_unit || product.unit}</span>
                       )}
                     </p>
                   </div>
@@ -486,8 +482,8 @@ export default function CatalogPage() {
                         currency: "USD",
                         minimumFractionDigits: 2,
                       })}
-                      {selectedProduct.capacity_unit && (
-                        <span className="text-base font-normal text-muted-foreground ml-1">/ {selectedProduct.capacity_unit}</span>
+                      {(selectedProduct.capacity_unit || selectedProduct.unit) && (
+                        <span className="text-base font-normal text-muted-foreground ml-1">/ {selectedProduct.capacity_unit || selectedProduct.unit}</span>
                       )}
                     </p>
                   </div>

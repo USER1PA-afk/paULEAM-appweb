@@ -206,7 +206,7 @@ export default function NewPackagingTemplatePage() {
                 </div>
 
                 {/* Granel → Qty → Terminado */}
-                <div className="grid gap-2 md:grid-cols-[1fr_auto_1fr] items-end">
+                <div className="grid gap-2 md:grid-cols-[1fr_auto_1fr] items-center">
 
                   {/* Granel */}
                   <div className="space-y-1">
@@ -240,7 +240,7 @@ export default function NewPackagingTemplatePage() {
                   </div>
 
                   {/* Flecha + cantidad */}
-                  <div className="flex flex-col items-center gap-0.5 pb-0.5 hidden md:flex">
+                  <div className="flex-col items-center gap-0.5 hidden md:flex">
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
                     <div className="flex gap-1">
                       <input
@@ -312,7 +312,7 @@ export default function NewPackagingTemplatePage() {
                 )}
 
                 {/* Unidad + Descripción */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-foreground">
                       Unidad empacada <span className="text-destructive">*</span>

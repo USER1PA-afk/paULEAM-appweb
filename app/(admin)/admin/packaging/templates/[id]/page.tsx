@@ -252,7 +252,7 @@ export default function EditPackagingTemplatePage() {
                 </div>
 
                 {/* Granel → Qty → Terminado */}
-                <div className="grid gap-2 md:grid-cols-[1fr_auto_1fr] items-end">
+                <div className="grid gap-2 md:grid-cols-[1fr_auto_1fr] items-center">
                   {/* Granel */}
                   <div className="space-y-1">
                     <label className="flex flex-wrap items-center gap-1 text-xs font-semibold text-foreground">
@@ -282,7 +282,7 @@ export default function EditPackagingTemplatePage() {
                   </div>
 
                   {/* Flecha + cantidad (desktop) */}
-                  <div className="flex flex-col items-center gap-0.5 pb-0.5 hidden md:flex">
+                  <div className="flex-col items-center gap-0.5 hidden md:flex">
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
                     <div className="flex gap-1">
                       <input type="number" required min="0.001" step="any" value={form.bulk_qty_per_unit}

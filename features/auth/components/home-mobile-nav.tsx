@@ -12,7 +12,8 @@ export function HomeMobileNav() {
   const { role } = useRole();
 
   return (
-    <div className="flex sm:hidden">
+    <div className="flex items-center gap-1 sm:hidden">
+      <ThemeToggle />
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Cerrar menú" : "Abrir menú"}
@@ -74,10 +75,6 @@ export function HomeMobileNav() {
             )}
           </div>
 
-          <div className="flex items-center justify-between px-3 py-2 border-t border-border mt-1">
-            <span className="text-xs text-muted-foreground">Tema</span>
-            <ThemeToggle />
-          </div>
         </div>
       )}
     </div>
