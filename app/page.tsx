@@ -147,7 +147,7 @@ export default function HomePage() {
         </section>
 
         {/* ── Product Carousel ── */}
-        <section className="bg-muted/40 dark:bg-muted/10 border-y border-border">
+        <section className="bg-muted/40 dark:bg-muted/10">
           <div className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
             <div className="mb-8 flex items-end justify-between gap-4">
               <div>

@@ -370,27 +370,35 @@ export default function CatalogPage() {
       {/* Product Detail Modal */}
       {selectedProduct && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs transition-opacity duration-200"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-xs transition-opacity duration-200"
           onClick={() => setSelectedProduct(null)}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl transition-all duration-200 scale-100 flex flex-col md:flex-row gap-8"
+            className="flex flex-col w-full max-w-4xl max-h-[92vh] sm:max-h-[90vh] rounded-t-2xl sm:rounded-2xl border border-border bg-card shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
-            <button
-              onClick={() => setSelectedProduct(null)}
-              className="absolute top-4 right-4 p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-              aria-label="Cerrar modal"
-            >
-              <XIcon className="h-5 w-5" />
-            </button>
+            {/* ── Sticky close bar — always visible ── */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+              <h2 className="font-semibold text-foreground text-sm truncate pr-4">
+                {selectedProduct.name}
+              </h2>
+              <button
+                onClick={() => setSelectedProduct(null)}
+                className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                aria-label="Cerrar modal"
+              >
+                <XIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* ── Scrollable content ── */}
+            <div className="overflow-y-auto flex-1 p-4 sm:p-6 flex flex-col md:flex-row gap-6 md:gap-8">
 
             {/* Left Side: Images */}
             <div className="w-full md:w-1/2 flex flex-col gap-4">
-              <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-muted border border-border flex items-center justify-center shadow-inner">
+              <div className="relative h-52 sm:h-72 md:aspect-square md:h-auto w-full rounded-xl overflow-hidden bg-muted border border-border flex items-center justify-center shadow-inner">
                 {activeImageUrl ? (
                   <Image
                     src={activeImageUrl}
@@ -459,18 +467,13 @@ export default function CatalogPage() {
 
             {/* Right Side: Details */}
             <div className="w-full md:w-1/2 flex flex-col gap-5 justify-between">
-              <div className="space-y-2">
-                {selectedProduct.weight && (
-                  <div className="flex items-center gap-2">
-                    <p className="text-[10px] font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 px-2 py-0.5 rounded">
-                      Peso: {selectedProduct.weight} {selectedProduct.unit}
-                    </p>
-                  </div>
-                )}
-                <h2 className="text-2xl font-bold text-foreground leading-tight">
-                  {selectedProduct.name}
-                </h2>
-              </div>
+              {selectedProduct.weight && (
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 px-2 py-0.5 rounded">
+                    Peso: {selectedProduct.weight} {selectedProduct.unit}
+                  </p>
+                </div>
+              )}
 
               {/* Price & Cart Actions */}
               <div className="rounded-xl bg-muted/30 p-4 border border-border space-y-4">
@@ -669,6 +672,7 @@ export default function CatalogPage() {
                   )}
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </div>

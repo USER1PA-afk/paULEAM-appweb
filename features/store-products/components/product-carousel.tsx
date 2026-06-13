@@ -173,27 +173,27 @@ export function ProductCarousel() {
                     </span>
                   )}
 
-                  {/* Liquid glass info panel — includes price */}
-                  <div className="absolute bottom-0 left-0 right-0 m-3 rounded-2xl overflow-hidden">
-                    <div className="backdrop-blur-md bg-white/25 dark:bg-black/45 border border-white/40 dark:border-white/10 shadow-lg px-4 py-3 space-y-0.5">
-                      <h3 className="font-extrabold text-lg leading-tight text-white drop-shadow-sm line-clamp-1">
+                  {/* Liquid glass info panel — flush at bottom, no gap */}
+                  <div className="absolute inset-x-3 bottom-0 rounded-t-2xl overflow-hidden">
+                    <div className="backdrop-blur-md bg-white/85 dark:bg-black/55 border-x border-t border-black/10 dark:border-white/10 px-4 py-3 space-y-0.5">
+                      <h3 className="font-extrabold text-lg leading-tight text-neutral-900 dark:text-white line-clamp-1">
                         {product.name}
                       </h3>
                       {product.short_description && (
-                        <p className="text-xs text-white/75 drop-shadow-sm line-clamp-1">
+                        <p className="text-xs text-neutral-600 dark:text-white/75 line-clamp-1">
                           {product.short_description}
                         </p>
                       )}
                       <div className="flex items-center justify-between pt-1.5">
-                        <span className="text-xl font-extrabold text-white drop-shadow-sm">
+                        <span className="text-xl font-extrabold text-neutral-900 dark:text-white">
                           {fmt.format(product.price)}
                           {(product.capacity_unit || product.unit) && (
-                            <span className="text-sm font-semibold ml-1 text-white/75">
+                            <span className="text-sm font-semibold ml-1 text-neutral-500 dark:text-white/70">
                               / {product.capacity_unit || product.unit}
                             </span>
                           )}
                         </span>
-                        <span className="rounded-full bg-brand-600/90 border border-white/20 px-3 py-1 text-[11px] font-bold text-white shadow-sm">
+                        <span className="rounded-full bg-brand-600 px-3 py-1 text-[11px] font-bold text-white">
                           Ver →
                         </span>
                       </div>
