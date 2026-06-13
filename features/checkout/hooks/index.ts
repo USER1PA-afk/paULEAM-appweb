@@ -39,6 +39,7 @@ interface Order {
   id: string;
   user_id: string;
   status: string;
+  fulfillment_type: string;
   total: number;
   payment_receipt_url: string | null;
   payment_method: string | null;
@@ -292,6 +293,7 @@ export function useCheckout() {
       shippingAddress: string;
       paymentReceipt: File;
       paymentMethod: string;
+      fulfillmentType: "ENVIO" | "RETIRO_EN_PLANTA";
       notes?: string;
     }) => {
       setLoading(true);
@@ -339,11 +341,12 @@ export function useCheckout() {
           .insert({
             user_id: userData.user.id,
             status: "PAGADO",
+            fulfillment_type: params.fulfillmentType,
             total: params.total,
             payment_receipt_url: publicUrl,
             payment_method: params.paymentMethod,
             delivery_date: deliveryDateStr,
-            shipping_address: params.shippingAddress,
+            shipping_address: params.shippingAddress || null,
             notes: params.notes ?? null,
           })
           .select()
@@ -422,35 +425,46 @@ export function useOrderManagement() {
       try {
         const { data: userData } = await insforge.auth.getCurrentUser();
 
-        // 1. Obtener los items de la orden con sus factores de conversión
-        const { data: itemsData, error: itemsError } = await insforge.database
-          .from("order_items")
-          .select(ORDER_ITEMS_SELECT)
-          .eq("order_id", orderId);
+        // 1. Fetch order to determine fulfillment type
+        const { data: orderData, error: orderFetchError } = await insforge.database
+          .from("orders")
+          .select("fulfillment_type")
+          .eq("id", orderId)
+          .single();
 
-        if (itemsError) throw itemsError;
+        if (orderFetchError) throw orderFetchError;
+        const fulfillmentType = (orderData as { fulfillment_type: string }).fulfillment_type;
 
-        // 2. Insertar EGRESOs en el inventory_ledger
-        const items = (itemsData as unknown as OrderItemDetail[]) ?? [];
-        for (const item of items) {
-          const conversionFactor = item.products?.conversion_factor ?? 1.0;
-          const physicalQuantity = Number((item.quantity / conversionFactor).toFixed(4));
+        // 2. For ENVIO: deduct inventory now. For RETIRO_EN_PLANTA: defer to confirmPickup.
+        if (fulfillmentType === "ENVIO") {
+          const { data: itemsData, error: itemsError } = await insforge.database
+            .from("order_items")
+            .select(ORDER_ITEMS_SELECT)
+            .eq("order_id", orderId);
 
-          const { error: ledgerError } = await insforge.database
-            .from("inventory_ledger")
-            .insert({
-              product_id: item.product_id,
-              movement_type: "EGRESO",
-              quantity: physicalQuantity,
-              reference_type: "VENTA",
-              reference_id: orderId,
-              notes: `Venta #${orderId.substring(0, 8)}`,
-            });
+          if (itemsError) throw itemsError;
 
-          if (ledgerError) throw ledgerError;
+          const items = (itemsData as unknown as OrderItemDetail[]) ?? [];
+          for (const item of items) {
+            const conversionFactor = item.products?.conversion_factor ?? 1.0;
+            const physicalQuantity = Number((item.quantity / conversionFactor).toFixed(4));
+
+            const { error: ledgerError } = await insforge.database
+              .from("inventory_ledger")
+              .insert({
+                product_id: item.product_id,
+                movement_type: "EGRESO",
+                quantity: physicalQuantity,
+                reference_type: "VENTA",
+                reference_id: orderId,
+                notes: `Venta #${orderId.substring(0, 8)}`,
+              });
+
+            if (ledgerError) throw ledgerError;
+          }
         }
 
-        // 3. Actualizar estado de la orden a APROBADO
+        // 3. Mark as APROBADO (payment verified)
         const { error } = await insforge.database
           .from("orders")
           .update({
@@ -466,6 +480,52 @@ export function useOrderManagement() {
       } catch (err: unknown) {
         return {
           error: err instanceof Error ? err.message : "Error al aprobar orden",
+        };
+      }
+    },
+    [insforge, fetchOrders]
+  );
+
+  const confirmPickup = useCallback(
+    async (orderId: string) => {
+      try {
+        const { data: itemsData, error: itemsError } = await insforge.database
+          .from("order_items")
+          .select(ORDER_ITEMS_SELECT)
+          .eq("order_id", orderId);
+
+        if (itemsError) throw itemsError;
+
+        const items = (itemsData as unknown as OrderItemDetail[]) ?? [];
+        for (const item of items) {
+          const conversionFactor = item.products?.conversion_factor ?? 1.0;
+          const physicalQuantity = Number((item.quantity / conversionFactor).toFixed(4));
+
+          const { error: ledgerError } = await insforge.database
+            .from("inventory_ledger")
+            .insert({
+              product_id: item.product_id,
+              movement_type: "EGRESO",
+              quantity: physicalQuantity,
+              reference_type: "VENTA",
+              reference_id: orderId,
+              notes: `Retiro en planta #${orderId.substring(0, 8)}`,
+            });
+
+          if (ledgerError) throw ledgerError;
+        }
+
+        const { error } = await insforge.database
+          .from("orders")
+          .update({ status: "COMPLETADO" })
+          .eq("id", orderId);
+
+        if (error) throw error;
+        await fetchOrders();
+        return { error: null };
+      } catch (err: unknown) {
+        return {
+          error: err instanceof Error ? err.message : "Error al confirmar entrega",
         };
       }
     },
@@ -492,7 +552,7 @@ export function useOrderManagement() {
     [insforge, fetchOrders]
   );
 
-  return { orders, loading, approveOrder, rejectOrder, refetch: fetchOrders };
+  return { orders, loading, approveOrder, rejectOrder, confirmPickup, refetch: fetchOrders };
 }
 
 /**

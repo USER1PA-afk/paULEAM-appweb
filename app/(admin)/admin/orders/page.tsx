@@ -2,10 +2,10 @@
 
 import { useOrderManagement, pickupCode, receiptProxyUrl } from "@features/checkout/hooks";
 import { formatDate, formatCurrency } from "@shared/lib/utils";
-import { PAYMENT_METHOD_LABELS } from "@entities/order";
+import { PAYMENT_METHOD_LABELS, FULFILLMENT_TYPE_LABELS } from "@entities/order";
 import { useState } from "react";
 import { getInsforge } from "@shared/lib/insforge/client";
-import { ChevronDown, ChevronUp, Receipt, X, Download, Eye, Loader2, Truck } from "lucide-react";
+import { ChevronDown, ChevronUp, Receipt, X, Download, Eye, Loader2, Truck, Store, PackageCheck } from "lucide-react";
 import { usePagination } from "@shared/hooks/use-pagination";
 import { TablePagination } from "@shared/components/ui/table-pagination";
 
@@ -19,7 +19,7 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; te
 };
 
 export default function AdminOrdersPage() {
-  const { orders, loading, approveOrder, rejectOrder } = useOrderManagement();
+  const { orders, loading, approveOrder, rejectOrder, confirmPickup } = useOrderManagement();
   const { page, setPage, paged: pagedOrders, from, to, total, totalPages } = usePagination(orders);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [acting, setActing] = useState<string | null>(null);
@@ -90,6 +90,14 @@ export default function AdminOrdersPage() {
     setActing(orderId);
     setActionError(null);
     const { error } = await rejectOrder(orderId);
+    if (error) setActionError(error);
+    setActing(null);
+  }
+
+  async function handleConfirmPickup(orderId: string) {
+    setActing(orderId);
+    setActionError(null);
+    const { error } = await confirmPickup(orderId);
     if (error) setActionError(error);
     setActing(null);
   }
@@ -244,6 +252,19 @@ export default function AdminOrdersPage() {
                           {PAYMENT_METHOD_LABELS[order.payment_method as keyof typeof PAYMENT_METHOD_LABELS] ?? order.payment_method}
                         </span>
                       )}
+                      {order.fulfillment_type && (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          order.fulfillment_type === "RETIRO_EN_PLANTA"
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+                            : "bg-sky-100 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300"
+                        }`}>
+                          {order.fulfillment_type === "RETIRO_EN_PLANTA"
+                            ? <Store aria-hidden="true" className="h-2.5 w-2.5" />
+                            : <Truck aria-hidden="true" className="h-2.5 w-2.5" />
+                          }
+                          {FULFILLMENT_TYPE_LABELS[order.fulfillment_type as keyof typeof FULFILLMENT_TYPE_LABELS] ?? order.fulfillment_type}
+                        </span>
+                      )}
                       {order.delivery_date && (
                         <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
                           <Truck aria-hidden="true" className="h-3 w-3" />
@@ -280,6 +301,19 @@ export default function AdminOrdersPage() {
                         {isActing ? "..." : "Rechazar"}
                       </button>
                     </div>
+                  )}
+
+                  {/* Confirm pickup — APROBADO + RETIRO_EN_PLANTA only */}
+                  {order.status === "APROBADO" && order.fulfillment_type === "RETIRO_EN_PLANTA" && (
+                    <button
+                      onClick={() => handleConfirmPickup(order.id)}
+                      disabled={isActing}
+                      aria-label={`Confirmar entrega de orden ${code}`}
+                      className="inline-flex items-center gap-1.5 shrink-0 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                    >
+                      <PackageCheck aria-hidden="true" className="h-3.5 w-3.5" />
+                      {isActing ? "..." : "Confirmar entrega"}
+                    </button>
                   )}
 
                   {/* Receipt preview button — visible on card row when url exists */}

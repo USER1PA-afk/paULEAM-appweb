@@ -17,6 +17,8 @@ import {
   Loader2,
   X,
   Download,
+  Store,
+  Truck,
 } from "lucide-react";
 import { usePagination } from "@shared/hooks/use-pagination";
 import { TablePagination } from "@shared/components/ui/table-pagination";
@@ -45,7 +47,7 @@ const STATUS_CONFIG: Record<
     dot: "bg-green-500",
     bg: "bg-white dark:bg-card border border-green-400",
     text: "text-green-700 dark:text-green-400 font-bold",
-    message: "¡Tu pedido fue aprobado! Puedes retirarlo con tu código.",
+    message: "¡Tu pago fue verificado! Te avisaremos cuando esté listo.",
   },
   ENVIADO: {
     label: "Enviado",
@@ -351,8 +353,27 @@ export default function MyOrdersPage() {
                     {/* Status message */}
                     {status.message && (
                       <p className={`text-xs font-medium px-3 py-2 rounded-md ${status.bg} ${status.text}`}>
-                        {status.message}
+                        {order.status === "APROBADO" && order.fulfillment_type === "RETIRO_EN_PLANTA"
+                          ? "¡Tu pago fue verificado! Acércate a la planta con tu código para retirar tu pedido."
+                          : order.status === "APROBADO" && order.fulfillment_type === "ENVIO"
+                          ? "¡Tu pedido fue aprobado y está siendo preparado para envío!"
+                          : status.message}
                       </p>
+                    )}
+
+                    {/* Fulfillment type badge */}
+                    {order.fulfillment_type && (
+                      <div className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium w-fit ${
+                        order.fulfillment_type === "RETIRO_EN_PLANTA"
+                          ? "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800"
+                          : "bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-900/20 dark:text-sky-300 dark:border-sky-800"
+                      }`}>
+                        {order.fulfillment_type === "RETIRO_EN_PLANTA"
+                          ? <Store aria-hidden="true" className="h-3.5 w-3.5" />
+                          : <Truck aria-hidden="true" className="h-3.5 w-3.5" />
+                        }
+                        {order.fulfillment_type === "RETIRO_EN_PLANTA" ? "Retiro en planta" : "Envío a domicilio"}
+                      </div>
                     )}
 
                     {/* Products */}

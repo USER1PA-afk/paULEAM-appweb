@@ -4,8 +4,9 @@ import { z } from "zod";
  * Entity: Order
  *
  * Orden de venta del E-Commerce.
- * Estado: PENDIENTE → PAGADO → APROBADO → ENVIADO → COMPLETADO
- * El admin valida el comprobante manualmente.
+ * Estado: PENDIENTE → PAGADO → APROBADO → COMPLETADO / CANCELADO
+ * ENVIO: inventario se deduce al APROBADO.
+ * RETIRO_EN_PLANTA: inventario se deduce al confirmar entrega física (→ COMPLETADO).
  */
 
 export const OrderStatusEnum = z.enum([
@@ -17,6 +18,14 @@ export const OrderStatusEnum = z.enum([
   "CANCELADO",
 ]);
 export type OrderStatus = z.infer<typeof OrderStatusEnum>;
+
+export const FulfillmentTypeEnum = z.enum(["ENVIO", "RETIRO_EN_PLANTA"]);
+export type FulfillmentType = z.infer<typeof FulfillmentTypeEnum>;
+
+export const FULFILLMENT_TYPE_LABELS: Record<FulfillmentType, string> = {
+  ENVIO:            "Envío a domicilio",
+  RETIRO_EN_PLANTA: "Retiro en planta",
+};
 
 export const PaymentMethodEnum = z.enum([
   "EFECTIVO",
@@ -54,6 +63,7 @@ export const OrderSchema = z.object({
   id: z.string().uuid(),
   user_id: z.string().uuid(),
   status: OrderStatusEnum,
+  fulfillment_type: FulfillmentTypeEnum.default("ENVIO"),
   total: z.number().nonnegative(),
   payment_receipt_url: z.string().url().optional(),
   payment_method: PaymentMethodEnum.nullable().optional(),

@@ -15,6 +15,8 @@ import {
   CalendarDays,
   Tag,
   ExternalLink,
+  Truck,
+  Store,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@shared/lib/utils";
 
@@ -24,6 +26,7 @@ interface ReceiptSnapshot {
   total: number;
   items: CartItem[];
   receiptUrl?: string | null;
+  fulfillmentType: "ENVIO" | "RETIRO_EN_PLANTA";
 }
 
 export default function CheckoutPage() {
@@ -31,6 +34,7 @@ export default function CheckoutPage() {
   const { submitOrder, loading, error } = useCheckout();
   const { isAuthenticated } = useAuth();
 
+  const [fulfillmentType, setFulfillmentType] = useState<"ENVIO" | "RETIRO_EN_PLANTA">("RETIRO_EN_PLANTA");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
@@ -112,7 +116,9 @@ export default function CheckoutPage() {
                 {code}
               </p>
               <p className="mt-1 text-xs font-medium text-brand-600/80">
-                Presenta este código al retirar tu pedido
+                {receiptData.fulfillmentType === "RETIRO_EN_PLANTA"
+                  ? "Preséntalo al operario al llegar a la planta"
+                  : "Guárdalo como referencia de tu pedido"}
               </p>
             </div>
 
@@ -200,7 +206,7 @@ export default function CheckoutPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!receipt) return;
-    if (!address.trim()) return;
+    if (fulfillmentType === "ENVIO" && !address.trim()) return;
     if (!paymentMethod) return;
 
     const snapshot = [...items];
@@ -211,6 +217,7 @@ export default function CheckoutPage() {
       shippingAddress: address,
       paymentReceipt: receipt,
       paymentMethod,
+      fulfillmentType,
       notes,
     });
 
@@ -221,6 +228,7 @@ export default function CheckoutPage() {
         total: result.data.total,
         items: snapshot,
         receiptUrl: result.data.payment_receipt_url,
+        fulfillmentType,
       });
       setSuccess(true);
       clearCart();
@@ -256,22 +264,60 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Shipping address */}
-        <div className="space-y-1.5">
-          <label htmlFor="checkout-address" className="text-sm font-medium text-foreground">
-            Dirección de Envío <span className="text-destructive">*</span>
-          </label>
-          <textarea
-            id="checkout-address"
-            required
-            rows={2}
-            autoComplete="street-address"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-            placeholder="Calle, ciudad, departamento..."
-          />
+        {/* Fulfillment type */}
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-foreground">Forma de entrega</p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setFulfillmentType("RETIRO_EN_PLANTA")}
+              className={`flex flex-col items-center gap-2 rounded-xl border-2 px-4 py-4 text-sm font-medium transition-colors ${
+                fulfillmentType === "RETIRO_EN_PLANTA"
+                  ? "border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300"
+                  : "border-border bg-background text-muted-foreground hover:border-brand-300 hover:bg-muted/30"
+              }`}
+            >
+              <Store aria-hidden="true" className="h-6 w-6" />
+              <span>Retiro en planta</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFulfillmentType("ENVIO")}
+              className={`flex flex-col items-center gap-2 rounded-xl border-2 px-4 py-4 text-sm font-medium transition-colors ${
+                fulfillmentType === "ENVIO"
+                  ? "border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300"
+                  : "border-border bg-background text-muted-foreground hover:border-brand-300 hover:bg-muted/30"
+              }`}
+            >
+              <Truck aria-hidden="true" className="h-6 w-6" />
+              <span>Envío a domicilio</span>
+            </button>
+          </div>
+          {fulfillmentType === "RETIRO_EN_PLANTA" && (
+            <p className="text-xs text-muted-foreground">
+              El inventario se descontará cuando el operario confirme la entrega física en planta.
+            </p>
+          )}
         </div>
+
+        {/* Shipping address — only required for delivery */}
+        {fulfillmentType === "ENVIO" && (
+          <div className="space-y-1.5">
+            <label htmlFor="checkout-address" className="text-sm font-medium text-foreground">
+              Dirección de Envío <span className="text-destructive">*</span>
+            </label>
+            <textarea
+              id="checkout-address"
+              required
+              rows={2}
+              autoComplete="street-address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+              placeholder="Calle, ciudad, departamento..."
+            />
+          </div>
+        )}
 
         {/* Payment method selector */}
         <PaymentMethodSelector value={paymentMethod} onChange={setPaymentMethod} />
@@ -336,7 +382,7 @@ export default function CheckoutPage() {
 
         <button
           type="submit"
-          disabled={loading || !receipt || !address.trim() || !paymentMethod}
+          disabled={loading || !receipt || (fulfillmentType === "ENVIO" && !address.trim()) || !paymentMethod}
           className="w-full rounded-lg bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-brand-700 disabled:opacity-50 transition-all"
         >
           {loading ? "Procesando..." : "Confirmar Orden"}
