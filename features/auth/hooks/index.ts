@@ -1,6 +1,6 @@
 "use client";
 
-import { getInsforge } from "@shared/lib/insforge/client";
+import { getInsforge, resetBrowserClient } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback } from "react";
 import { useAuditActions } from "@features/audit/hooks";
 
@@ -42,8 +42,14 @@ export function useAuth() {
       try {
         const res = await fetch("/api/auth/me");
         if (!res.ok) return false;
-        const { user } = await res.json() as { user: { id: string; email: string; role: string } | null };
+        const { user, token } = await res.json() as {
+          user: { id: string; email: string; role: string } | null;
+          token?: string;
+        };
         if (!user || !active) return false;
+        // Re-initialize the SDK singleton with the validated token so all
+        // subsequent database/RPC calls succeed (fixes localStorage-cleared state).
+        if (token) resetBrowserClient(token);
         setState({
           user: { id: user.id, email: user.email, emailVerified: true, profile: {}, metadata: {} } as AuthUser,
           loading: false,

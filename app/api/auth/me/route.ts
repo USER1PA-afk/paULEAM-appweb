@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
         email: userData.user.email ?? "",
         role:  resolvedRole,
       },
+      token,
     });
   } catch {
     return NextResponse.json({ user: null });

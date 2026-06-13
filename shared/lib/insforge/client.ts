@@ -46,17 +46,29 @@ export function createServerClient() {
  * Singleton del cliente browser para uso en hooks de cliente.
  * Se inicializa lazily para evitar errores en SSR.
  */
-let browserClient: ReturnType<typeof createBrowserClient> | null = null;
+let browserClient: ReturnType<typeof createClient> | null = null;
 
 export function getInsforge() {
   if (typeof window === "undefined") {
-    // En server, siempre crear una instancia nueva
     return createServerClient();
   }
-
   if (!browserClient) {
     browserClient = createBrowserClient();
   }
-
   return browserClient;
+}
+
+/**
+ * Re-initializes the browser singleton with an explicit access token.
+ * Called by the auth hook when localStorage is empty (cleared on mobile)
+ * but the httpOnly session cookie is still valid. The token-bearing client
+ * sends Authorization: Bearer <token> on every request, restoring
+ * authenticated DB/RPC access without relying on localStorage.
+ */
+export function resetBrowserClient(accessToken: string) {
+  if (typeof window === "undefined") return;
+  const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY;
+  if (!baseUrl || !anonKey) return;
+  browserClient = createClient({ baseUrl, anonKey, edgeFunctionToken: accessToken });
 }
