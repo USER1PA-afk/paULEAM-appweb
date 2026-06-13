@@ -3,13 +3,34 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@insforge/sdk";
 
 /**
- * GET /api/auth/me
+ * GET /api/auth/me — SERVER-SIDE SESSION HYDRATION FALLBACK
  *
- * Server-side session hydration fallback.
- * Reads the httpOnly pauleam-session cookie, validates it against Insforge,
- * and returns basic user info so the client can populate React auth state
- * even when the Insforge SDK's localStorage session is missing (e.g. after
- * a full localStorage.clear() or on slow mobile where getCurrentUser() times out).
+ * PURPOSE:
+ *   This endpoint exists because the Insforge SDK uses localStorage to store
+ *   the user session. On some mobile browsers, localStorage is cleared between
+ *   navigations (aggressive privacy settings or Chrome's data-clear). When that
+ *   happens, getCurrentUser() returns null and the React UI shows "not logged in"
+ *   even though the httpOnly pauleam-session cookie is still valid.
+ *
+ * WHAT IT DOES:
+ *   1. Reads the httpOnly pauleam-session cookie (JavaScript cannot do this)
+ *   2. Validates it by calling Insforge's getCurrentUser() server-side
+ *   3. Returns { user: { id, email, role }, token } so the client can:
+ *        a) Populate React auth state (email in navbar, isAuthenticated flag)
+ *        b) Call resetBrowserClient(token) to rebuild the SDK singleton so
+ *           all DB/RPC calls work without relying on localStorage
+ *
+ * CALLER:
+ *   features/auth/hooks/index.ts → hydrateFromServer() inside checkSession()
+ *
+ * RETURNING THE TOKEN:
+ *   The token is the value of the pauleam-session cookie. Returning it to the
+ *   client is safe because the request itself PROVES the cookie is present —
+ *   you cannot call this endpoint without already having the token in a cookie.
+ *   This mirrors the Supabase SSR pattern.
+ *
+ * DO NOT add authentication middleware that blocks this endpoint — it MUST be
+ * reachable in all states (including when the proxy would normally redirect).
  */
 export async function GET(request: NextRequest) {
   const token = request.cookies.get("pauleam-session")?.value;

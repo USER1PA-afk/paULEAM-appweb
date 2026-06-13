@@ -22,7 +22,41 @@ interface AuthState {
 }
 
 /**
- * Hook principal de autenticación.
+ * useAuth — PRIMARY AUTH HOOK (TRACK B)
+ *
+ * Manages React auth state using the Insforge SDK (localStorage-based session).
+ * This is independent from the httpOnly cookie system used by proxy.ts (Track A).
+ *
+ * SESSION INITIALIZATION — checkSession():
+ *   PRIMARY:  insforge.auth.getCurrentUser() — reads from SDK / localStorage.
+ *             Timeout: 8 seconds (was 3s — too short for slow mobile networks).
+ *   FALLBACK: hydrateFromServer() — called when primary returns null or times out.
+ *             Hits GET /api/auth/me which validates the httpOnly cookie server-side
+ *             and returns { user, token }. Then calls resetBrowserClient(token) to
+ *             rebuild the SDK singleton so DB/RPC calls work without localStorage.
+ *
+ * WHY THE FALLBACK EXISTS:
+ *   On some mobile browsers (Chrome Android with aggressive privacy settings),
+ *   localStorage is cleared between page navigations. The SDK loses its session
+ *   on every reload. The httpOnly cookie (Track A) survives because it is not
+ *   in localStorage. The fallback re-bridges Track A → Track B.
+ *
+ * signOut() RULES:
+ *   - Calls POST /api/auth/logout first (clears httpOnly cookies).
+ *   - Then calls insforge.auth.signOut() (clears in-memory SDK session).
+ *   - Then calls localStorage.clear() — clears ALL storage except the cart.
+ *     DO NOT revert to key-pattern filtering; it missed SDK token key names
+ *     and was the original cause of persistent phantom sessions.
+ *   - Redirects via window.location.replace() NOT router.push().
+ *     router.push() is a soft navigation — mobile browsers may not flush
+ *     cleared cookies before the next proxy check, causing redirect loops.
+ *
+ * signIn() RULES:
+ *   - Token is extracted with fallback: accessToken → access_token → session.access_token
+ *     The Insforge SDK may return camelCase or snake_case depending on version.
+ *   - set-cookie response is checked for ok status. A non-ok response throws
+ *     and the user sees the error. DO NOT silently ignore it (was the cause
+ *     of silent mobile login failures that left users in redirect loops).
  */
 export function useAuth() {
   const [state, setState] = useState<AuthState>({

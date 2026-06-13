@@ -147,6 +147,12 @@ Exposed from `features/checkout/hooks/index.ts` alongside `useCart`, `useCheckou
 | `cost_per_unit` column not found | Migration `20260525000000` not applied — run it or add column manually |
 | ENVASE_EMPAQUE as recipe ingredient fails | DB trigger blocks it — use only MATERIA_PRIMA or INSUMO |
 | PRODUCTO_TERMINADO manual INGRESO fails | DB trigger blocks it — only allowed via PRODUCCION/EMPAQUE/AJUSTE |
+| **User stuck in `/login` ↔ `/shop/catalog` redirect loop** | Phantom session: httpOnly cookies not cleared. Navigate to `/logout` (always reachable, not in proxy matcher) — it nukes all cookies + localStorage and redirects to `/login`. |
+| **`isAuthenticated = false` after login on mobile** | Two causes: (1) `getCurrentUser()` times out on slow networks — timeout is 8s, do not lower it. (2) localStorage cleared by mobile browser — `useAuth` falls back to `GET /api/auth/me` which reads the httpOnly cookie and calls `resetBrowserClient(token)` to rebuild the SDK. |
+| **DB/RPC calls fail with "Not authenticated" on mobile** | SDK singleton has no session (localStorage cleared). The `hydrateFromServer()` fallback in `useAuth` calls `resetBrowserClient(token)` to reinitialize the singleton with `edgeFunctionToken`. Do NOT remove `resetBrowserClient` from `shared/lib/insforge/client.ts`. |
+| **Logout appears to work but session persists** | `router.push()` is a soft navigation — mobile browsers do not flush cleared cookies before the next proxy check. `signOut()` must use `window.location.replace()`. Do NOT change it back to `router.push()`. |
+| **set-cookie silently fails → no session after login** | Old pattern swallowed non-ok HTTP responses. Now `signIn()` throws on non-ok set-cookie response. The error is shown to the user. Do NOT revert to `.catch(() => {})` on the set-cookie fetch. |
+| **`stock_summary` view missing a column** | The view uses an explicit column list — new columns on `products` are NOT automatically included. Create a migration to `DROP VIEW ... CASCADE; CREATE VIEW ... AS SELECT ..., new_col ...`. See `migrations/20260616000001_stock-summary-add-pos-fields.sql` as the pattern. |
 
 ---
 

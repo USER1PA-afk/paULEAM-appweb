@@ -145,6 +145,74 @@ paULEAM-appweb/
 20. **Audit module append-only:** `audit_log` never uses UPDATE or DELETE. The only write path is `log_audit_event()` RPC (SECURITY DEFINER). Audit failures must be silenced with `console.warn` — they must never block the primary operation.
 21. **Audit events from frontend:** Login/logout/login-failed events are logged in `features/auth/hooks/index.ts` via `useAuditActions().logEvent()`. Data-change events (products, status changes, role changes) are logged automatically by PostgreSQL triggers.
 
+## Auth System Architecture — Two-Track Design
+
+The app uses **two parallel auth mechanisms** that must stay in sync. Never collapse them into one.
+
+### Track A — httpOnly Cookies (Proxy / Route Protection)
+
+| Cookie | Written by | Cleared by | Read by |
+|--------|-----------|------------|---------|
+| `pauleam-session` | `POST /api/auth/set-cookie` | `POST /api/auth/logout` | `proxy.ts` only |
+| `pauleam-role` | `POST /api/auth/set-cookie` | `POST /api/auth/logout` | `proxy.ts` only |
+
+- JavaScript **cannot** read httpOnly cookies — they are invisible to the SDK and all client code.
+- The proxy has a **fast path** (both cookies present → trust immediately, zero network calls) and a **fallback path** (session present, role missing → one Insforge call to resolve role).
+- Cookie attributes in `set-cookie` and `logout` **must match exactly** (httpOnly, secure, sameSite, path). A mismatch means the browser treats them as different cookies and logout fails to delete the session → phantom session.
+
+### Track B — Insforge SDK Session (React State / DB Calls)
+
+- Stored in **localStorage** by the SDK after `signInWithPassword()`.
+- Used by every hook that calls `getInsforge()` for authenticated DB/RPC calls.
+- Managed by `useAuth()` in `features/auth/hooks/index.ts`.
+
+### Why Two Tracks?
+
+`proxy.ts` runs as Next.js middleware (server-side, edge runtime). It cannot access the SDK or React state. It needs a server-readable credential → httpOnly cookies.
+
+Client components need the SDK session to make authenticated Insforge API calls → localStorage.
+
+### The Mobile Problem & Fix
+
+On some mobile browsers (Chrome Android with aggressive privacy settings), **localStorage is cleared between page navigations**. Track B breaks — SDK returns null — React shows "not logged in" even though Track A (httpOnly cookie) is valid.
+
+**Fix implemented:**
+
+1. `checkSession()` in `useAuth` gives the SDK **8 seconds** (not 3) before timing out.
+2. If SDK returns null or times out → `hydrateFromServer()` calls `GET /api/auth/me`.
+3. `/api/auth/me` reads `pauleam-session` (httpOnly) server-side, validates it, returns `{ user, token }`.
+4. `resetBrowserClient(token)` in `shared/lib/insforge/client.ts` rebuilds the SDK singleton with `edgeFunctionToken: token` so all subsequent DB/RPC calls work without localStorage.
+
+### Login Flow Critical Rules
+
+- Token extraction must try all variants: `accessToken → access_token → session.access_token` (SDK may return camelCase or snake_case).
+- `set-cookie` response **must be checked for ok status** — a non-ok response must throw, not be silently ignored. Silent failure was the original cause of phantom sessions on mobile.
+- After `set-cookie`, wait **100ms** before `window.location.href` — mobile browsers need time to flush `Set-Cookie` headers to the cookie jar before the next navigation fires.
+
+### Logout Flow Critical Rules
+
+- **Always use `window.location.replace()`**, never `router.push()`. Soft navigation does not cause the browser to re-read the cookie jar; the proxy would see stale cookies on the first post-logout request → redirect loop.
+- `signOut()` must call three things in order: `POST /api/auth/logout` → `insforge.auth.signOut()` → `localStorage.clear()`.
+- `localStorage.clear()` wipes ALL storage (except the cart, which is preserved). Do NOT revert to key-pattern filtering — it missed SDK token key names.
+
+### Emergency Escape Hatch
+
+`/logout` page (`app/logout/page.tsx`):
+- Calls `POST /api/auth/logout` + clears `localStorage` + clears `sessionStorage` + redirects to `/login`.
+- **NOT in the proxy matcher** — always reachable even with a phantom session.
+- User can navigate to it directly in the browser address bar to break any stuck session.
+
+### Proxy Matcher — What Is and Is Not Protected
+
+```
+matcher: ["/admin", "/admin/:path*", "/login", "/register"]
+```
+
+- `/shop/*` — NOT protected by proxy. Shop pages render for all users; `useAuth()` controls the UI.
+- `/logout` — NOT protected. Must be reachable in all states (escape hatch).
+- `/api/auth/me` — NOT protected. Must be callable when the SDK has no session (it IS the fallback).
+- `/pos` — NOT in matcher. POS layout handles its own role check client-side.
+
 ## User Roles
 
 | Role | Access |
@@ -154,7 +222,7 @@ paULEAM-appweb/
 | `sales_kiosk` | POS only (`/pos`) |
 | `cliente` | Shop only (`/shop/*`) |
 
-Roles are stored in `profiles.role` and read from JWT claims. The `proxy.ts` reads the `pauleam-role` cookie set by the client-side layouts after auth.
+Roles are stored in `profiles.role` and read from JWT claims. The `proxy.ts` reads the `pauleam-role` cookie set server-side by `/api/auth/set-cookie` after login.
 
 ## Insforge SDK — Correct API
 

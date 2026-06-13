@@ -2,11 +2,25 @@ import { NextResponse } from "next/server";
 import { createClient } from "@insforge/sdk";
 
 /**
- * POST /api/auth/set-cookie
+ * POST /api/auth/set-cookie — TRACK A WRITER
  *
- * Validates a JWT token server-side and sets httpOnly session cookies.
- * Called by the client after a successful signInWithPassword so the token
- * is stored in an httpOnly cookie (not accessible to JS) for proxy protection.
+ * Sets the httpOnly auth cookies that Track A (proxy middleware) depends on.
+ * Called immediately after every successful signInWithPassword() or signUp().
+ *
+ * CRITICAL RULES:
+ *   1. BOTH cookies (pauleam-session AND pauleam-role) must always be set
+ *      together. The proxy fast-path requires both present and valid.
+ *   2. Cookie options (httpOnly, secure, sameSite, path, maxAge) MUST match
+ *      exactly what /api/auth/logout uses to clear them. A mismatch in any
+ *      attribute means logout cannot delete the cookie (browser treats them
+ *      as different cookies).
+ *   3. This endpoint returns 401 if Insforge token validation fails.
+ *      The caller (signIn in useAuth) treats a non-ok response as a hard
+ *      error shown to the user. DO NOT revert to silently ignoring the
+ *      response — that was the original cause of phantom sessions on mobile.
+ *   4. The 100ms delay before window.location.href in the login form exists
+ *      to give mobile browsers time to flush Set-Cookie headers to the cookie
+ *      jar before the next navigation fires. DO NOT remove it.
  */
 export async function POST(request: Request) {
   let token: string;
