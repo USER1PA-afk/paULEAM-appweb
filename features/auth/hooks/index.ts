@@ -2,7 +2,6 @@
 
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useAuditActions } from "@features/audit/hooks";
 
 interface AuthUser {
@@ -33,7 +32,6 @@ export function useAuth() {
   });
 
   const insforge = getInsforge();
-  const router = useRouter();
   const { logEvent } = useAuditActions();
 
   // Verificar sesión al montar
@@ -200,10 +198,10 @@ export function useAuth() {
         }
       }
       if (shouldRedirect) {
-        router.push("/");
+        window.location.replace("/");
       }
     }
-  }, [insforge, router, logEvent]);
+  }, [insforge, logEvent]);
 
   return {
     ...state,
