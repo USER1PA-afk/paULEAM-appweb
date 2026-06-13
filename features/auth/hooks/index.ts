@@ -37,10 +37,27 @@ export function useAuth() {
   // Verificar sesión al montar
   useEffect(() => {
     let active = true;
+
+    async function hydrateFromServer(): Promise<boolean> {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (!res.ok) return false;
+        const { user } = await res.json() as { user: { id: string; email: string; role: string } | null };
+        if (!user || !active) return false;
+        setState({
+          user: { id: user.id, email: user.email, emailVerified: true, profile: {}, metadata: {} } as AuthUser,
+          loading: false,
+          error: null,
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
     async function checkSession() {
-      // Crear una promesa que rechaza después de un timeout de 3 segundos
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), 3000)
+        setTimeout(() => reject(new Error("Timeout")), 8000)
       );
 
       try {
@@ -52,9 +69,15 @@ export function useAuth() {
         if (!active) return;
 
         if (error || !data?.user) {
-          setState({ user: null, loading: false, error: null });
+          // SDK returned null — localStorage may be cleared or slow network.
+          // Fall back to server-side cookie validation.
+          const hydrated = await hydrateFromServer();
+          if (!hydrated && active) {
+            setState({ user: null, loading: false, error: null });
+          }
           return;
         }
+
         setState({
           user: data.user as unknown as AuthUser,
           loading: false,
@@ -62,11 +85,10 @@ export function useAuth() {
         });
 
         // Silently refresh the httpOnly session cookie so the proxy
-        // stays in sync when the SDK refreshes its internal token
+        // stays in sync when the SDK refreshes its internal token.
         insforge.auth.refreshSession().then((res) => {
-          const freshToken = (
-            res?.data as { accessToken?: string } | null
-          )?.accessToken;
+          const raw = res?.data as { accessToken?: string; access_token?: string; session?: { access_token?: string } } | null;
+          const freshToken = raw?.accessToken ?? raw?.access_token ?? raw?.session?.access_token;
           if (freshToken && active) {
             fetch("/api/auth/set-cookie", {
               method: "POST",
@@ -75,16 +97,18 @@ export function useAuth() {
             }).catch(() => {});
           }
         }).catch(() => {});
-      } catch (err) {
+      } catch {
         if (!active) return;
-        console.warn("La verificación de sesión falló o expiró:", err);
-        setState({ user: null, loading: false, error: err instanceof Error ? err.message : "Error de sesión" });
+        // Timeout or network error — try server fallback before giving up.
+        const hydrated = await hydrateFromServer();
+        if (!hydrated && active) {
+          setState({ user: null, loading: false, error: null });
+        }
       }
     }
+
     checkSession();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [insforge]);
 
   const signIn = useCallback(
