@@ -188,14 +188,12 @@ export function useAuth() {
       console.warn("Logout warning:", err);
     } finally {
       setState({ user: null, loading: false, error: null });
-      // Clear any remaining SDK localStorage tokens
       if (typeof window !== "undefined") {
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-          const key = localStorage.key(i);
-          if (key && (key.includes("-auth-token") || key.includes("access_token"))) {
-            localStorage.removeItem(key);
-          }
-        }
+        // Preserve cart; wipe everything else (catches any SDK token key name)
+        const cartSnapshot = localStorage.getItem("pauleam_cart");
+        try { localStorage.clear(); } catch { /* ignore */ }
+        try { sessionStorage.clear(); } catch { /* ignore */ }
+        if (cartSnapshot) localStorage.setItem("pauleam_cart", cartSnapshot);
       }
       if (shouldRedirect) {
         window.location.replace("/");
