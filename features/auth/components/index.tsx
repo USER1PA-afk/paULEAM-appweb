@@ -36,6 +36,12 @@ export function LoginForm() {
         role = (profile as { role: string } | null)?.role ?? "cliente";
       }
 
+      // Yield to the browser's cookie-commit microtask queue before navigating.
+      // Mobile browsers (Chrome Android) may not flush Set-Cookie to the
+      // cookie jar synchronously — a 100ms gap prevents the race condition
+      // where the proxy fires before the httpOnly session cookie is readable.
+      await new Promise((r) => setTimeout(r, 100));
+
       // Hard navigation so the browser sends a fresh request carrying
       // the pauleam-session httpOnly cookie the proxy depends on.
       if (role === "sales_kiosk") {
@@ -47,6 +53,7 @@ export function LoginForm() {
       }
     } catch {
       // Si falla la consulta del rol, enviamos a dashboard (el layout se encarga de proteger)
+      await new Promise((r) => setTimeout(r, 100));
       window.location.href = "/admin/dashboard";
     }
   }

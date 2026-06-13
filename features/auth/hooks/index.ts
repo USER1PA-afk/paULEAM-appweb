@@ -101,15 +101,19 @@ export function useAuth() {
         }
 
         // Set httpOnly session cookie server-side before returning
-        const token = (
-          data as { accessToken?: string } | null
-        )?.accessToken;
+        const raw = data as { accessToken?: string; access_token?: string; session?: { access_token?: string } } | null;
+        const token = raw?.accessToken ?? raw?.access_token ?? raw?.session?.access_token;
         if (token) {
-          await fetch("/api/auth/set-cookie", {
+          const cookieRes = await fetch("/api/auth/set-cookie", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ token }),
-          }).catch((e) => console.warn("set-cookie failed:", e));
+          }).catch(() => null);
+          if (!cookieRes?.ok) {
+            throw new Error("No se pudo establecer la sesión. Intenta de nuevo.");
+          }
+        } else {
+          throw new Error("Token de sesión no disponible. Intenta de nuevo.");
         }
 
         setState({
@@ -149,15 +153,19 @@ export function useAuth() {
         if (loginRes.error) throw loginRes.error;
 
         // Set httpOnly session cookie server-side
-        const regToken = (
-          loginRes.data as { accessToken?: string } | null
-        )?.accessToken;
+        const rawReg = loginRes.data as { accessToken?: string; access_token?: string; session?: { access_token?: string } } | null;
+        const regToken = rawReg?.accessToken ?? rawReg?.access_token ?? rawReg?.session?.access_token;
         if (regToken) {
-          await fetch("/api/auth/set-cookie", {
+          const regCookieRes = await fetch("/api/auth/set-cookie", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ token: regToken }),
-          }).catch((e) => console.warn("set-cookie failed:", e));
+          }).catch(() => null);
+          if (!regCookieRes?.ok) {
+            throw new Error("No se pudo establecer la sesión. Intenta de nuevo.");
+          }
+        } else {
+          throw new Error("Token de sesión no disponible. Intenta de nuevo.");
         }
 
         // El trigger handle_new_user() crea el perfil con rol 'cliente' por defecto
