@@ -175,7 +175,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Two columns: Quick Actions + Recent Activity */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         {/* Quick Actions */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-foreground">Acciones Rápidas</h2>

@@ -208,9 +208,9 @@ export default function CatalogPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       {/* Header */}
-      <div className="space-y-2 mb-8">
+      <div className="space-y-2 mb-6 sm:mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
           Catálogo de Productos
         </h1>
@@ -261,7 +261,7 @@ export default function CatalogPage() {
           <p className="text-sm mt-1">No hay productos disponibles en este momento.</p>
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {products.map((product, idx) => (
             <div
               key={product.id}
@@ -618,7 +618,7 @@ export default function CatalogPage() {
                   )}
                 </div>
 
-                <div className="py-3 text-xs text-muted-foreground flex-1 overflow-y-auto max-h-[160px] scrollbar-thin">
+                <div className="py-3 text-xs text-muted-foreground flex-1 overflow-y-auto max-h-[240px] md:max-h-[160px] scrollbar-thin">
                   {activeTab === "descripcion" && (
                     <p className="whitespace-pre-line leading-relaxed text-foreground/90">
                       {selectedProduct.long_description || selectedProduct.description || "Sin descripción detallada disponible."}

@@ -165,7 +165,7 @@ export default function NewStoreProductPage() {
 
       {/* ─── Layout: form | preview ─── */}
       <form onSubmit={handleSubmit} noValidate>
-        <div className="flex gap-6 items-start">
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
 
           {/* ── Form column ── */}
           <div className="flex-1 min-w-0 space-y-4">

@@ -134,26 +134,28 @@ export function AuditLogTable() {
           ))}
         </select>
 
-        {/* Rango de fechas */}
-        <input
-          type="date"
-          value={filters.date_from ?? ""}
-          onChange={(e) => setFilter("date_from", e.target.value || undefined)}
-          className="rounded-full border border-border bg-background px-3 py-1 text-[11px] font-medium focus:outline-none focus:ring-1 focus:ring-ring"
-          aria-label="Desde"
-        />
-        <span className="text-xs text-muted-foreground">—</span>
-        <input
-          type="date"
-          value={filters.date_to ?? ""}
-          onChange={(e) => setFilter("date_to", e.target.value || undefined)}
-          className="rounded-full border border-border bg-background px-3 py-1 text-[11px] font-medium focus:outline-none focus:ring-1 focus:ring-ring"
-          aria-label="Hasta"
-        />
+        {/* Rango de fechas — wraps on mobile */}
+        <div className="flex items-center gap-1.5 w-full sm:w-auto">
+          <input
+            type="date"
+            value={filters.date_from ?? ""}
+            onChange={(e) => setFilter("date_from", e.target.value || undefined)}
+            className="flex-1 sm:flex-none rounded-full border border-border bg-background px-3 py-1 text-[11px] font-medium focus:outline-none focus:ring-1 focus:ring-ring min-w-0"
+            aria-label="Desde"
+          />
+          <span className="text-xs text-muted-foreground shrink-0">—</span>
+          <input
+            type="date"
+            value={filters.date_to ?? ""}
+            onChange={(e) => setFilter("date_to", e.target.value || undefined)}
+            className="flex-1 sm:flex-none rounded-full border border-border bg-background px-3 py-1 text-[11px] font-medium focus:outline-none focus:ring-1 focus:ring-ring min-w-0"
+            aria-label="Hasta"
+          />
+        </div>
 
         <button
           onClick={() => refetch()}
-          className="ml-auto flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-[11px] font-medium hover:bg-muted transition-colors"
+          className="sm:ml-auto flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-[11px] font-medium hover:bg-muted transition-colors"
           aria-label="Actualizar"
         >
           <RefreshCw aria-hidden="true" className="h-3 w-3" />
@@ -185,8 +187,8 @@ export function AuditLogTable() {
           <p className="text-sm mt-1">Los cambios aparecerán aquí automáticamente.</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="rounded-xl border border-border bg-card shadow-sm overflow-x-auto">
+          <table className="w-full min-w-[480px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold tracking-widest uppercase text-muted-foreground/60 w-36">

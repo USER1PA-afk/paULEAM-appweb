@@ -28,7 +28,7 @@ export default function AdminInventoryPage() {
 
       <div className="space-y-8 print:space-y-6">
         {/* Header — oculto al imprimir */}
-        <div className="flex items-start justify-between print:hidden">
+        <div className="flex items-start justify-between flex-wrap gap-3 print:hidden">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
               Inventario (Bodega)

@@ -178,7 +178,7 @@ export default function ProductionOrderDetailPage() {
   return (
     <div className="space-y-6">
       {/* ── Header ───────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="space-y-1">
           <button
             onClick={() => router.push("/admin/production")}

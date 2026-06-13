@@ -424,7 +424,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </aside>
 
         {/* ── Main content ── */}
-        <main id="main-content" className="flex-1 overflow-y-auto p-5 lg:p-7">
+        <main id="main-content" className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-7">
           {role === "cliente" || role === "sales_kiosk" ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
               <div

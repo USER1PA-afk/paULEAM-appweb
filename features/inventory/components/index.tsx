@@ -45,7 +45,7 @@ function StockSubTable({
         <span className="text-[10px] font-semibold tabular-nums text-muted-foreground/60 bg-muted rounded-full px-1.5 py-px">{items.length}</span>
       </div>
       <div className="overflow-x-auto rounded-xl border border-border/70 shadow-sm">
-        <table aria-label={label} className="w-full text-sm table-fixed">
+        <table aria-label={label} className="w-full min-w-[420px] text-sm table-fixed">
           <colgroup>
             <col className="w-[14%]" />
             <col className="w-[40%]" />
@@ -776,23 +776,24 @@ export function InventoryLedgerTable({
           })}
         </select>
 
-        <div className="flex items-center gap-1.5 ml-auto">
-          <label htmlFor="ledger-from" className="text-[11px] text-muted-foreground">Desde</label>
+        {/* Date range — wraps to its own line on mobile */}
+        <div className="flex items-center gap-1.5 sm:ml-auto w-full sm:w-auto">
+          <label htmlFor="ledger-from" className="text-[11px] text-muted-foreground shrink-0">Desde</label>
           <input id="ledger-from" type="date" value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)} max={dateTo || undefined}
-            className="h-7 rounded-full border border-border bg-background px-2.5 text-[11px] focus:outline-none focus:ring-2 focus:ring-ring"
+            className="h-7 flex-1 sm:flex-none rounded-full border border-border bg-background px-2.5 text-[11px] focus:outline-none focus:ring-2 focus:ring-ring min-w-0"
           />
-          <span className="text-muted-foreground/40 text-[11px]">—</span>
+          <span className="text-muted-foreground/40 text-[11px] shrink-0">—</span>
           <input id="ledger-to" type="date" value={dateTo}
             onChange={(e) => setDateTo(e.target.value)} min={dateFrom || undefined}
-            className="h-7 rounded-full border border-border bg-background px-2.5 text-[11px] focus:outline-none focus:ring-2 focus:ring-ring"
+            className="h-7 flex-1 sm:flex-none rounded-full border border-border bg-background px-2.5 text-[11px] focus:outline-none focus:ring-2 focus:ring-ring min-w-0"
           />
         </div>
       </div>
 
       {/* Table */}
       <div className="overflow-x-auto rounded-xl border border-border/70 shadow-sm">
-        <table aria-label="Movimientos de inventario" className="w-full text-sm">
+        <table aria-label="Movimientos de inventario" className="w-full min-w-[500px] text-sm">
           <thead>
             <tr className="border-b border-border/70 bg-muted/40">
               <th className="px-4 py-2.5 text-left text-[10px] font-semibold tracking-widest uppercase text-muted-foreground/60 w-36">Fecha</th>

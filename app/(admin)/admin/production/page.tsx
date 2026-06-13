@@ -240,14 +240,14 @@ export default function AdminProductionPage() {
 
       <div className="space-y-8 print:space-y-4">
         {/* Header */}
-        <div className="flex items-start justify-between print:hidden">
+        <div className="flex items-start justify-between flex-wrap gap-3 print:hidden">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Producción</h1>
             <p className="mt-1 text-muted-foreground">
               Órdenes de producción con motor de escalado automático de recetas.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button onClick={() => window.print()} className="btn-secondary">
               <Printer className="h-4 w-4" /> PDF
             </button>
@@ -580,7 +580,7 @@ export default function AdminProductionPage() {
           </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[600px] text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="px-4 py-3 text-center font-medium text-muted-foreground">Lote</th>

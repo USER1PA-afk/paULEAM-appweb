@@ -1406,8 +1406,8 @@ export default function AdminProductsPage() {
                   </span>
                   <span className="text-xs text-muted-foreground">({typeProducts.length})</span>
                 </h2>
-                <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-                  <table className="w-full text-sm">
+                <div className="rounded-xl border border-border bg-card shadow-sm overflow-x-auto">
+                  <table className="w-full min-w-[600px] text-sm">
                     <thead>
                       <tr className="border-b border-border bg-muted/50 text-left">
                         <th className="px-4 py-3 font-medium text-muted-foreground w-28">SKU</th>

@@ -362,7 +362,7 @@ function AdminPackagingPageInner() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground">ID</th>

@@ -431,6 +431,7 @@ export default function PosPage() {
   const [deunaPending, setDeunaPending] = useState(false);
   const [generateInvoice, setGenerateInvoice] = useState(false);
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
+  const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
 
   const amountRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -525,7 +526,7 @@ export default function PosPage() {
 
   // ─────────────────────────────────────────────────────────
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="relative flex h-full overflow-hidden">
 
       {invoiceData && (
         <InvoiceModal
@@ -543,7 +544,7 @@ export default function PosPage() {
       ══════════════════════════════════════════ */}
       <section
         aria-label="Catálogo de productos"
-        className="flex flex-col w-[60%] min-w-0 border-r border-neutral-200 dark:border-white/5 overflow-hidden"
+        className={`flex-col min-w-0 border-r border-neutral-200 dark:border-white/5 overflow-hidden w-full md:w-[60%] pb-14 md:pb-0 ${mobileTab === "products" ? "flex" : "hidden"} md:flex`}
       >
         {/* Search bar */}
         <div className="shrink-0 px-3 py-2.5 bg-neutral-50 dark:bg-[#111111] border-b border-neutral-200 dark:border-white/5">
@@ -613,7 +614,7 @@ export default function PosPage() {
       ══════════════════════════════════════════ */}
       <section
         aria-label="Carrito y pago"
-        className="flex w-[40%] min-w-0 flex-col bg-white dark:bg-[#111111] border-l border-neutral-200 dark:border-transparent overflow-hidden"
+        className={`min-w-0 flex-col bg-white dark:bg-[#111111] border-l border-neutral-200 dark:border-transparent overflow-hidden w-full md:w-[40%] pb-14 md:pb-0 ${mobileTab === "cart" ? "flex" : "hidden"} md:flex`}
       >
 
         {/* ── Customer Selector ──────────────────── */}
@@ -999,6 +1000,50 @@ export default function PosPage() {
           </div>
         </div>
       </section>
+
+      {/* ══════════════════════════════════════════
+          Mobile bottom tab bar (hidden on md+)
+      ══════════════════════════════════════════ */}
+      <nav
+        aria-label="Navegación POS"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex h-14 items-stretch border-t border-neutral-200 dark:border-white/8 bg-white dark:bg-[#111111]"
+      >
+        <button
+          onClick={() => setMobileTab("products")}
+          className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+            mobileTab === "products"
+              ? "text-brand-600 dark:text-brand-400 bg-brand-600/5"
+              : "text-neutral-500 dark:text-neutral-600"
+          }`}
+        >
+          <Package className="h-5 w-5" aria-hidden="true" />
+          Productos
+        </button>
+        <button
+          onClick={() => setMobileTab("cart")}
+          className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+            mobileTab === "cart"
+              ? "text-brand-600 dark:text-brand-400 bg-brand-600/5"
+              : "text-neutral-500 dark:text-neutral-600"
+          }`}
+        >
+          <span className="relative">
+            <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+            {!isEmpty && (
+              <span className="absolute -top-1 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-[9px] font-black text-white">
+                {items.length}
+              </span>
+            )}
+          </span>
+          <span>Carrito</span>
+          {!isEmpty && (
+            <span className="text-[8px] tabular-nums text-brand-600 dark:text-brand-400 leading-none">
+              {formatCurrency(total)}
+            </span>
+          )}
+        </button>
+      </nav>
+
     </div>
   );
 }
