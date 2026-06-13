@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ThemeToggle } from "@shared/components/theme-toggle";
 import { HomeAuthNav } from "@features/auth/components/home-auth-nav";
+import { HomeMobileNav } from "@features/auth/components/home-mobile-nav";
 import { Footer } from "@shared/components/footer";
 import { ProductCarousel } from "@features/store-products/components/product-carousel";
 import { Leaf, Award, Truck } from "lucide-react";
@@ -69,9 +70,7 @@ export default function HomePage() {
             </div>
           </nav>
 
-          <div className="flex sm:hidden">
-            <ThemeToggle />
-          </div>
+          <HomeMobileNav />
         </div>
       </header>
 
