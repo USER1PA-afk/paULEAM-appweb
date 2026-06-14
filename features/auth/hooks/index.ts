@@ -69,6 +69,15 @@ export function useAuth() {
   const { logEvent } = useAuditActions();
 
   // Verificar sesión al montar
+  //
+  // WHY [] deps and not [insforge]:
+  //   resetBrowserClient(token) creates a new client object on every call.
+  //   If [insforge] were in the deps, the effect would re-run after each
+  //   hydrateFromServer() call (which calls resetBrowserClient), which would
+  //   call hydrateFromServer() again, creating a new client, re-running the
+  //   effect… infinite loop. [] breaks the cycle — we check the session once
+  //   on mount. getInsforge() is called inside checkSession() to always get
+  //   the current singleton at call time (not a stale closure reference).
   useEffect(() => {
     let active = true;
 
@@ -96,13 +105,14 @@ export function useAuth() {
     }
 
     async function checkSession() {
+      const ins = getInsforge(); // fresh singleton — not the closed-over variable
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error("Timeout")), 8000)
       );
 
       try {
         const { data, error } = await Promise.race([
-          insforge.auth.getCurrentUser(),
+          ins.auth.getCurrentUser(),
           timeoutPromise,
         ]);
 
@@ -126,7 +136,7 @@ export function useAuth() {
 
         // Silently refresh the httpOnly session cookie so the proxy
         // stays in sync when the SDK refreshes its internal token.
-        insforge.auth.refreshSession().then((res) => {
+        ins.auth.refreshSession().then((res) => {
           const raw = res?.data as { accessToken?: string; access_token?: string; session?: { access_token?: string } } | null;
           const freshToken = raw?.accessToken ?? raw?.access_token ?? raw?.session?.access_token;
           if (freshToken && active) {
@@ -149,7 +159,7 @@ export function useAuth() {
 
     checkSession();
     return () => { active = false; };
-  }, [insforge]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const signIn = useCallback(
     async (email: string, password: string) => {
@@ -290,30 +300,48 @@ export function useAuth() {
 export function useRole() {
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const insforge = getInsforge();
 
+  // WHY [] deps and not [insforge]:
+  //   Same reason as useAuth — resetBrowserClient creates a new client reference
+  //   on every call. [insforge] would cause this effect to be cleaned up and
+  //   re-queued on every hydrateFromServer() call in useAuth, setting active=false
+  //   before the async DB query completes. The finally block sees active=false and
+  //   skips setLoading(false), leaving roleLoading=true forever → spinner stuck.
+  //   [] + getInsforge() inside the async function always reads the current singleton.
   useEffect(() => {
     let active = true;
     async function fetchRole() {
+      const ins = getInsforge(); // fresh singleton — not a stale closure reference
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error("Timeout")), 3000)
       );
 
       try {
         const { data: userData } = await Promise.race([
-          insforge.auth.getCurrentUser(),
+          ins.auth.getCurrentUser(),
           timeoutPromise,
         ]);
 
         if (!active) return;
 
         if (!userData?.user?.id) {
-          setLoading(false);
+          // SDK returned null — browser may have cleared localStorage.
+          // edgeFunctionToken (set by resetBrowserClient) does not enable
+          // getCurrentUser() on the browser SDK (no isServerMode). Fall back
+          // to /api/auth/me which already has the role in the pauleam-role cookie.
+          try {
+            const res = await fetch("/api/auth/me");
+            if (!res.ok || !active) return;
+            const { user: serverUser } = await res.json() as { user: { role?: string } | null };
+            if (active) setRole(serverUser?.role ?? null);
+          } catch {
+            // server fallback also failed; role stays null
+          }
           return;
         }
 
         const { data } = await Promise.race([
-          insforge.database
+          ins.database
             .from("profiles")
             .select("role")
             .eq("id", userData.user.id)
@@ -335,7 +363,7 @@ export function useRole() {
     return () => {
       active = false;
     };
-  }, [insforge]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     role,
