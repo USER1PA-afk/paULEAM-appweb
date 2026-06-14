@@ -51,9 +51,10 @@ function ProductCard({
 }) {
   const [pressed, setPressed] = useState(false);
   const outOfStock = product.stock_commercial <= 0;
+  const atLimit = !outOfStock && cartQty >= Math.floor(product.stock_commercial);
 
   const handleTap = () => {
-    if (outOfStock) return;
+    if (outOfStock || atLimit) return;
     setPressed(true);
     setTimeout(() => setPressed(false), 150);
     onTap(product);
@@ -63,7 +64,7 @@ function ProductCard({
     <button
       id={`pos-product-${product.product_id}`}
       onClick={handleTap}
-      disabled={outOfStock}
+      disabled={outOfStock || atLimit}
       aria-label={`Agregar ${product.name} al carrito`}
       className={`
         relative flex flex-col overflow-hidden rounded-xl border text-left
@@ -72,6 +73,8 @@ function ProductCard({
         ${
           outOfStock
             ? "border-neutral-200 dark:border-white/5 bg-neutral-100 dark:bg-white/3 opacity-40 cursor-not-allowed"
+            : atLimit
+            ? "border-amber-300 dark:border-amber-700/50 bg-amber-50 dark:bg-amber-900/10 cursor-not-allowed text-neutral-900 dark:text-white"
             : "border-neutral-200 dark:border-white/10 bg-white dark:bg-[#1a1a1a] hover:border-brand-600/50 dark:hover:border-brand-600/50 hover:bg-neutral-50 dark:hover:bg-[#1f1f1f] active:scale-[0.96] cursor-pointer text-neutral-900 dark:text-white"
         }
       `}
@@ -110,24 +113,25 @@ function ProductCard({
         </p>
         <div className="mt-auto flex items-end justify-between gap-1">
           <div>
-            <p className="text-base font-black text-brand-600 dark:text-brand-400 leading-none">
-              {formatCurrency(product.price)}
-            </p>
-            <p className="text-[9px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-              / {product.capacity_unit || product.sales_unit_name}
+            <p className="text-sm font-black text-brand-600 dark:text-brand-400 leading-none">
+              {formatCurrency(product.price)}<span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">/{product.capacity_unit || product.sales_unit_name}</span>
             </p>
           </div>
           <div className="text-right">
             <p
               className={`text-[10px] font-bold leading-none ${
-                product.stock_commercial < 3
+                outOfStock
+                  ? "text-neutral-400 dark:text-neutral-600"
+                  : atLimit
+                  ? "text-amber-600 dark:text-amber-400"
+                  : product.stock_commercial < 3
                   ? "text-amber-600 dark:text-amber-400"
                   : "text-accent-600 dark:text-accent-400"
               }`}
             >
-              {outOfStock ? "Agotado" : `${Math.floor(product.stock_commercial)}`}
+              {outOfStock ? "Agotado" : atLimit ? "Límite" : `${Math.floor(product.stock_commercial)}`}
             </p>
-            {!outOfStock && (
+            {!outOfStock && !atLimit && (
               <p className="text-[8px] text-neutral-500 dark:text-neutral-600 mt-0.5">
                 {product.sales_unit_name}s
               </p>
@@ -139,28 +143,50 @@ function ProductCard({
   );
 }
 
-/** Ítem del carrito con controles +/- */
+/** Ítem del carrito con input de cantidad y controles +/- */
 function CartRow({
   item,
   onIncrease,
   onDecrease,
+  onSetQty,
   onRemove,
 }: {
-  item: { product_id: string; name: string; price: number; quantity: number; sales_unit_name: string };
+  item: { product_id: string; name: string; price: number; quantity: number; sales_unit_name: string; stock_commercial: number };
   onIncrease: () => void;
   onDecrease: () => void;
+  onSetQty: (qty: number) => void;
   onRemove: () => void;
 }) {
+  const [inputVal, setInputVal] = useState(String(item.quantity));
+  const atMax = item.quantity >= item.stock_commercial;
+
+  // Sync when quantity changes via +/- buttons
+  useEffect(() => { setInputVal(String(item.quantity)); }, [item.quantity]);
+
+  const commitInput = () => {
+    const n = parseInt(inputVal, 10);
+    if (!n || n < 1) {
+      onRemove();
+    } else {
+      const clamped = Math.min(n, item.stock_commercial);
+      onSetQty(clamped);
+      setInputVal(String(clamped));
+    }
+  };
+
   return (
     <div className="flex items-center gap-2 py-2.5 border-b border-neutral-200 dark:border-white/5 last:border-0">
+      {/* Name + price/unit */}
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold text-neutral-900 dark:text-white truncate">{item.name}</p>
-        <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
-          {formatCurrency(item.price)} / {item.sales_unit_name}
+        <p className="text-xs font-semibold text-neutral-900 dark:text-white truncate leading-snug">
+          {item.name}
+        </p>
+        <p className="text-[11px] font-bold text-brand-600 dark:text-brand-400 leading-snug">
+          {formatCurrency(item.price)}<span className="font-normal text-neutral-500 dark:text-neutral-400">/{item.sales_unit_name}</span>
         </p>
       </div>
 
-      {/* Qty controls */}
+      {/* Qty controls + direct input */}
       <div className="flex items-center gap-1 shrink-0">
         <button
           id={`pos-cart-decrease-${item.product_id}`}
@@ -171,22 +197,39 @@ function CartRow({
         >
           <Minus className="h-3 w-3" aria-hidden="true" />
         </button>
-        <span className="w-7 text-center text-sm font-black text-neutral-900 dark:text-white">
-          {item.quantity}
-        </span>
+
+        <input
+          type="number"
+          min={1}
+          max={item.stock_commercial}
+          value={inputVal}
+          onChange={(e) => setInputVal(e.target.value)}
+          onBlur={commitInput}
+          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+          aria-label={`Cantidad de ${item.name}`}
+          className="w-12 h-7 rounded-md border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5
+            text-center text-sm font-black text-neutral-900 dark:text-white
+            focus:outline-none focus:border-brand-500/60 focus:ring-1 focus:ring-brand-500/30
+            [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        />
+
         <button
           id={`pos-cart-increase-${item.product_id}`}
           onClick={onIncrease}
+          disabled={atMax}
           aria-label={`Aumentar cantidad de ${item.name}`}
-          className="flex h-7 w-7 items-center justify-center rounded-md bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400
-            hover:bg-neutral-200 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-white active:scale-90 transition-all duration-100"
+          className={`flex h-7 w-7 items-center justify-center rounded-md transition-all duration-100
+            ${atMax
+              ? "bg-neutral-100 dark:bg-white/5 text-neutral-300 dark:text-neutral-700 cursor-not-allowed"
+              : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-white active:scale-90"
+            }`}
         >
           <Plus className="h-3 w-3" aria-hidden="true" />
         </button>
       </div>
 
       {/* Subtotal */}
-      <p className="w-14 text-right text-xs font-bold text-neutral-900 dark:text-white shrink-0">
+      <p className="w-14 text-right text-xs font-bold text-neutral-900 dark:text-white shrink-0 tabular-nums">
         {formatCurrency(item.price * item.quantity)}
       </p>
 
@@ -413,7 +456,7 @@ function InvoiceModal({ data, onClose }: { data: InvoiceData; onClose: () => voi
 export default function PosPage() {
   const { user } = useAuth();
   const { products, loading: productsLoading, error: productsError, refetch } = usePosProducts();
-  const { items, total, isEmpty, addItem, increaseQty, decreaseQty, removeItem, clearCart } = usePosCart();
+  const { items, total, isEmpty, addItem, increaseQty, decreaseQty, setQty, removeItem, clearCart } = usePosCart();
   const { submitSale, loading: checkoutLoading, error: checkoutError } = usePosCheckout();
   const { query, setQuery, results, searching } = usePosCustomerSearch();
 
@@ -753,6 +796,7 @@ export default function PosPage() {
                   item={item}
                   onIncrease={() => increaseQty(item.product_id)}
                   onDecrease={() => decreaseQty(item.product_id)}
+                  onSetQty={(qty) => setQty(item.product_id, qty)}
                   onRemove={() => removeItem(item.product_id)}
                 />
               ))}

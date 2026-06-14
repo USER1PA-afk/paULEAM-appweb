@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { SupplierSelect } from "@features/suppliers/components";
 import { useSupplierActions } from "@features/suppliers/hooks";
 import { useRole } from "@features/auth/hooks";
-import { Tag, AlertTriangle, Pencil, Trash2, Star, ImagePlus, X as XIcon } from "lucide-react";
+import { Tag, AlertTriangle, Pencil, Trash2, Star, ImagePlus, X as XIcon, Search } from "lucide-react";
 import { TablePagination } from "@shared/components/ui/table-pagination";
 import Image from "next/image";
 
@@ -128,6 +128,7 @@ export default function AdminProductsPage() {
   const [conflictSaving, setConflictSaving] = useState(false);
 
   const [productPages, setProductPages] = useState<Partial<Record<ProductType, number>>>({});
+  const [searchQueries, setSearchQueries] = useState<Partial<Record<ProductType, string>>>({});
   const insforge = getInsforge();
   const { linkSuppliersToProduct } = useSupplierActions();
   const { role } = useRole();
@@ -1393,19 +1394,40 @@ export default function AdminProductsPage() {
             const typeProducts = products.filter((p) => p.type === typeValue);
             const typeArchived = archivedProducts.filter((p) => p.type === typeValue);
             const isPurchasable = PURCHASABLE_TYPES.includes(typeValue);
-            const typeTotalPages = Math.max(1, Math.ceil(typeProducts.length / PROD_PAGE_SIZE));
+            const searchQuery = (searchQueries[typeValue] ?? "").toLowerCase();
+            const filteredTypeProducts = searchQuery
+              ? typeProducts.filter((p) => p.name.toLowerCase().includes(searchQuery))
+              : typeProducts;
+            const typeTotalPages = Math.max(1, Math.ceil(filteredTypeProducts.length / PROD_PAGE_SIZE));
             const typePage = Math.min(Math.max(1, productPages[typeValue] ?? 1), typeTotalPages);
-            const pagedTypeProducts = typeProducts.slice((typePage - 1) * PROD_PAGE_SIZE, typePage * PROD_PAGE_SIZE);
-            const typeFrom = typeProducts.length === 0 ? 0 : (typePage - 1) * PROD_PAGE_SIZE + 1;
-            const typeTo = Math.min(typePage * PROD_PAGE_SIZE, typeProducts.length);
+            const pagedTypeProducts = filteredTypeProducts.slice((typePage - 1) * PROD_PAGE_SIZE, typePage * PROD_PAGE_SIZE);
+            const typeFrom = filteredTypeProducts.length === 0 ? 0 : (typePage - 1) * PROD_PAGE_SIZE + 1;
+            const typeTo = Math.min(typePage * PROD_PAGE_SIZE, filteredTypeProducts.length);
             return (
               <div key={typeValue} className="space-y-3">
-                <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${typeColor}`}>
-                    {typeLabel}
-                  </span>
-                  <span className="text-xs text-muted-foreground">({typeProducts.length})</span>
-                </h2>
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${typeColor}`}>
+                      {typeLabel}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {searchQuery ? `${filteredTypeProducts.length} de ${typeProducts.length}` : `(${typeProducts.length})`}
+                    </span>
+                  </h2>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="text"
+                      value={searchQueries[typeValue] ?? ""}
+                      onChange={(e) => {
+                        setSearchQueries((prev) => ({ ...prev, [typeValue]: e.target.value }));
+                        setProductPages((prev) => ({ ...prev, [typeValue]: 1 }));
+                      }}
+                      placeholder={`Buscar ${typeLabel.toLowerCase()}…`}
+                      className="h-8 pl-8 pr-3 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring transition-colors w-52"
+                    />
+                  </div>
+                </div>
                 <div className="rounded-xl border border-border bg-card shadow-sm overflow-x-auto">
                   <table className="w-full min-w-[600px] text-sm">
                     <thead>
@@ -1425,11 +1447,13 @@ export default function AdminProductsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {typeProducts.length === 0 ? (
+                      {filteredTypeProducts.length === 0 ? (
                         <tr>
                           <td colSpan={typeValue === "PRODUCTO_TERMINADO" ? 8 : 6} className="px-4 py-8 text-center text-muted-foreground">
                             <Tag className="h-6 w-6 mx-auto mb-1 opacity-25" />
-                            No hay {typeLabel.toLowerCase()} registrados.
+                            {searchQuery
+                              ? `Sin resultados para "${searchQueries[typeValue]}".`
+                              : `No hay ${typeLabel.toLowerCase()} registrados.`}
                           </td>
                         </tr>
                       ) : (
@@ -1507,7 +1531,7 @@ export default function AdminProductsPage() {
                     totalPages={typeTotalPages}
                     from={typeFrom}
                     to={typeTo}
-                    total={typeProducts.length}
+                    total={filteredTypeProducts.length}
                     onPageChange={(p) => setProductPages((prev) => ({ ...prev, [typeValue]: p }))}
                   />
                 </div>

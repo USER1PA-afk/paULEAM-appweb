@@ -37,6 +37,7 @@ export interface PosCartItem {
   quantity: number;                  // cantidad en unidades comerciales
   sales_unit_name: string;
   conversion_factor: number;
+  stock_commercial: number;          // techo de unidades disponibles al momento de agregar
 }
 
 export type PosPaymentMethod = "EFECTIVO" | "QR_DEUNA";
@@ -118,15 +119,18 @@ export function usePosCart() {
    * Si ya existe en el carrito, incrementa la cantidad.
    */
   const addItem = useCallback((product: PosProduct) => {
+    const max = Math.floor(product.stock_commercial);
     setItems((prev) => {
       const existing = prev.find((i) => i.product_id === product.product_id);
       if (existing) {
+        if (existing.quantity >= max) return prev;
         return prev.map((i) =>
           i.product_id === product.product_id
             ? { ...i, quantity: i.quantity + 1 }
             : i
         );
       }
+      if (max <= 0) return prev;
       return [
         ...prev,
         {
@@ -137,6 +141,7 @@ export function usePosCart() {
           quantity: 1,
           sales_unit_name: product.sales_unit_name,
           conversion_factor: product.conversion_factor,
+          stock_commercial: max,
         },
       ];
     });
@@ -145,7 +150,9 @@ export function usePosCart() {
   const increaseQty = useCallback((productId: string) => {
     setItems((prev) =>
       prev.map((i) =>
-        i.product_id === productId ? { ...i, quantity: i.quantity + 1 } : i
+        i.product_id === productId && i.quantity < i.stock_commercial
+          ? { ...i, quantity: i.quantity + 1 }
+          : i
       )
     );
   }, []);
@@ -160,6 +167,15 @@ export function usePosCart() {
       return prev.map((i) =>
         i.product_id === productId ? { ...i, quantity: i.quantity - 1 } : i
       );
+    });
+  }, []);
+
+  const setQty = useCallback((productId: string, qty: number) => {
+    setItems((prev) => {
+      const item = prev.find((i) => i.product_id === productId);
+      if (!item) return prev;
+      const clamped = Math.min(Math.max(1, Math.floor(qty)), item.stock_commercial);
+      return prev.map((i) => i.product_id === productId ? { ...i, quantity: clamped } : i);
     });
   }, []);
 
@@ -182,6 +198,7 @@ export function usePosCart() {
     addItem,
     increaseQty,
     decreaseQty,
+    setQty,
     removeItem,
     clearCart,
   };

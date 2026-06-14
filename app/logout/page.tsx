@@ -15,8 +15,10 @@ export default function LogoutPage() {
       // 1. Clear httpOnly cookies server-side
       await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
 
-      // 2. Wipe ALL localStorage (catches any SDK token key names)
+      // 2. Wipe ALL localStorage (catches any SDK token key names); preserve theme preference
+      const themeSnapshot = localStorage.getItem("theme");
       try { localStorage.clear(); } catch { /* ignore */ }
+      if (themeSnapshot) { try { localStorage.setItem("theme", themeSnapshot); } catch { /* ignore */ } }
 
       // 3. Wipe sessionStorage too
       try { sessionStorage.clear(); } catch { /* ignore */ }

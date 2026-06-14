@@ -28,7 +28,7 @@ export default function RootLayout({
         >
           Saltar al contenido principal
         </a>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
           {children}
         </ThemeProvider>
       </body>

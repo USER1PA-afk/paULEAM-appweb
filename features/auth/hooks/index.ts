@@ -261,11 +261,13 @@ export function useAuth() {
     } finally {
       setState({ user: null, loading: false, error: null });
       if (typeof window !== "undefined") {
-        // Preserve cart; wipe everything else (catches any SDK token key name)
+        // Preserve cart + theme preference; wipe everything else (catches any SDK token key name)
         const cartSnapshot = localStorage.getItem("pauleam_cart");
+        const themeSnapshot = localStorage.getItem("theme");
         try { localStorage.clear(); } catch { /* ignore */ }
         try { sessionStorage.clear(); } catch { /* ignore */ }
         if (cartSnapshot) localStorage.setItem("pauleam_cart", cartSnapshot);
+        if (themeSnapshot) localStorage.setItem("theme", themeSnapshot);
       }
       if (shouldRedirect) {
         window.location.replace("/");
