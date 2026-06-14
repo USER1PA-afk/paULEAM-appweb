@@ -25,6 +25,7 @@ import {
   Bell,
   Shield,
   Settings,
+  ChevronDown,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -41,10 +42,8 @@ const NAV_ITEMS = [
 ];
 
 const SUB_ITEMS = [
-  { label: "Tienda Online",    href: "/admin/store/products", icon: ShoppingBag,  roles: ["admin"] },
-  { label: "Ver E-Commerce",   href: "/shop/catalog",         icon: Store,        roles: ["admin", "operario"] },
-  { label: "Punto de Venta",   href: "/pos",                  icon: Monitor,      roles: ["admin", "sales_kiosk"] },
-  { label: "Órdenes de Venta", href: "/admin/orders",         icon: ShoppingCart, roles: ["admin"] },
+  { label: "Punto de Venta",   href: "/pos",          icon: Monitor,      roles: ["admin", "sales_kiosk"] },
+  { label: "Órdenes de Venta", href: "/admin/orders", icon: ShoppingCart, roles: ["admin"] },
 ];
 
 const ROLE_LABELS: Record<string, { label: string; cls: string }> = {
@@ -112,6 +111,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen,      setSidebarOpen]      = useState(false);
   const [notifOpen,        setNotifOpen]        = useState(false);
+  const [storeOpen,        setStoreOpen]        = useState(() =>
+    pathname.startsWith("/admin/store") || pathname === "/shop/catalog"
+  );
   const [notifications] = useState([
     { id: 1, text: "Nueva orden de venta recibida",        time: "Hace 2 min",  read: false, href: "/admin/orders"     },
     { id: 2, text: "Stock bajo: Harina de trigo",          time: "Hace 15 min", read: false, href: "/admin/inventory"  },
@@ -134,6 +136,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (role === "cliente") router.replace("/shop/catalog");
     if (role === "sales_kiosk") router.replace("/pos");
   }, [role, router, authLoading, isAuthenticated]);
+
+  useEffect(() => {
+    if (pathname.startsWith("/admin/store") || pathname === "/shop/catalog") {
+      setStoreOpen(true);
+    }
+  }, [pathname]);
   useSessionGuard(() => signOut(false));
   const filteredNav  = NAV_ITEMS.filter((item) => role && item.roles.includes(role));
   const roleInfo     = role ? ROLE_LABELS[role] : null;
@@ -319,7 +327,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}
           </div>
           <div className="hidden sm:flex flex-col items-end leading-tight">
-            <span className="text-sm font-semibold text-foreground truncate max-w-36">
+            <span className="text-sm font-semibold text-foreground max-w-52 overflow-hidden text-ellipsis whitespace-nowrap" title={user?.profile?.name ?? user?.email ?? ""}>
               {user?.profile?.name ?? user?.email ?? "Sin sesión"}
             </span>
             {roleInfo && (
@@ -414,6 +422,75 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
               </div>
               <ul className="space-y-0.5">
+                {/* Gestionar Tienda — collapsible group (admin only) */}
+                {role === "admin" && (() => {
+                  const storeActive = pathname.startsWith("/admin/store") || pathname === "/shop/catalog";
+                  return (
+                    <>
+                      <li>
+                        <div className={`flex items-center rounded-lg py-2 px-3 text-sm font-medium min-h-9
+                          transition-all duration-200 ease-out
+                          ${sidebarCollapsed ? "lg:justify-center lg:px-0 lg:gap-0" : ""}
+                          ${storeActive ? "bg-brand-600 text-white shadow-sm" : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"}`}
+                        >
+                          <Link
+                            href="/admin/store/products"
+                            onClick={() => setSidebarOpen(false)}
+                            className="flex items-center gap-3 flex-1 min-w-0"
+                          >
+                            <ShoppingBag
+                              aria-hidden="true"
+                              className={`shrink-0 h-4 w-4 ${storeActive ? "text-white" : "text-muted-foreground"}`}
+                            />
+                            <span className={`truncate ${sidebarCollapsed ? "lg:hidden" : ""}`}>
+                              Gestionar Tienda
+                            </span>
+                          </Link>
+                          {!sidebarCollapsed && (
+                            <button
+                              onClick={() => setStoreOpen((v) => !v)}
+                              aria-label={storeOpen ? "Contraer tienda" : "Expandir tienda"}
+                              className="ml-auto pl-2 shrink-0"
+                            >
+                              <ChevronDown
+                                aria-hidden="true"
+                                className={`h-3.5 w-3.5 transition-transform duration-200
+                                  ${storeOpen ? "rotate-180" : ""}
+                                  ${storeActive ? "text-white/80" : "text-muted-foreground"}`}
+                              />
+                            </button>
+                          )}
+                        </div>
+                      </li>
+                      {storeOpen && !sidebarCollapsed && (
+                        <li>
+                          <Link
+                            href="/shop/catalog"
+                            onClick={() => setSidebarOpen(false)}
+                            aria-current={pathname === "/shop/catalog" ? "page" : undefined}
+                            className={`flex items-center gap-3 rounded-lg py-2 pl-8 pr-3 text-sm font-medium min-h-9
+                              transition-all duration-200 ease-out
+                              ${pathname === "/shop/catalog"
+                                ? "bg-brand-600 text-white shadow-sm"
+                                : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                              }`}
+                          >
+                            <Store
+                              aria-hidden="true"
+                              className={`shrink-0 h-4 w-4 ${pathname === "/shop/catalog" ? "text-white" : "text-muted-foreground"}`}
+                            />
+                            Ver eCommerce
+                          </Link>
+                        </li>
+                      )}
+                    </>
+                  );
+                })()}
+                {/* Ver E-Commerce standalone for operario */}
+                {role === "operario" && (
+                  <NavLink item={{ label: "Ver E-Commerce", href: "/shop/catalog", icon: Store, roles: ["admin", "operario"] }} />
+                )}
+                {/* Remaining sub items */}
                 {SUB_ITEMS.filter((item) => role && item.roles.includes(role)).map((item) => (
                   <NavLink key={item.href} item={item} />
                 ))}

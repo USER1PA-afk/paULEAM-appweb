@@ -4,6 +4,24 @@ import { getInsforge, resetBrowserClient } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback } from "react";
 import { useAuditActions } from "@features/audit/hooks";
 
+// Module-level deduplication: HomeAuthNav, HomeMobileNav, and shop/admin layouts
+// each mount their own useAuth() + useRole() instances. Without this, every
+// instance independently fires GET /api/auth/me when localStorage is cleared
+// (mobile, suspension, or first load). One shared promise means one network call
+// regardless of how many hook instances mount simultaneously.
+type ServerSession = { user: { id: string; email: string; role: string; fullName?: string } | null; token?: string };
+let _serverSessionPromise: Promise<ServerSession | null> | null = null;
+
+function fetchServerSession(): Promise<ServerSession | null> {
+  if (!_serverSessionPromise) {
+    _serverSessionPromise = fetch("/api/auth/me")
+      .then((res) => res.ok ? res.json() as Promise<ServerSession> : null)
+      .catch(() => null)
+      .finally(() => { _serverSessionPromise = null; });
+  }
+  return _serverSessionPromise;
+}
+
 interface AuthUser {
   id: string;
   email: string;
@@ -83,18 +101,17 @@ export function useAuth() {
 
     async function hydrateFromServer(): Promise<boolean> {
       try {
-        const res = await fetch("/api/auth/me");
-        if (!res.ok) return false;
-        const { user, token } = await res.json() as {
-          user: { id: string; email: string; role: string } | null;
-          token?: string;
-        };
-        if (!user || !active) return false;
-        // Re-initialize the SDK singleton with the validated token so all
-        // subsequent database/RPC calls succeed (fixes localStorage-cleared state).
-        if (token) resetBrowserClient(token);
+        const result = await fetchServerSession();
+        if (!result?.user || !active) return false;
+        if (result.token) resetBrowserClient(result.token);
         setState({
-          user: { id: user.id, email: user.email, emailVerified: true, profile: {}, metadata: {} } as AuthUser,
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            emailVerified: true,
+            profile: { name: result.user.fullName ?? "" },
+            metadata: {},
+          } as AuthUser,
           loading: false,
           error: null,
         });
@@ -208,22 +225,28 @@ export function useAuth() {
   );
 
   const signUp = useCallback(
-    async (email: string, password: string, name: string) => {
+    async (email: string, password: string, name: string, phone?: string) => {
       setState((prev) => ({ ...prev, loading: true, error: null }));
       try {
-        const { error } = await insforge.auth.signUp({
+        const { data: signUpData, error } = await insforge.auth.signUp({
           email,
           password,
           name,
         });
         if (error) throw error;
 
-        // Forzar login inmediato para obtener el token real del SDK
+        // Insforge requires email verification — do not auto-login
+        if (signUpData?.requireEmailVerification) {
+          setState({ user: null, loading: false, error: null });
+          return { data: null, error: null, requireEmailVerification: true as const };
+        }
+
+        // Email auto-confirmed — force immediate login to get real SDK token
         const loginRes = await insforge.auth.signInWithPassword({
           email,
           password,
         });
-        
+
         if (loginRes.error) throw loginRes.error;
 
         // Set httpOnly session cookie server-side
@@ -242,18 +265,26 @@ export function useAuth() {
           throw new Error("Token de sesión no disponible. Intenta de nuevo.");
         }
 
+        // Persist phone to profile (trigger only sets full_name and role)
+        if (phone) {
+          const userId = (loginRes.data?.user as { id?: string } | null)?.id;
+          if (userId) {
+            await insforge.database.from("profiles").update({ phone }).eq("id", userId);
+          }
+        }
+
         // El trigger handle_new_user() crea el perfil con rol 'cliente' por defecto
         setState({
           user: loginRes.data?.user as unknown as AuthUser ?? null,
           loading: false,
           error: null,
         });
-        return { data: loginRes.data, error: null };
+        return { data: loginRes.data, error: null, requireEmailVerification: false as const };
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : "Error al registrarse";
         setState((prev) => ({ ...prev, loading: false, error: message }));
-        return { data: null, error: message };
+        return { data: null, error: message, requireEmailVerification: false as const };
       }
     },
     [insforge]
@@ -328,12 +359,12 @@ export function useRole() {
           // SDK returned null — browser may have cleared localStorage.
           // edgeFunctionToken (set by resetBrowserClient) does not enable
           // getCurrentUser() on the browser SDK (no isServerMode). Fall back
-          // to /api/auth/me which already has the role in the pauleam-role cookie.
+          // to the shared fetchServerSession() — deduped with useAuth's call
+          // so concurrent mounts don't each fire a separate network request.
           try {
-            const res = await fetch("/api/auth/me");
-            if (!res.ok || !active) return;
-            const { user: serverUser } = await res.json() as { user: { role?: string } | null };
-            if (active) setRole(serverUser?.role ?? null);
+            const result = await fetchServerSession();
+            if (!active) return;
+            setRole(result?.user?.role ?? null);
           } catch {
             // server fallback also failed; role stays null
           }

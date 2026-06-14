@@ -60,15 +60,18 @@ export default function CatalogPage() {
   const [activeTab, setActiveTab] = useState<"descripcion" | "ingredientes" | "nutricion" | "especificaciones" | "comercial">("descripcion");
 
   const fetchProducts = useCallback(async () => {
-    // Obtener IDs de productos que son inputs de empaque (granel) — no se venden directamente
-    const { data: tplData } = await insforge.database
-      .from("packaging_templates")
-      .select("finished_product_id")
-      .eq("is_active", true);
-
-    const bulkInputIds = new Set<string>(
-      (tplData as { finished_product_id: string }[] ?? []).map((t) => t.finished_product_id)
-    );
+    // packaging_templates requires auth in RLS — only query when authenticated.
+    // Unauthenticated users see all PRODUCTO_TERMINADO items (acceptable for browsing).
+    let bulkInputIds = new Set<string>();
+    if (isAuthenticated) {
+      const { data: tplData } = await insforge.database
+        .from("packaging_templates")
+        .select("finished_product_id")
+        .eq("is_active", true);
+      bulkInputIds = new Set<string>(
+        (tplData as { finished_product_id: string }[] ?? []).map((t) => t.finished_product_id)
+      );
+    }
 
     const { data } = await insforge.database
       .from("products")
@@ -108,7 +111,7 @@ export default function CatalogPage() {
 
     setProducts(mappedProducts);
     setLoading(false);
-  }, [insforge]);
+  }, [insforge, isAuthenticated]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchProducts(); }, [fetchProducts]);

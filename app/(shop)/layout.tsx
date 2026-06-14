@@ -7,7 +7,7 @@ import { useAuth, useRole } from "@features/auth/hooks";
 import { useCart } from "@features/checkout/hooks";
 import { ThemeToggle } from "@shared/components/theme-toggle";
 import { useState } from "react";
-import { ShoppingCart, Menu, X } from "lucide-react";
+import { ShoppingCart, Menu, X, User, LayoutDashboard } from "lucide-react";
 import { Footer } from "@shared/components/footer";
 
 export default function ShopLayout({
@@ -97,15 +97,24 @@ export default function ShopLayout({
 
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
-                <span className="hidden text-xs text-muted-foreground lg:block truncate max-w-36">
-                  {user?.email}
-                </span>
+                <div className="hidden lg:flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <User aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate max-w-32">
+                    {user?.profile?.name?.split(" ")[0] ?? user?.email}
+                  </span>
+                </div>
                 {(role === "admin" || role === "operario") && (
                   <Link
                     href="/admin/dashboard"
-                    className="rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 transition-colors"
+                    title="Volver al panel de administración"
+                    className="flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold
+                      text-neutral-600 dark:text-neutral-400
+                      hover:bg-neutral-100 dark:hover:bg-white/10
+                      hover:text-neutral-900 dark:hover:text-white
+                      transition-all duration-150 active:scale-95"
                   >
-                    Panel Admin
+                    <LayoutDashboard aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden xl:inline">Dashboard</span>
                   </Link>
                 )}
                 <button
@@ -209,18 +218,27 @@ export default function ShopLayout({
             <div className="pt-2 mt-1 border-t border-border space-y-1">
               {isAuthenticated ? (
                 <>
-                  {user?.email && (
-                    <p className="px-3 py-1 text-xs text-muted-foreground truncate">
-                      {user.email}
-                    </p>
+                  {(user?.profile?.name ?? user?.email) && (
+                    <div className="flex items-center gap-1.5 px-3 py-1 text-xs text-muted-foreground">
+                      <User aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">
+                        {user?.profile?.name?.split(" ")[0] ?? user?.email}
+                      </span>
+                    </div>
                   )}
                   {(role === "admin" || role === "operario") && (
                     <Link
                       href="/admin/dashboard"
                       onClick={close}
-                      className="flex items-center rounded-lg px-3 py-2.5 text-sm font-medium text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
+                      title="Volver al panel de administración"
+                      className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium
+                        text-neutral-600 dark:text-neutral-400
+                        hover:bg-neutral-100 dark:hover:bg-white/10
+                        hover:text-neutral-900 dark:hover:text-white
+                        transition-all duration-150"
                     >
-                      Panel Admin
+                      <LayoutDashboard aria-hidden="true" className="h-4 w-4 shrink-0" />
+                      Dashboard
                     </Link>
                   )}
                   <button

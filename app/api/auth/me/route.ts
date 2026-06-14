@@ -54,19 +54,42 @@ export async function GET(request: NextRequest) {
 
     const { data: userData, error } = await insforge.auth.getCurrentUser();
     if (error || !userData?.user?.id) {
-      return NextResponse.json({ user: null });
+      // Token in cookie is expired or invalid. Clear stale cookies so the proxy
+      // stops intercepting /login — otherwise an expired token causes a redirect
+      // loop: proxy sees cookie → sends to /shop/catalog → React says unauthenticated
+      // → user clicks login → proxy redirects again → forever.
+      // Only cleared here (SDK returned error/null), NOT in the catch below
+      // (network failure) to avoid logging users out during Insforge outages.
+      const isProd = process.env.NODE_ENV === "production";
+      const clear = { httpOnly: true, secure: isProd, sameSite: "lax" as const, path: "/", maxAge: 0 };
+      const response = NextResponse.json({ user: null });
+      response.cookies.set("pauleam-session", "", clear);
+      response.cookies.set("pauleam-role",    "", clear);
+      return response;
     }
 
-    const resolvedRole = role ?? (() => {
-      // Fetch role from profiles as fallback if cookie is stale
-      return "cliente";
-    })();
+    const userId = userData.user.id;
+
+    // Fetch role + full_name from profiles in one query.
+    // role cookie may be missing on first request after login (race); full_name
+    // is never in the cookie so always needs a DB read here.
+    const { data: profile } = await insforge.database
+      .from("profiles")
+      .select("role, full_name")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const resolvedRole =
+      role ?? (profile as { role?: string } | null)?.role ?? "cliente";
+    const fullName =
+      (profile as { full_name?: string } | null)?.full_name ?? "";
 
     return NextResponse.json({
       user: {
-        id:    userData.user.id,
-        email: userData.user.email ?? "",
-        role:  resolvedRole,
+        id:       userId,
+        email:    userData.user.email ?? "",
+        role:     resolvedRole,
+        fullName,
       },
       token,
     });
