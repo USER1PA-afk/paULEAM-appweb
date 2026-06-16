@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@insforge/sdk";
 import { randomInt, createHash } from "crypto";
+import { signEmailUrl } from "@features/auth/lib";
 
 /**
  * POST /api/auth/send-pre-verify
@@ -9,12 +10,13 @@ import { randomInt, createHash } from "crypto";
  * Nothing is written to Insforge's auth system at this point.
  *
  * SECURITY:
- *   - Returns HTTP 200 with the same body for all outcomes (no enumeration).
- *   - If the email is already registered, does NOT send an OTP
- *     (avoids wasting sends and leaking registration status).
+ *   - If the email is already registered → HTTP 409 with explicit message.
+ *     No OTP is sent. Client shows the error on the register page.
+ *   - If the email is new → HTTP 200 with HMAC-signed signature. OTP is sent.
  *   - Minimum 900ms response time prevents timing side-channels.
  *   - OTP is stored as SHA-256 hash — plaintext is never persisted.
  *   - Upserts: a second request for the same email resets the OTP and timer.
+ *   - Returns HMAC-signed email URL to prevent tampering with verify-email link.
  */
 
 const MIN_MS = 900;
@@ -75,7 +77,7 @@ export async function POST(req: Request) {
       retryCount: 0,
     });
 
-    // If email already registered, silently skip — same response either way.
+    // If email already registered, return 409 — no OTP sent.
     const { data: existing } = await insforge.database
       .from("profiles")
       .select("id")
@@ -84,7 +86,10 @@ export async function POST(req: Request) {
 
     if (existing !== null) {
       await settle();
-      return NextResponse.json(GENERIC);
+      return NextResponse.json(
+        { error: "Ya existe una cuenta con este correo. Intenta iniciar sesión o recuperar tu contraseña." },
+        { status: 409 }
+      );
     }
 
     const otp = String(randomInt(100000, 1000000));
@@ -108,5 +113,6 @@ export async function POST(req: Request) {
   }
 
   await settle();
-  return NextResponse.json(GENERIC);
+  const signature = signEmailUrl(email);
+  return NextResponse.json({ ...GENERIC, signature });
 }

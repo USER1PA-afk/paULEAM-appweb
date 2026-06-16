@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@shared/lib/insforge/client";
+import { signEmailUrl } from "@features/auth/lib";
 
 /**
  * POST /api/auth/send-reset-code
@@ -7,9 +8,10 @@ import { createServerClient } from "@shared/lib/insforge/client";
  * Server-side wrapper for sendResetPasswordEmail.
  *
  * SECURITY PROPERTIES:
- *   1. User enumeration prevention — always returns HTTP 200 with the same
- *      body regardless of whether the email is registered. Attackers cannot
- *      distinguish "email found" from "email not found".
+ *   1. Email existence gate — queries profiles.email (populated by
+ *      handle_new_user trigger + backfill migration 20260617000002).
+ *      Non-registered emails → HTTP 404 with explicit error. No send.
+ *      Registered emails → HTTP 200 with HMAC signature + OTP sent.
  *
  *   2. Timing normalization — enforces a minimum response time so response
  *      latency cannot be used as a side-channel to infer whether the Insforge
@@ -19,10 +21,7 @@ import { createServerClient } from "@shared/lib/insforge/client";
  *      Clients cannot call sendResetPasswordEmail directly to probe which
  *      addresses are registered.
  *
- *   4. Email existence gate — queries profiles.email (populated by
- *      handle_new_user trigger + backfill migration 20260617000002).
- *      Non-registered emails never trigger a send; the client response is
- *      identical either way.
+ *   4. HMAC-signed email URL — prevents tampering with the reset-password link.
  */
 
 const GENERIC_MESSAGE =
@@ -30,8 +29,11 @@ const GENERIC_MESSAGE =
 
 const MIN_RESPONSE_MS = 900;
 
-function genericResponse() {
-  return NextResponse.json({ message: GENERIC_MESSAGE });
+function genericResponse(signature?: string) {
+  return NextResponse.json({
+    message: GENERIC_MESSAGE,
+    ...(signature ? { signature } : {}),
+  });
 }
 
 export async function POST(req: Request) {
@@ -70,11 +72,19 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     // Only send the OTP if the account is known.
-    // profile === null   → unregistered email → skip send, same client response
-    // profile !== null   → registered → call Insforge
     if (profile !== null) {
       await insforge.auth.sendResetPasswordEmail({ email }).catch(() => {});
+      const signature = signEmailUrl(email);
+      await settle();
+      return genericResponse(signature);
     }
+
+    // Email not registered — return 404 so the client can show an error.
+    await settle();
+    return NextResponse.json(
+      { error: "No existe una cuenta con este correo." },
+      { status: 404 }
+    );
   } catch {
     // Swallow all errors — never expose internal failure state to the client.
   }

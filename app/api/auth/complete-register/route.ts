@@ -54,6 +54,20 @@ export async function POST(req: NextRequest) {
       retryCount:   1,
     });
 
+    // Guard: reject if this email already has a profile (duplicate registration)
+    const { data: existingProfile } = await insforge.database
+      .from("profiles")
+      .select("id")
+      .eq("email", verifiedEmail)
+      .maybeSingle();
+
+    if (existingProfile) {
+      return NextResponse.json(
+        { error: "Ya existe una cuenta con este correo. Inicia sesión o recupera tu contraseña." },
+        { status: 409 }
+      );
+    }
+
     // Create the account — email already verified by our OTP flow
     const { error: signUpErr } = await insforge.auth.signUp({
       email:    verifiedEmail,
@@ -62,6 +76,13 @@ export async function POST(req: NextRequest) {
     });
 
     if (signUpErr) {
+      const msg = signUpErr.message?.toLowerCase() ?? "";
+      if (msg.includes("already") || msg.includes("exists") || msg.includes("registered")) {
+        return NextResponse.json(
+          { error: "Ya existe una cuenta con este correo. Inicia sesión o recupera tu contraseña." },
+          { status: 409 }
+        );
+      }
       return NextResponse.json({ error: signUpErr.message }, { status: 400 });
     }
 

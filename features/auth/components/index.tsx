@@ -153,13 +153,21 @@ export function RegisterForm() {
     setLoading(true);
     setError(null);
     try {
+      const cleanEmail = email.trim().toLowerCase();
       const res = await fetch("/api/auth/send-pre-verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify({ email: cleanEmail }),
       });
-      if (!res.ok) throw new Error("Error al enviar el código.");
-      window.location.href = `/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}&mode=register`;
+      const body = (await res.json()) as { signature?: string; error?: string };
+
+      if (res.status === 409) {
+        throw new Error(body.error ?? "Ya existe una cuenta con este correo.");
+      }
+      if (!res.ok) throw new Error(body.error ?? "Error al enviar el código.");
+      if (!body.signature) throw new Error("Error al enviar el código. Intenta de nuevo.");
+
+      window.location.href = `/verify-email?email=${encodeURIComponent(cleanEmail)}&mode=register&sig=${encodeURIComponent(body.signature)}`;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al enviar el código. Intenta de nuevo.");
     } finally {
@@ -479,13 +487,14 @@ function OtpInput({
 
 // ─── Verify Email Form ────────────────────────────────────────────────────────
 
-export function VerifyEmailForm({ email, mode = "verify" }: { email: string; mode?: "register" | "verify" }) {
+export function VerifyEmailForm({ email, mode = "verify", signature: initialSig }: { email: string; mode?: "register" | "verify"; signature?: string }) {
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [cooldown, setCooldown] = useState(60);
   const [resending, setResending] = useState(false);
+  const [signature, setSignature] = useState(initialSig ?? "");
   const insforge = getInsforge();
 
   const otpStr = otp.join("");
@@ -550,11 +559,17 @@ export function VerifyEmailForm({ email, mode = "verify" }: { email: string; mod
     setResending(true);
     try {
       if (mode === "register") {
-        await fetch("/api/auth/send-pre-verify", {
+        const res = await fetch("/api/auth/send-pre-verify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
         });
+        const body = (await res.json()) as { signature?: string };
+        const newSig = body.signature ?? "";
+        setSignature(newSig);
+        const url = new URL(window.location.href);
+        url.searchParams.set("sig", newSig);
+        window.history.replaceState(null, "", url.toString());
       } else {
         await insforge.auth.resendVerificationEmail({ email });
       }
@@ -667,23 +682,32 @@ export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [signature, setSignature] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     try {
-      // Server route: always returns 200 regardless of whether email is registered.
-      // Never throw or show different UI on error — that leaks registration status.
-      await fetch("/api/auth/send-reset-code", {
+      const res = await fetch("/api/auth/send-reset-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
-    } catch {
-      // swallow network errors — same UX either way
+      const body = (await res.json()) as { signature?: string; error?: string; message?: string };
+
+      if (res.status === 404) {
+        throw new Error(body.error ?? "No existe una cuenta con este correo.");
+      }
+      if (!res.ok) throw new Error(body.error ?? "Error al enviar el código.");
+
+      setSignature(body.signature ?? "");
+      setSent(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al enviar el código.");
     } finally {
       setLoading(false);
-      setSent(true);
     }
   }
 
@@ -704,7 +728,7 @@ export function ForgotPasswordForm() {
           </div>
         </div>
         <Link
-          href={`/reset-password?email=${encodeURIComponent(email)}`}
+          href={`/reset-password?email=${encodeURIComponent(email)}&sig=${encodeURIComponent(signature)}`}
           className="block w-full rounded-md bg-brand-600 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-700 transition-colors"
         >
           Ingresar código →
@@ -736,6 +760,12 @@ export function ForgotPasswordForm() {
         />
       </div>
 
+      {error && (
+        <div role="alert" className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={loading}
@@ -755,7 +785,7 @@ export function ForgotPasswordForm() {
 
 // ─── Reset Password Form ──────────────────────────────────────────────────────
 
-export function ResetPasswordForm({ email }: { email: string }) {
+export function ResetPasswordForm({ email, signature }: { email: string; signature?: string }) {
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
