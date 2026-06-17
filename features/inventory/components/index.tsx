@@ -2,9 +2,10 @@
 
 import { useStockSummary, useInventoryLedger, useInventoryActions, useRealtimeStock } from "@features/inventory/hooks";
 import { useSuppliers } from "@features/suppliers/hooks";
-import { useState, useEffect, useCallback, Fragment } from "react";
+import { useState, useEffect, useCallback, Fragment, useMemo } from "react";
 import { usePagination } from "@shared/hooks/use-pagination";
 import { TablePagination } from "@shared/components/ui/table-pagination";
+import { SearchableSelect } from "@shared/components/ui/searchable-select";
 import { getInsforge } from "@shared/lib/insforge/client";
 import { RefreshCw, Zap, PackagePlus, FileDown, Handshake as HandshakeIcon, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Package, Hash } from "lucide-react";
 
@@ -303,6 +304,23 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
   // Tipos que se pueden comprar externamente y tener proveedor
   const PURCHASABLE = ["MATERIA_PRIMA", "INSUMO", "ENVASE_EMPAQUE", "MATERIAL_SECUNDARIO"];
 
+  const productOptions = useMemo(() => {
+    const TYPE_LABELS: Record<string, string> = {
+      MATERIA_PRIMA: "Materias Primas",
+      INSUMO: "Insumos",
+      ENVASE_EMPAQUE: "Envases y Empaques",
+      MATERIAL_SECUNDARIO: "Materiales Secundarios",
+      PRODUCTO_A_GRANEL: "Productos a Granel",
+      PRODUCTO_TERMINADO: "Productos Terminados",
+      OTRO: "Otros",
+    };
+    return products.map((p) => ({
+      value: p.id,
+      label: `${p.name} (${p.sku}) — ${p.unit}`,
+      group: TYPE_LABELS[p.type] ?? p.type,
+    }));
+  }, [products]);
+
   const selectedProduct = products.find((p) => p.id === form.product_id);
   const selectedUnit = selectedProduct?.unit?.toLowerCase() || "";
   const isPurchasable = PURCHASABLE.includes(selectedProduct?.type ?? "");
@@ -372,9 +390,9 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
             setShowForm((v) => !v);
             setSuccess(null);
           }}
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors"
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors w-full sm:w-auto"
         >
-          {showForm ? "Cancelar" : <span className="inline-flex items-center gap-1.5"><PackagePlus aria-hidden="true" className="h-4 w-4" /> Nuevo Ingreso</span>}
+          {showForm ? "Cancelar" : <span className="inline-flex items-center gap-1.5 justify-center"><PackagePlus aria-hidden="true" className="h-4 w-4" /> Nuevo Ingreso</span>}
         </button>
       </div>
 
@@ -387,7 +405,7 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4"
+          className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm space-y-4"
         >
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {/* Producto */}
@@ -395,12 +413,13 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
               <label htmlFor="entry-product" className="text-xs font-medium text-muted-foreground">
                 Producto *
               </label>
-              <select
+              <SearchableSelect
                 id="entry-product"
                 required
+                options={productOptions}
                 value={form.product_id}
-                onChange={(e) => {
-                  const prod = products.find((pr) => pr.id === e.target.value);
+                onChange={(val) => {
+                  const prod = products.find((pr) => pr.id === val);
                   const pType = prod?.type ?? "";
                   const nonPurchasable = ["PRODUCTO_A_GRANEL", "PRODUCTO_TERMINADO"].includes(pType);
                   const isPurchasableType = PURCHASABLE.includes(pType);
@@ -409,24 +428,18 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
                   const autoSupplier = primary ?? firstSupplier;
                   setForm((p) => ({
                     ...p,
-                    product_id: e.target.value,
+                    product_id: val,
                     supplier_id: autoSupplier?.supplier_id ?? "",
                     reference_type: nonPurchasable ? "AJUSTE" : p.reference_type,
-                    // Pre-fill cost from catalog for purchasable types; keep blank for others
                     unit_cost: isPurchasableType && prod?.cost_per_unit
                       ? String(prod.cost_per_unit)
                       : "",
                   }));
                 }}
+                placeholder="Seleccionar producto..."
+                searchPlaceholder="Escriba para buscar..."
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">Seleccionar producto...</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.sku}) — {p.unit}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             {/* Cantidad */}
@@ -543,18 +556,18 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
             </div>
           )}
 
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-3 flex-col sm:flex-row">
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-brand-600 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 transition-colors"
+              className="rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 transition-colors w-full sm:w-auto"
             >
               {loading ? "Registrando..." : "Registrar Ingreso"}
             </button>
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded-lg border border-border bg-background px-6 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              className="rounded-lg border border-border bg-background px-6 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors w-full sm:w-auto"
             >
               Cancelar
             </button>

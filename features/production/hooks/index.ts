@@ -117,10 +117,16 @@ export function useProductionOrders() {
   /**
    * Cancelar orden — solo admin. Cambia estado a CANCELADA.
    * No activa el trigger de producción (solo aplica para COMPLETADA).
+   * Bloquea cancelación de órdenes ya completadas (usar reverseOrder en su lugar).
    */
   const cancelOrder = useCallback(
     async (orderId: string) => {
       try {
+        const existing = orders.find((o) => o.id === orderId);
+        if (existing?.status === "COMPLETADA") {
+          return { data: null, error: "No se puede cancelar una orden completada. Use Revertir primero." };
+        }
+
         const { error: updateError } = await insforge.database
           .from("production_orders")
           .update({ status: "CANCELADA" })
@@ -132,6 +138,30 @@ export function useProductionOrders() {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? "Error al cancelar orden";
         return { data: null, error: msg };
+      }
+    },
+    [insforge, fetchOrders, orders]
+  );
+
+  /**
+   * Revertir orden completada — solo admin. Llama al RPC reverse_production_order
+   * que inserta contrapartidas AJUSTE por cada movimiento PRODUCCION y resetea
+   * la orden a BORRADOR.
+   */
+  const reverseOrder = useCallback(
+    async (orderId: string) => {
+      try {
+        const { error: rpcErr } = await insforge.database.rpc("reverse_production_order", {
+          p_order_id: orderId,
+        });
+
+        if (rpcErr) throw rpcErr;
+        await fetchOrders();
+        return { error: null };
+      } catch (err: unknown) {
+        return {
+          error: err instanceof Error ? err.message : "Error al revertir orden",
+        };
       }
     },
     [insforge, fetchOrders]
@@ -171,6 +201,7 @@ export function useProductionOrders() {
     updateStatus,
     cancelOrder,
     declareWaste,
+    reverseOrder,
     refetch: fetchOrders,
   };
 }

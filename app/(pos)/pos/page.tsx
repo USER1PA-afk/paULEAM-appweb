@@ -114,7 +114,7 @@ function ProductCard({
         <div className="mt-auto flex items-end justify-between gap-1">
           <div>
             <p className="text-sm font-black text-brand-600 dark:text-brand-400 leading-none">
-              {formatCurrency(product.price)}<span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">/{product.capacity_unit || product.sales_unit_name}</span>
+              {formatCurrency(product.price)}<span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">/{product.sales_unit_name || product.capacity_unit}</span>
             </p>
           </div>
           <div className="text-right">

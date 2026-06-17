@@ -187,9 +187,9 @@ export function ProductCarousel() {
                       <div className="flex items-center justify-between pt-1.5">
                         <span className="text-xl font-extrabold text-neutral-900 dark:text-white">
                           {fmt.format(product.price)}
-                          {(product.capacity_unit || product.unit) && (
+                          {(product.sales_unit_name || product.capacity_unit || product.unit) && (
                             <span className="text-sm font-semibold ml-1 text-neutral-500 dark:text-white/70">
-                              / {product.capacity_unit || product.unit}
+                              / {product.sales_unit_name || product.capacity_unit || product.unit}
                             </span>
                           )}
                         </span>

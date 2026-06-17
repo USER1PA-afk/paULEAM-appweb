@@ -82,12 +82,12 @@ export default function CartPage() {
                 {/* Bottom row: unit price + qty + subtotal */}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <p className="text-xs text-muted-foreground">
-                    {formatCurrency(item.price)} / {item.capacity_unit || item.sales_unit_name || item.unit}
+                    {formatCurrency(item.price)} / {item.sales_unit_name || item.capacity_unit || item.unit}
                   </p>
                   <div className="flex items-center gap-3 ml-auto">
                     <div className="text-center">
                       <p className="text-sm font-bold tabular-nums">{item.quantity}</p>
-                      <p className="text-[10px] text-muted-foreground">{item.capacity_unit || item.sales_unit_name || item.unit}</p>
+                      <p className="text-[10px] text-muted-foreground">{item.sales_unit_name || item.capacity_unit || item.unit}</p>
                     </div>
                     <p className="font-semibold tabular-nums text-sm">
                       {formatCurrency(item.price * item.quantity)}

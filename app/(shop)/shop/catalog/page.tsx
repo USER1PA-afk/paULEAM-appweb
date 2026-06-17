@@ -317,8 +317,8 @@ export default function CatalogPage() {
                         currency: "USD",
                         minimumFractionDigits: 2,
                       })}
-                      {(product.capacity_unit || product.unit) && (
-                        <span className="text-sm font-normal text-muted-foreground ml-1">/ {product.capacity_unit || product.unit}</span>
+                      {(product.sales_unit_name || product.capacity_unit || product.unit) && (
+                        <span className="text-sm font-normal text-muted-foreground ml-1">/ {product.sales_unit_name || product.capacity_unit || product.unit}</span>
                       )}
                     </p>
                   </div>
@@ -488,8 +488,8 @@ export default function CatalogPage() {
                         currency: "USD",
                         minimumFractionDigits: 2,
                       })}
-                      {(selectedProduct.capacity_unit || selectedProduct.unit) && (
-                        <span className="text-base font-normal text-muted-foreground ml-1">/ {selectedProduct.capacity_unit || selectedProduct.unit}</span>
+                      {(selectedProduct.sales_unit_name || selectedProduct.capacity_unit || selectedProduct.unit) && (
+                        <span className="text-base font-normal text-muted-foreground ml-1">/ {selectedProduct.sales_unit_name || selectedProduct.capacity_unit || selectedProduct.unit}</span>
                       )}
                     </p>
                   </div>

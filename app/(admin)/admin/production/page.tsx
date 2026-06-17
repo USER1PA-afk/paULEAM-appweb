@@ -7,12 +7,13 @@ import {
 } from "@features/production";
 import { usePackagingTemplates } from "@features/packaging";
 import { formatDate } from "@shared/lib/utils";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRole } from "@features/auth/hooks";
-import { Printer, Trash2 } from "lucide-react";
+import { Printer, Trash2, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePagination } from "@shared/hooks/use-pagination";
 import { TablePagination } from "@shared/components/ui/table-pagination";
+import { SearchableSelect } from "@shared/components/ui/searchable-select";
 
 // ─────────────────────────────────────────────────────────────
 // Sistema de unidades
@@ -58,10 +59,35 @@ export default function AdminProductionPage() {
   const {
     orders, loading,
     completeOrder, updateStatus, createOrder,
-    cancelOrder, declareWaste, refetch,
+    cancelOrder, declareWaste, reverseOrder, refetch,
   } = useProductionOrders();
   const { recipes } = useRecipes();
   const { role } = useRole();
+
+  const recipeOptions = useMemo(
+    () =>
+      recipes.map((r) => {
+        const rUnit = r.yield_unit?.toLowerCase() || "";
+        const rGroup = getUnitGroup(rUnit);
+        const baseStr = rGroup
+          ? (() => {
+              const rFactor = getUnitFactor(rUnit);
+              const displayOpt = UNIT_GROUPS[rGroup]?.find(
+                (u) => u.factor >= rFactor && u.factor <= rFactor * 1000
+              );
+              const df = displayOpt?.factor ?? rFactor;
+              const dl = displayOpt?.label ?? rUnit;
+              const val = r.yield_base / (df / rFactor);
+              return `${Number(val).toLocaleString("es-EC", { maximumFractionDigits: 3 })} ${dl}`;
+            })()
+          : `${r.yield_base} ${r.yield_unit}`;
+        return {
+          value: r.id,
+          label: `${r.name} (base: ${baseStr})`,
+        };
+      }),
+    [recipes]
+  );
   const isAdmin = role === "admin";
   const router = useRouter();
 
@@ -82,6 +108,10 @@ export default function AdminProductionPage() {
   const [wasteQty, setWasteQty] = useState("");
   const [wasteNotes, setWasteNotes] = useState("");
   const [savingWaste, setSavingWaste] = useState(false);
+
+  // Reversión
+  const [reverseOrderId, setReverseOrderId] = useState<string | null>(null);
+  const [reversing, setReversing] = useState(false);
 
   const [form, setForm] = useState({
     recipe_id: "",
@@ -197,6 +227,16 @@ export default function AdminProductionPage() {
     setWasteNotes("");
   }
 
+  async function handleReverseOrder(orderId: string) {
+    setReversing(true);
+    const { error: rErr } = await reverseOrder(orderId);
+    setReversing(false);
+    if (rErr) {
+      setRowErrors((prev) => ({ ...prev, [orderId]: rErr }));
+    }
+    setReverseOrderId(null);
+  }
+
   function togglePackagingSelection(templateId: string) {
     setPackagingSelections((prev) => {
       const exists = prev.find((s) => s.templateId === templateId);
@@ -287,38 +327,16 @@ export default function AdminProductionPage() {
                       <label htmlFor="prod-recipe" className="text-sm font-medium text-foreground">
                         Receta <span className="text-brand-500">*</span>
                       </label>
-                      <select
+                      <SearchableSelect
                         id="prod-recipe"
                         required
+                        options={recipeOptions}
                         value={form.recipe_id}
-                        onChange={(e) =>
-                          setForm((p) => ({ ...p, recipe_id: e.target.value, target_yield: "" }))
-                        }
+                        onChange={(val) => setForm((p) => ({ ...p, recipe_id: val, target_yield: "" }))}
+                        placeholder="Seleccionar receta..."
+                        searchPlaceholder="Buscar receta..."
                         className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-brand-400"
-                      >
-                        <option value="">Seleccionar receta...</option>
-                        {recipes.map((r) => {
-                          const rUnit = r.yield_unit?.toLowerCase() || "";
-                          const rGroup = getUnitGroup(rUnit);
-                          const baseStr = rGroup
-                            ? (() => {
-                                const rFactor = getUnitFactor(rUnit);
-                                const displayOpt = UNIT_GROUPS[rGroup]?.find(
-                                  (u) => u.factor >= rFactor && u.factor <= rFactor * 1000
-                                );
-                                const df = displayOpt?.factor ?? rFactor;
-                                const dl = displayOpt?.label ?? rUnit;
-                                const val = r.yield_base / (df / rFactor);
-                                return `${Number(val).toLocaleString("es-EC", { maximumFractionDigits: 3 })} ${dl}`;
-                              })()
-                            : `${r.yield_base} ${r.yield_unit}`;
-                          return (
-                            <option key={r.id} value={r.id}>
-                              {r.name} (base: {baseStr})
-                            </option>
-                          );
-                        })}
-                      </select>
+                      />
                     </div>
 
                     {/* Rendimiento + toggle de unidades */}
@@ -699,12 +717,20 @@ export default function AdminProductionPage() {
                                   Ver Detalle
                                 </button>
                                 {isAdmin && (
-                                  <button
-                                    onClick={() => setWasteOrderId(wasteOrderId === order.id ? null : order.id)}
-                                    className="rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
-                                  >
-                                    <Trash2 className="h-3 w-3 inline mr-0.5" />Merma
-                                  </button>
+                                  <>
+                                    <button
+                                      onClick={() => setWasteOrderId(wasteOrderId === order.id ? null : order.id)}
+                                      className="rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                                    >
+                                      <Trash2 className="h-3 w-3 inline mr-0.5" />Merma
+                                    </button>
+                                    <button
+                                      onClick={() => setReverseOrderId(reverseOrderId === order.id ? null : order.id)}
+                                      className="rounded-md border border-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                                    >
+                                      <RotateCcw className="h-3 w-3 inline mr-0.5" />Revertir
+                                    </button>
+                                  </>
                                 )}
                               </div>
                             )}
@@ -747,6 +773,38 @@ export default function AdminProductionPage() {
                                   Cancelar
                                 </button>
                               </form>
+                              {rowErrors[order.id] && (
+                                <div className="mt-2 rounded-md bg-destructive/10 border border-destructive/20 px-2 py-1 text-xs text-destructive">
+                                  {rowErrors[order.id]}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+
+                        {/* Confirmación de reversión */}
+                        {reverseOrderId === order.id && order.status === "COMPLETADA" && (
+                          <tr className="bg-red-50/60 dark:bg-red-900/10 border-t-0">
+                            <td colSpan={6} className="px-4 py-3 pb-4">
+                              <div className="flex flex-wrap items-center gap-3">
+                                <p className="text-xs text-red-800 dark:text-red-300 flex-1 min-w-48">
+                                  <strong>¿Revertir esta producción?</strong> Se eliminarán todos los movimientos de inventario (materia prima se restaura, producto terminado se retira) y la orden volverá a Borrador.
+                                </p>
+                                <button
+                                  onClick={() => handleReverseOrder(order.id)}
+                                  disabled={reversing}
+                                  className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                >
+                                  {reversing ? "Revirtiendo..." : "Sí, revertir"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setReverseOrderId(null)}
+                                  className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
                               {rowErrors[order.id] && (
                                 <div className="mt-2 rounded-md bg-destructive/10 border border-destructive/20 px-2 py-1 text-xs text-destructive">
                                   {rowErrors[order.id]}

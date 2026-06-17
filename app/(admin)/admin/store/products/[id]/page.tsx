@@ -411,7 +411,7 @@ export default function StoreProductDetailPage() {
                         <option value="paquete">Paquete</option>
                       </optgroup>
                     </select>
-                    <p className="text-[10px] text-muted-foreground mt-1">Se muestra como &ldquo;$Precio / lb&rdquo; en la tienda y el POS.</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Se muestra como &ldquo;$Precio / unidad&rdquo; en la tienda y el POS. Si define una unidad de venta (ej: Libra), se usará esa en su lugar.</p>
                   </Field>
                   <Field label="Peso (kg)">
                     <div className={inputCls + " bg-muted cursor-not-allowed flex items-center gap-2"}>
@@ -584,7 +584,7 @@ export default function StoreProductDetailPage() {
 
                     <div className="flex items-end gap-1">
                       <span className="text-3xl font-bold text-brand-600">{fmt(product.price || 0)}</span>
-                      <span className="text-sm text-muted-foreground mb-1">/ {product.capacity_unit || product.unit}</span>
+                      <span className="text-sm text-muted-foreground mb-1">/ {product.sales_unit_name || product.capacity_unit || product.unit}</span>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

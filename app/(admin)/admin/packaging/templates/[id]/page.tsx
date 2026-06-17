@@ -8,9 +8,10 @@ import {
 import { getInsforge } from "@shared/lib/insforge/client";
 import { Product } from "@entities/product";
 import { useRouter, useParams } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Trash2, Plus, ArrowRight, Package, Layers, PackageCheck, AlertTriangle } from "lucide-react";
+import { SearchableSelect } from "@shared/components/ui/searchable-select";
 
 interface MaterialRow {
   material_product_id: string;
@@ -170,6 +171,19 @@ export default function EditPackagingTemplatePage() {
   const canSubmit = !!form.finished_product_id && !!form.bulk_qty_per_unit && !!form.name;
   const isLoading = loadingTemplate || loadingProducts;
 
+  const granelOptions = useMemo(
+    () => finishedProducts.map((p) => ({ value: p.id, label: `${p.name} — ${p.unit}` })),
+    [finishedProducts]
+  );
+  const outputOptions = useMemo(
+    () => outputProducts.map((p) => ({ value: p.id, label: `${p.name} — ${p.unit}` })),
+    [outputProducts]
+  );
+  const materialOptions = useMemo(
+    () => packagingMaterials.map((p) => ({ value: p.id, label: `${p.name} (${p.sku})` })),
+    [packagingMaterials]
+  );
+
   const FlowStrip = (
     <div className="rounded-lg border border-border bg-card px-4 py-2 flex items-center gap-2 text-xs overflow-x-auto">
       <Layers className="h-3.5 w-3.5 text-teal-600 shrink-0" />
@@ -267,17 +281,18 @@ export default function EditPackagingTemplatePage() {
                         </p>
                       </div>
                     ) : (
-                      <select required value={form.finished_product_id}
-                        onChange={(e) => {
-                          const p = finishedProducts.find((pr) => pr.id === e.target.value);
-                          setForm((prev) => ({ ...prev, finished_product_id: e.target.value, output_product_id: "", bulk_unit: p?.unit ?? "kg" }));
+                      <SearchableSelect
+                        required
+                        options={granelOptions}
+                        value={form.finished_product_id}
+                        onChange={(val) => {
+                          const p = finishedProducts.find((pr) => pr.id === val);
+                          setForm((prev) => ({ ...prev, finished_product_id: val, output_product_id: "", bulk_unit: p?.unit ?? "kg" }));
                         }}
-                        className="w-full rounded-lg border border-teal-300 dark:border-teal-700 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
-                        <option value="">Seleccionar...</option>
-                        {finishedProducts.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name} — {p.unit}</option>
-                        ))}
-                      </select>
+                        placeholder="Seleccionar..."
+                        searchPlaceholder="Buscar producto..."
+                        className="w-full rounded-lg border border-teal-300 dark:border-teal-700 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                      />
                     )}
                   </div>
 
@@ -322,14 +337,14 @@ export default function EditPackagingTemplatePage() {
                         </p>
                       </div>
                     ) : (
-                      <select value={form.output_product_id}
-                        onChange={(e) => setForm((p) => ({ ...p, output_product_id: e.target.value }))}
-                        className={`w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${noOutputSelected && form.finished_product_id ? "border-amber-400 dark:border-amber-600" : "border-brand-300 dark:border-brand-700"}`}>
-                        <option value="">— Sin asignar —</option>
-                        {outputProducts.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name} — {p.unit}</option>
-                        ))}
-                      </select>
+                      <SearchableSelect
+                        options={outputOptions}
+                        value={form.output_product_id}
+                        onChange={(val) => setForm((p) => ({ ...p, output_product_id: val }))}
+                        placeholder="— Sin asignar —"
+                        searchPlaceholder="Buscar producto..."
+                        className={`w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${noOutputSelected && form.finished_product_id ? "border-amber-400 dark:border-amber-600" : "border-brand-300 dark:border-brand-700"}`}
+                      />
                     )}
                   </div>
                 </div>
@@ -424,14 +439,15 @@ export default function EditPackagingTemplatePage() {
                   return (
                     <div key={index} className="flex gap-2 items-center bg-muted/20 rounded-lg border border-border/60 p-2.5">
                       <div className="flex-1 min-w-0">
-                        <select value={mat.material_product_id}
-                          onChange={(e) => updateMaterial(index, "material_product_id", e.target.value)}
-                          className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                          <option value="">Material {index + 1}...</option>
-                          {packagingMaterials.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
+                        <SearchableSelect
+                          options={materialOptions}
+                          value={mat.material_product_id}
+                          onChange={(val) => updateMaterial(index, "material_product_id", val)}
+                          placeholder={`Material ${index + 1}...`}
+                          searchPlaceholder="Buscar material..."
+                          emptyMessage="Sin materiales disponibles"
+                          className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
                         {selectedMat && (
                           <p className="text-[9px] text-muted-foreground font-mono mt-0.5 pl-0.5">SKU: {selectedMat.sku}</p>
                         )}

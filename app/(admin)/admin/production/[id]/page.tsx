@@ -18,7 +18,7 @@ import { useRole } from "@features/auth/hooks";
 import { formatDate } from "@shared/lib/utils";
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Package, Trash2, FlaskConical, DollarSign } from "lucide-react";
+import { ArrowLeft, Package, Trash2, FlaskConical, DollarSign, RotateCcw } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────
 // Sistema de unidades (igual al de production/page.tsx)
@@ -70,7 +70,7 @@ export default function ProductionOrderDetailPage() {
   const { templates: packagingTemplates } = usePackagingTemplates();
   const { orders: packagingOrders, refetch: refetchPackaging } = usePackagingOrdersByProduction(id);
   const { role } = useRole();
-  const { declareWaste } = useProductionOrders();
+  const { declareWaste, reverseOrder } = useProductionOrders();
   const isAdmin = role === "admin";
 
   const [showWaste, setShowWaste] = useState(false);
@@ -78,6 +78,10 @@ export default function ProductionOrderDetailPage() {
   const [wasteNotes, setWasteNotes] = useState("");
   const [savingWaste, setSavingWaste] = useState(false);
   const [wasteError, setWasteError] = useState<string | null>(null);
+
+  const [showReverseConfirm, setShowReverseConfirm] = useState(false);
+  const [reversing, setReversing] = useState(false);
+  const [reverseError, setReverseError] = useState<string | null>(null);
 
   const recipe = recipes.find((r) => r.id === order?.recipe_id);
   const status = order ? (STATUS_LABELS[order.status] ?? { label: order.status, dot: "bg-gray-400" }) : null;
@@ -144,6 +148,16 @@ export default function ProductionOrderDetailPage() {
     setWasteNotes("");
   }
 
+  async function handleReverseOrder() {
+    setReversing(true);
+    setReverseError(null);
+    const { error: rErr } = await reverseOrder(id);
+    setReversing(false);
+    if (rErr) { setReverseError(rErr); return; }
+    setShowReverseConfirm(false);
+    router.push("/admin/production");
+  }
+
   // Costo total consolidado
   const productionCost = Number(order?.production_cost ?? 0);
   const packagingCostCompleted = packagingOrders
@@ -203,12 +217,20 @@ export default function ProductionOrderDetailPage() {
         </div>
 
         {isAdmin && order.status === "COMPLETADA" && (
-          <button
-            onClick={() => setShowWaste(!showWaste)}
-            className="shrink-0 rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
-          >
-            <Trash2 className="h-3.5 w-3.5 inline mr-1" />Declarar Merma
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowWaste(!showWaste)}
+              className="rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+            >
+              <Trash2 className="h-3.5 w-3.5 inline mr-1" />Declarar Merma
+            </button>
+            <button
+              onClick={() => { setShowReverseConfirm(!showReverseConfirm); setShowWaste(false); }}
+              className="rounded-md border border-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+            >
+              <RotateCcw className="h-3.5 w-3.5 inline mr-1" />Revertir Producción
+            </button>
+          </div>
         )}
       </div>
 
@@ -249,6 +271,34 @@ export default function ProductionOrderDetailPage() {
           </form>
           {wasteError && (
             <div className="mt-2 rounded-md bg-destructive/10 border border-destructive/20 px-2 py-1 text-xs text-destructive">{wasteError}</div>
+          )}
+        </div>
+      )}
+
+      {/* ── Confirmación de reversión ──────────────────────── */}
+      {showReverseConfirm && (
+        <div className="rounded-xl border border-red-300 bg-red-50/60 dark:bg-red-900/10 p-4">
+          <p className="text-sm text-red-800 dark:text-red-300 mb-3">
+            <strong>¿Revertir esta producción?</strong> Se eliminarán todos los movimientos de inventario de esta orden: la materia prima consumida se restaurará y el producto terminado se retirará. La orden volverá a estado Borrador para corrección.
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleReverseOrder}
+              disabled={reversing}
+              className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+            >
+              {reversing ? "Revirtiendo..." : "Sí, revertir producción"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowReverseConfirm(false); setReverseError(null); }}
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+          {reverseError && (
+            <div className="mt-2 rounded-md bg-destructive/10 border border-destructive/20 px-2 py-1 text-xs text-destructive">{reverseError}</div>
           )}
         </div>
       )}

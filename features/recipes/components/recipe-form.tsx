@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { InstructionStep } from "@entities/recipe";
 import { useProducts, useRecipeMutations, useRecipe } from "../hooks";
 import { getAllUnits } from "../lib";
+import { SearchableSelect } from "@shared/components/ui/searchable-select";
 import { ArrowLeft, Plus, Trash2, GripVertical, Save, Thermometer, Clock, X } from "lucide-react";
 
 interface RecipeFormProps {
@@ -55,6 +56,25 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
   const [initialized, setInitialized] = useState(false);
 
   const unitOptions = getAllUnits();
+
+  const outputProductOptions = useMemo(
+    () =>
+      finishedProducts.map((p) => ({
+        value: p.id,
+        label: `${p.name} (${p.sku})`,
+      })),
+    [finishedProducts]
+  );
+
+  const ingredientOptions = useMemo(() => {
+    const materias = ingredientProducts
+      .filter((p) => p.type === "MATERIA_PRIMA")
+      .map((p) => ({ value: p.id, label: `${p.name} (${p.sku})`, group: "Materias Primas" }));
+    const insumos = ingredientProducts
+      .filter((p) => p.type === "INSUMO")
+      .map((p) => ({ value: p.id, label: `${p.name} (${p.sku})`, group: "Insumos" }));
+    return [...materias, ...insumos];
+  }, [ingredientProducts]);
 
   // Populate form when editing
   useEffect(() => {
@@ -318,20 +338,16 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
               <label htmlFor="recipe-output" className="text-xs font-medium text-muted-foreground">
                 Producto Resultado *
               </label>
-              <select
+              <SearchableSelect
                 id="recipe-output"
                 required
+                options={outputProductOptions}
                 value={outputProductId}
-                onChange={(e) => setOutputProductId(e.target.value)}
+                onChange={setOutputProductId}
+                placeholder="Seleccionar producto terminado..."
+                searchPlaceholder="Buscar producto..."
                 className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
-              >
-                <option value="">Seleccionar producto terminado...</option>
-                {finishedProducts.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.sku})
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             {/* Rendimiento Base */}
@@ -449,29 +465,16 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                       >
                         {idx + 1}
                       </span>
-                      <select
+                      <SearchableSelect
                         required
                         aria-label={`Ingrediente ${idx + 1}`}
+                        options={ingredientOptions}
                         value={row.product_id}
-                        onChange={(e) => updateIngredientRow(row.key, "product_id", e.target.value)}
+                        onChange={(val) => updateIngredientRow(row.key, "product_id", val)}
+                        placeholder="Seleccionar ingrediente..."
+                        searchPlaceholder="Buscar ingrediente..."
                         className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
-                      >
-                        <option value="">Seleccionar ingrediente...</option>
-                        {ingredientProducts.filter(p => p.type === "MATERIA_PRIMA").length > 0 && (
-                          <optgroup label="Materias Primas">
-                            {ingredientProducts.filter(p => p.type === "MATERIA_PRIMA").map((p) => (
-                              <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-                            ))}
-                          </optgroup>
-                        )}
-                        {ingredientProducts.filter(p => p.type === "INSUMO").length > 0 && (
-                          <optgroup label="Insumos">
-                            {ingredientProducts.filter(p => p.type === "INSUMO").map((p) => (
-                              <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-                            ))}
-                          </optgroup>
-                        )}
-                      </select>
+                      />
                     </div>
 
                     {/* Quantity + Unit + Delete — flex row on mobile, grid cols on sm+ */}
