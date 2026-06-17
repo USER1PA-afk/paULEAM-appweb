@@ -61,6 +61,14 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
             style={{ width: 28, height: 28 }}
             className="object-contain dark:invert"
           />
+          <Image
+            src="/PANCHITOS_logo_page-0001.png"
+            alt="Logo Panchitos"
+            width={38}
+            height={38}
+            style={{ width: 38, height: 38 }}
+            className="object-contain"
+          />
           <div className="flex flex-col leading-tight">
             <span className="text-[11px] font-black uppercase tracking-[0.2em] text-neutral-900 dark:text-white">
               PAuleam

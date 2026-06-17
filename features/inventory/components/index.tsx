@@ -316,7 +316,8 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
     };
     return products.map((p) => ({
       value: p.id,
-      label: `${p.name} (${p.sku}) — ${p.unit}`,
+      label: `${p.name} (${p.sku})`,
+      meta: p.unit,
       group: TYPE_LABELS[p.type] ?? p.type,
     }));
   }, [products]);
@@ -409,7 +410,7 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
         >
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {/* Producto */}
-            <div className="space-y-1.5 lg:col-span-1">
+            <div className="space-y-1.5 lg:col-span-1 min-w-0">
               <label htmlFor="entry-product" className="text-xs font-medium text-muted-foreground">
                 Producto *
               </label>
@@ -443,7 +444,7 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
             </div>
 
             {/* Cantidad */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <label htmlFor="entry-qty" className="text-xs font-medium text-muted-foreground">
                 Cantidad *
               </label>
@@ -461,7 +462,7 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
             </div>
 
             {/* Costo Unitario */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <label htmlFor="entry-cost" className="text-xs font-medium text-muted-foreground">
                 Costo Unitario (USD)
               </label>
@@ -478,7 +479,7 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
             </div>
 
             {/* Tipo de referencia */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <label htmlFor="entry-ref" className="text-xs font-medium text-muted-foreground">
                 Tipo de Movimiento
                 {(isGranel || isTerminado) && (
@@ -501,7 +502,7 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
 
             {/* Proveedor — visible solo cuando tipo = COMPRA y producto es comprable */}
             {isCompra && isPurchasable && (
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 min-w-0">
                 <label htmlFor="entry-supplier" className="text-xs font-medium text-muted-foreground">
                   Proveedor *
                 </label>
@@ -535,7 +536,7 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
             )}
 
             {/* Notas */}
-            <div className={`space-y-1.5 ${isCompra ? "sm:col-span-2 lg:col-span-1" : "sm:col-span-2 lg:col-span-2"}`}>
+            <div className={`space-y-1.5 min-w-0 ${isCompra ? "sm:col-span-2 lg:col-span-1" : "sm:col-span-2 lg:col-span-2"}`}>
               <label htmlFor="entry-notes" className="text-xs font-medium text-muted-foreground">
                 Notas
               </label>

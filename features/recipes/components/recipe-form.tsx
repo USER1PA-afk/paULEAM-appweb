@@ -319,7 +319,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
 
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {/* Nombre */}
-            <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+            <div className="space-y-1.5 sm:col-span-2 lg:col-span-1 min-w-0">
               <label htmlFor="recipe-name" className="text-xs font-medium text-muted-foreground">
                 Nombre de la Receta *
               </label>
@@ -334,7 +334,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
             </div>
 
             {/* Producto Resultado */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <label htmlFor="recipe-output" className="text-xs font-medium text-muted-foreground">
                 Producto Resultado *
               </label>
@@ -455,10 +455,10 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                   className="rounded-lg border border-border/50 bg-muted/30 p-3 hover:border-border hover:bg-muted/50 transition-all duration-150"
                 >
                   {/* Desktop: 12-col grid / Mobile: stacked */}
-                  <div className="flex flex-col gap-2 sm:grid sm:grid-cols-12 sm:gap-3 sm:items-center">
+                  <div className="flex flex-col gap-2 sm:grid sm:grid-cols-12 sm:gap-3 sm:items-center overflow-hidden">
 
                     {/* # + Product — full width on mobile */}
-                    <div className="sm:col-span-5 flex items-center gap-2">
+                    <div className="sm:col-span-5 flex items-center gap-2 min-w-0">
                       <span
                         aria-hidden="true"
                         className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white dark:bg-blue-500 dark:text-zinc-950 text-[10px] font-extrabold select-none shadow-sm"

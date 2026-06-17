@@ -172,11 +172,11 @@ export default function EditPackagingTemplatePage() {
   const isLoading = loadingTemplate || loadingProducts;
 
   const granelOptions = useMemo(
-    () => finishedProducts.map((p) => ({ value: p.id, label: `${p.name} — ${p.unit}` })),
+    () => finishedProducts.map((p) => ({ value: p.id, label: p.name, meta: p.unit })),
     [finishedProducts]
   );
   const outputOptions = useMemo(
-    () => outputProducts.map((p) => ({ value: p.id, label: `${p.name} — ${p.unit}` })),
+    () => outputProducts.map((p) => ({ value: p.id, label: p.name, meta: p.unit })),
     [outputProducts]
   );
   const materialOptions = useMemo(
@@ -268,7 +268,7 @@ export default function EditPackagingTemplatePage() {
                 {/* Granel → Qty → Terminado */}
                 <div className="grid gap-2 md:grid-cols-[1fr_auto_1fr] items-center">
                   {/* Granel */}
-                  <div className="space-y-1">
+                  <div className="space-y-1 min-w-0">
                     <label className="flex flex-wrap items-center gap-1 text-xs font-semibold text-foreground">
                       <Layers className="h-3 w-3 text-teal-600" />
                       Producto a Granel <span className="text-destructive">*</span>
@@ -324,7 +324,7 @@ export default function EditPackagingTemplatePage() {
                   </div>
 
                   {/* Terminado */}
-                  <div className="space-y-1">
+                  <div className="space-y-1 min-w-0">
                     <label className="flex flex-wrap items-center gap-1 text-xs font-semibold text-foreground">
                       <PackageCheck className="h-3 w-3 text-brand-600" />
                       Producto Terminado <span className="text-destructive">*</span>
@@ -437,7 +437,7 @@ export default function EditPackagingTemplatePage() {
                 {materials.map((mat, index) => {
                   const selectedMat = packagingMaterials.find((p) => p.id === mat.material_product_id);
                   return (
-                    <div key={index} className="flex gap-2 items-center bg-muted/20 rounded-lg border border-border/60 p-2.5">
+                    <div key={index} className="flex gap-2 items-center bg-muted/20 rounded-lg border border-border/60 p-2.5 overflow-hidden">
                       <div className="flex-1 min-w-0">
                         <SearchableSelect
                           options={materialOptions}

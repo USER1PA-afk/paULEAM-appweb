@@ -52,6 +52,14 @@ export default function HomePage() {
               style={{ width: 36, height: 36 }}
               className="shrink-0 object-contain dark:invert"
             />
+            <Image
+              src="/PANCHITOS_logo_page-0001.png"
+              alt="Logo Panchitos"
+              width={52}
+              height={52}
+              style={{ width: 52, height: 52 }}
+              className="shrink-0 object-contain"
+            />
             <span className="text-sm font-extrabold tracking-tight text-foreground uppercase">
               PAuleam
             </span>
@@ -101,46 +109,70 @@ export default function HomePage() {
           />
 
           <div className="relative z-10 mx-auto max-w-6xl px-6 py-16 lg:py-24">
-            <div className="max-w-2xl space-y-6">
-              {/* Institution pill */}
-              <div className="inline-flex items-center rounded-full border border-brand-200 dark:border-brand-800 px-3 py-1">
-                <span className="text-xs font-semibold text-brand-700 dark:text-brand-300 uppercase tracking-wide">
-                  Planta de Alimentos · ULEAM Extension Chone
-                </span>
+            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-4">
+              <div className="lg:hidden mb-6">
+                <Image
+                  src="/PANCHITOS_logo_page-0001.png"
+                  alt="Logo Panchitos"
+                  width={300}
+                  height={300}
+                  className="mx-auto object-contain"
+                  priority
+                />
               </div>
 
-              <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-                Sabores que nacen{" "}
-                <span className="relative whitespace-nowrap">
-                  <span className="bg-linear-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
-                    de la tierra
+              <div className="max-w-2xl space-y-6">
+                {/* Institution pill */}
+                <div className="inline-flex items-center rounded-full border border-brand-200 dark:border-brand-800 px-3 py-1">
+                  <span className="text-xs font-semibold text-brand-700 dark:text-brand-300 uppercase tracking-wide">
+                    Planta de Alimentos · ULEAM Extension Chone
                   </span>
-                  <span
-                    aria-hidden="true"
-                    className="absolute -bottom-1 left-0 h-0.5 w-full rounded-full bg-linear-to-r from-brand-500 to-accent-500"
-                  />
-                </span>
-              </h1>
+                </div>
 
-              <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-                Productos alimenticios artesanales elaborados en la Planta de
-                Alimentos de la{" "}
-                <span className="font-semibold text-foreground">ULEAM</span>.
-                Calidad académica, sabor auténtico, directo a tu mesa.
-              </p>
+                <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+                  Sabores que nacen{" "}
+                  <span className="relative whitespace-nowrap">
+                    <span className="bg-linear-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
+                      de la tierra
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="absolute -bottom-1 left-0 h-0.5 w-full rounded-full bg-linear-to-r from-brand-500 to-accent-500"
+                    />
+                  </span>
+                </h1>
 
-              {/* Metrics */}
-              <div className="flex flex-wrap gap-8 pt-2">
-                {[
-                  { value: "100%", label: "Natural", color: "text-accent-600 dark:text-accent-400" },
-                  { value: "S/A",  label: "Conservantes", color: "text-brand-600 dark:text-brand-400" },
-                  { value: "Local", label: "Producción", color: "text-uleam-gray dark:text-muted-foreground" },
-                ].map((s) => (
-                  <div key={s.label}>
-                    <div className={`text-2xl font-extrabold ${s.color}`}>{s.value}</div>
-                    <div className="text-xs text-muted-foreground">{s.label}</div>
-                  </div>
-                ))}
+                <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+                  Productos alimenticios artesanales elaborados en la Planta de
+                  Alimentos de la{" "}
+                  <span className="font-semibold text-foreground">ULEAM</span>.
+                  Calidad académica, sabor auténtico, directo a tu mesa.
+                </p>
+
+                {/* Metrics */}
+                <div className="flex flex-wrap gap-8 pt-2">
+                  {[
+                    { value: "100%", label: "Natural", color: "text-accent-600 dark:text-accent-400" },
+                    { value: "S/A",  label: "Conservantes", color: "text-brand-600 dark:text-brand-400" },
+                    { value: "Local", label: "Producción", color: "text-uleam-gray dark:text-muted-foreground" },
+                  ].map((s) => (
+                    <div key={s.label}>
+                      <div className={`text-2xl font-extrabold ${s.color}`}>{s.value}</div>
+                      <div className="text-xs text-muted-foreground">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hidden lg:flex lg:flex-1 lg:justify-end">
+                <Image
+                  src="/PANCHITOS_logo_page-0001.png"
+                  alt="Logo Panchitos"
+                  width={640}
+                  height={640}
+                  className="object-contain"
+                  priority
+                />
               </div>
             </div>
           </div>

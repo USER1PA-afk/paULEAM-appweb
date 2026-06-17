@@ -239,6 +239,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             style={{ width: 26, height: 26 }}
             className="shrink-0 object-contain dark:invert"
           />
+          <Image
+            src="/PANCHITOS_logo_page-0001.png"
+            alt="Logo Panchitos"
+            width={36}
+            height={36}
+            style={{ width: 36, height: 36 }}
+            className="shrink-0 object-contain"
+          />
           <span className="hidden sm:block text-[13px] font-extrabold uppercase tracking-tight text-foreground">
             PAuleam
           </span>

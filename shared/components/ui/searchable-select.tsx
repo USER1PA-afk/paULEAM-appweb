@@ -7,6 +7,8 @@ export interface SearchableOption {
   value: string;
   label: string;
   group?: string;
+  /** Short secondary text shown next to the label (e.g. unit, SKU) */
+  meta?: string;
 }
 
 interface SearchableSelectProps {
@@ -58,14 +60,15 @@ export function SearchableSelect({
     return map;
   }, [options]);
 
-  // Filter
+  // Filter — searches both label and meta
   const filteredGroups = useMemo(() => {
     const q = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const result = new Map<string | null, SearchableOption[]>();
     for (const [group, opts] of groups) {
       const filtered = opts.filter((o) => {
         const norm = o.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        return norm.includes(q);
+        const metaNorm = o.meta?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") ?? "";
+        return norm.includes(q) || metaNorm.includes(q);
       });
       if (filtered.length > 0) result.set(group, filtered);
     }
@@ -87,7 +90,6 @@ export function SearchableSelect({
   // Scroll highlighted item into view — only for keyboard navigation
   useEffect(() => {
     if (keyboardNav.current && highlightIdx >= 0 && listRef.current) {
-      const groupHeaders = listRef.current.querySelectorAll('[role="group"] > div:first-child');
       const allChildren = Array.from(listRef.current.querySelectorAll('[role="option"]'));
       const item = allChildren[highlightIdx] as HTMLElement | undefined;
       item?.scrollIntoView({ block: "nearest" });
@@ -110,7 +112,6 @@ export function SearchableSelect({
 
   const openDropdown = useCallback(() => {
     if (disabled) return;
-    // Determine if dropdown should open upward (on mobile or when near bottom)
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
@@ -182,7 +183,7 @@ export function SearchableSelect({
   );
 
   return (
-    <div ref={containerRef} className="relative" onKeyDown={handleKeyDown}>
+    <div ref={containerRef} className="relative min-w-0" onKeyDown={handleKeyDown}>
       {/* Trigger button */}
       <button
         type="button"
@@ -194,13 +195,22 @@ export function SearchableSelect({
         aria-required={required}
         onClick={open ? () => { setOpen(false); setSearch(""); } : openDropdown}
         disabled={disabled}
-        className={`flex items-center gap-2 w-full text-left ${className} ${
+        className={`flex items-center gap-2 w-full text-left overflow-hidden min-w-0 ${className} ${
           disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
         }`}
       >
-        <span className={`flex-1 truncate ${selectedOption ? "" : "text-muted-foreground"}`}>
-          {selectedOption ? selectedOption.label : placeholder}
-        </span>
+        {selectedOption ? (
+          <span className="flex-1 flex items-center gap-1.5 min-w-0">
+            <span className="truncate">{selectedOption.label}</span>
+            {selectedOption.meta && (
+              <span className="shrink-0 text-[10px] font-medium text-muted-foreground bg-muted rounded px-1 py-px">
+                {selectedOption.meta}
+              </span>
+            )}
+          </span>
+        ) : (
+          <span className="flex-1 truncate text-muted-foreground">{placeholder}</span>
+        )}
         {value && !disabled && (
           <span
             role="button"
@@ -254,7 +264,7 @@ export function SearchableSelect({
             />
           </div>
 
-          {/* Options list */}
+          {/* Options list — NO truncation, full labels visible */}
           <ul
             ref={listRef}
             role="listbox"
@@ -292,7 +302,10 @@ export function SearchableSelect({
                             isHighlighted ? "bg-accent text-accent-foreground" : ""
                           } ${isSelected ? "font-medium" : ""}`}
                         >
-                          <span className="flex-1 truncate">{opt.label}</span>
+                          <span className="flex-1">{opt.label}</span>
+                          {opt.meta && (
+                            <span className="shrink-0 text-[10px] text-muted-foreground/70">{opt.meta}</span>
+                          )}
                           {isSelected && (
                             <span className="shrink-0 text-brand-600 text-xs">✓</span>
                           )}

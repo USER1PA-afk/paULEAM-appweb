@@ -131,11 +131,11 @@ export default function NewPackagingTemplatePage() {
   const canSubmit = !!form.finished_product_id && !!form.bulk_qty_per_unit && !!form.name;
 
   const granelOptions = useMemo(
-    () => finishedProducts.map((p) => ({ value: p.id, label: `${p.name} — ${p.unit}` })),
+    () => finishedProducts.map((p) => ({ value: p.id, label: p.name, meta: p.unit })),
     [finishedProducts]
   );
   const outputOptions = useMemo(
-    () => outputProducts.map((p) => ({ value: p.id, label: `${p.name} — ${p.unit}` })),
+    () => outputProducts.map((p) => ({ value: p.id, label: p.name, meta: p.unit })),
     [outputProducts]
   );
   const materialOptions = useMemo(
@@ -392,7 +392,7 @@ export default function NewPackagingTemplatePage() {
                 {materials.map((mat, index) => {
                   const selectedMat = packagingMaterials.find((p) => p.id === mat.material_product_id);
                   return (
-                    <div key={index} className="flex gap-2 items-center bg-muted/20 rounded-lg border border-border/60 p-2.5">
+                    <div key={index} className="flex gap-2 items-center bg-muted/20 rounded-lg border border-border/60 p-2.5 overflow-hidden">
                       <div className="flex-1 min-w-0">
                         <SearchableSelect
                           options={materialOptions}

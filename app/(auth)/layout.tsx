@@ -32,6 +32,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               height={40}
               className="shrink-0 object-contain drop-shadow-md"
             />
+            <Image
+              src="/PANCHITOS_logo_page-0001.png"
+              alt="Logo Panchitos"
+              width={48}
+              height={48}
+              className="shrink-0 object-contain"
+            />
             <div className="flex flex-col leading-tight">
               <span className="text-base font-extrabold text-white uppercase tracking-tight">
                 PAuleam
@@ -116,6 +123,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               width={32}
               height={32}
               className="shrink-0 object-contain dark:invert"
+            />
+            <Image
+              src="/PANCHITOS_logo_page-0001.png"
+              alt="Logo Panchitos"
+              width={40}
+              height={40}
+              className="shrink-0 object-contain"
             />
             <div className="flex flex-col leading-tight">
               <span className="text-sm font-extrabold uppercase tracking-tight text-foreground">PAuleam</span>

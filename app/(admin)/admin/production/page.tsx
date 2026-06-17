@@ -323,7 +323,7 @@ export default function AdminProductionPage() {
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Producción</p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {/* Receta */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 min-w-0">
                       <label htmlFor="prod-recipe" className="text-sm font-medium text-foreground">
                         Receta <span className="text-brand-500">*</span>
                       </label>

@@ -39,6 +39,14 @@ export default function ShopLayout({
               style={{ width: 32, height: 32 }}
               className="shrink-0 object-contain dark:invert"
             />
+            <Image
+              src="/PANCHITOS_logo_page-0001.png"
+              alt="Logo Panchitos"
+              width={44}
+              height={44}
+              style={{ width: 44, height: 44 }}
+              className="shrink-0 object-contain"
+            />
             <span className="text-base font-bold tracking-tight text-foreground">
               PAuleam
             </span>
