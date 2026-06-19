@@ -42,9 +42,10 @@ export async function GET(
     );
   }
 
-  // ── 3. Create scoped server client with the user's token ──────────────────
-  //  `edgeFunctionToken` calls http.setAuthToken() + tokenManager.setAccessToken()
-  //  so auth.getCurrentUser() and storage.download() both use this session.
+  // ── 3. Create clients ──────────────────────────────────────────────────────
+  //  Auth client: uses the user's JWT to verify session + authorization.
+  //  Storage client: uses only the admin API key (no edgeFunctionToken) to
+  //  bypass RLS — the route already verified the caller is owner or staff.
   const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL;
   const apiKey  = process.env.INSFORGE_API_KEY;
 
@@ -58,6 +59,10 @@ export async function GET(
     edgeFunctionToken: token,
     isServerMode: true,
   });
+
+  const storageClient = apiKey
+    ? createClient({ baseUrl, anonKey: apiKey, isServerMode: true })
+    : insforge;
 
   // ── 4. Verify session ─────────────────────────────────────────────────────
   const { data: userData, error: authError } = await insforge.auth.getCurrentUser();
@@ -87,7 +92,7 @@ export async function GET(
   }
 
   // ── 6. Download the file from the private bucket ──────────────────────────
-  const { data: blob, error: storageError } = await insforge.storage
+  const { data: blob, error: storageError } = await storageClient.storage
     .from("payment-receipts")
     .download(filePath);
 
