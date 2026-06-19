@@ -88,7 +88,7 @@ export default function HomePage() {
       <main id="main-content" className="flex flex-1 flex-col">
 
         {/* ── Hero ── */}
-        <section className="relative overflow-hidden bg-white dark:bg-background">
+        <section className="relative overflow-hidden">
           {/* Subtle dot grid */}
           <div
             aria-hidden="true"
@@ -122,12 +122,6 @@ export default function HomePage() {
               </div>
 
               <div className="max-w-2xl space-y-6">
-                {/* Institution pill */}
-                <div className="inline-flex items-center rounded-full border border-brand-200 dark:border-brand-800 px-3 py-1">
-                  <span className="text-xs font-semibold text-brand-700 dark:text-brand-300 uppercase tracking-wide">
-                    Planta de Alimentos · ULEAM Extension Chone
-                  </span>
-                </div>
 
                 <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
                   Sabores que nacen{" "}
@@ -179,7 +173,17 @@ export default function HomePage() {
         </section>
 
         {/* ── Product Carousel ── */}
-        <section className="bg-muted/40 dark:bg-muted/10">
+        <section className="relative overflow-hidden">
+          {/* Decorative glow */}
+          <div
+            aria-hidden="true"
+            className="absolute -top-24 -left-24 h-[400px] w-[400px] rounded-full bg-accent-100/30 dark:bg-accent-900/8 blur-3xl"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute -bottom-16 -right-16 h-[350px] w-[350px] rounded-full bg-brand-100/30 dark:bg-brand-900/8 blur-3xl"
+          />
+
           <div className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
             <div className="mb-8 flex items-end justify-between gap-4">
               <div>
@@ -203,7 +207,13 @@ export default function HomePage() {
         </section>
 
         {/* ── Value props ── */}
-        <section className="mx-auto max-w-6xl px-6 py-12 sm:py-16 w-full">
+        <section className="relative overflow-hidden">
+          {/* Decorative glow */}
+          <div
+            aria-hidden="true"
+            className="absolute -top-16 -right-16 h-[350px] w-[350px] rounded-full bg-accent-100/25 dark:bg-accent-900/8 blur-3xl"
+          />
+          <div className="mx-auto max-w-6xl px-6 py-12 sm:py-16 w-full">
           <div className="grid gap-6 sm:grid-cols-3">
             {VALUES.map((v) => (
               <div
@@ -219,6 +229,7 @@ export default function HomePage() {
                 </p>
               </div>
             ))}
+          </div>
           </div>
         </section>
 
