@@ -1,5 +1,6 @@
 import React from "react";
 import { logoBase64 } from "./logoBase64";
+import { InstallPwaButton } from "./install-pwa-button";
 
 export function Footer() {
   return (
@@ -9,7 +10,7 @@ export function Footer() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={logoBase64}
-            alt="Logo ULEAM" 
+            alt="Logo ULEAM"
             className="h-10 w-auto object-contain opacity-90 dark:opacity-100 transition-all"
           />
           <div className="hidden h-8 w-px bg-border sm:block" />
@@ -19,6 +20,7 @@ export function Footer() {
             {" "}· Planta de Alimentos · ERP
           </p>
         </div>
+        <InstallPwaButton />
       </div>
     </footer>
   );

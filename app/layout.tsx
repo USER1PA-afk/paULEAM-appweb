@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@shared/components/theme-provider";
+import { ServiceWorkerRegister } from "@shared/components/service-worker-register";
 import "./globals.css";
 
 const inter = Inter({
@@ -12,6 +13,20 @@ export const metadata: Metadata = {
   title: "PAuleam — ERP & E-Commerce | Planta de Alimentos",
   description:
     "Sistema integrado de gestión industrial y comercio electrónico para planta de alimentos. Inventario, producción, ventas y más.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "PAuleam",
+  },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#cc0000",
 };
 
 export default function RootLayout({
@@ -31,6 +46,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
           {children}
         </ThemeProvider>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

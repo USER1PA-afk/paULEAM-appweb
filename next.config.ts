@@ -33,6 +33,15 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Service worker: allow root scope + let the browser revalidate sw.js
+        // on every navigation so updates roll out promptly.
+        source: "/sw.js",
+        headers: [
+          { key: "Service-Worker-Allowed", value: "/" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+      {
         // CORS: restrict API routes to known origins only
         source: "/api/:path*",
         headers: [
