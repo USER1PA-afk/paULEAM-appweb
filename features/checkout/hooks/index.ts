@@ -128,40 +128,66 @@ export function receiptProxyUrl(value: string): string {
   return value;
 }
 
+const CART_KEY_PREFIX = "pauleam_cart_";
+export { CART_KEY_PREFIX };
+
+function cartKey(userId: string): string {
+  return `${CART_KEY_PREFIX}${userId}`;
+}
+
 let globalCartItems: CartItem[] = [];
-let isCartInitialized = false;
+let currentUserId: string | null = null;
 const cartListeners = new Set<() => void>();
 
-function notifyCart() {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("pauleam_cart", JSON.stringify(globalCartItems));
+function loadCartForUser(userId: string | null): CartItem[] {
+  if (typeof window === "undefined" || !userId) return [];
+  try {
+    const saved = localStorage.getItem(cartKey(userId));
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
+}
+
+function saveCartForUser(userId: string | null, items: CartItem[]): void {
+  if (typeof window === "undefined" || !userId) return;
+  try {
+    if (items.length === 0) {
+      localStorage.removeItem(cartKey(userId));
+    } else {
+      localStorage.setItem(cartKey(userId), JSON.stringify(items));
+    }
+  } catch {
+    /* ignore quota / serialization errors */
+  }
+}
+
+function notifyCart() {
+  saveCartForUser(currentUserId, globalCartItems);
   cartListeners.forEach((l) => l());
 }
 
 /**
  * Hook para el carrito de compras con reservas de stock.
  * Las reservas usan pg_try_advisory_xact_lock para evitar sobreventa.
+ *
+ * PER-USER ISOLATION: cart storage is keyed by userId (`pauleam_cart_<userId>`).
+ * Passing `null` (guest) yields an empty cart. Logging out / switching user
+ * triggers a reload via the `[userId]` effect dep, so each user only ever
+ * sees their own items. The legacy single-key `pauleam_cart` (no suffix)
+ * is intentionally ignored — it was the source of the cross-session leak.
  */
-export function useCart() {
+export function useCart(userId: string | null = null) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const insforge = getInsforge();
 
   useEffect(() => {
-    if (!isCartInitialized) {
-      if (typeof window !== "undefined") {
-        const saved = localStorage.getItem("pauleam_cart");
-        if (saved) {
-          try {
-            globalCartItems = JSON.parse(saved);
-          } catch {
-            globalCartItems = [];
-          }
-        }
-      }
-      isCartInitialized = true;
-    }
+    // Reload cart when the active user changes (login, logout, switch user).
+    currentUserId = userId;
+    globalCartItems = loadCartForUser(userId);
     /* eslint-disable react-hooks/set-state-in-effect */
     setItems([...globalCartItems]);
 
@@ -171,7 +197,7 @@ export function useCart() {
     return () => {
       cartListeners.delete(listener);
     };
-  }, []);
+  }, [userId]);
 
   const addItem = useCallback(
     async (
@@ -203,6 +229,13 @@ export function useCart() {
         });
 
         if (error) throw error;
+
+        // Sync module-level user to the in-flight add (handles login
+        // transition where useEffect hasn't re-run with the new userId yet).
+        if (currentUserId !== userData.user.id) {
+          currentUserId = userData.user.id;
+          globalCartItems = loadCartForUser(currentUserId);
+        }
 
         const existing = globalCartItems.find((i) => i.product_id === product.id);
         if (existing) {

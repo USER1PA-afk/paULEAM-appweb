@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart } from "@features/checkout/hooks";
+import { useAuth } from "@features/auth/hooks";
 import { DeliveryInfoBanner } from "@features/checkout/components/DeliveryInfoBanner";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,7 +9,8 @@ import { ShoppingCart, Package, X } from "lucide-react";
 import { formatCurrency } from "@shared/lib/utils";
 
 export default function CartPage() {
-  const { items, total, itemCount, removeItem, clearCart, isEmpty } = useCart();
+  const { user } = useAuth();
+  const { items, total, itemCount, removeItem, clearCart, isEmpty } = useCart(user?.id ?? null);
 
   if (isEmpty) {
     return (

@@ -45,8 +45,8 @@ interface ProductImage {
 export default function CatalogPage() {
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const { addItem, loading: cartLoading } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const { addItem, loading: cartLoading } = useCart(user?.id ?? null);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number | "">>({});
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);

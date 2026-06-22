@@ -357,26 +357,42 @@ export default function AdminProductsPage() {
     setSaving(true);
     setError(null);
 
-    // Upload image if selected (admin only)
-    let uploadedImageUrl: string | undefined;
-    if (isAdmin && imageFile) {
-      const ext = imageFile.name.split(".").pop() ?? "jpg";
-      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: upErr } = await insforge.storage
-        .from("product-images")
-        .upload(path, imageFile);
-      if (upErr) {
-        setError("Error al subir imagen: " + (upErr as Error).message);
-        setSaving(false);
-        return;
-      }
-      uploadedImageUrl = insforge.storage.from("product-images").getPublicUrl(path);
-    }
-
     const isAutoCost = AUTO_COST_TYPES.includes(formData.type);
     const hasCapacity = formData.type === "ENVASE_EMPAQUE";
 
+    async function syncPrimaryGallery(productId: string, storagePath: string) {
+      await insforge.database
+        .from("product_images")
+        .update({ is_primary: false })
+        .eq("product_id", productId);
+      await insforge.database.from("product_images").insert({
+        product_id: productId,
+        storage_path: storagePath,
+        is_primary: true,
+        position: 0,
+        alt_text: imageFile?.name.split(".")[0] ?? null,
+      });
+    }
+
     if (formMode === "edit" && editingId) {
+      let uploadedImageUrl: string | undefined;
+      let uploadedStoragePath: string | undefined;
+      if (isAdmin && imageFile) {
+        const ext = imageFile.name.split(".").pop() ?? "jpg";
+        uploadedStoragePath = `products/${editingId}/${Date.now()}.${ext}`;
+        const { error: upErr } = await insforge.storage
+          .from("product-images")
+          .upload(uploadedStoragePath, imageFile);
+        if (upErr) {
+          setError("Error al subir imagen: " + (upErr as Error).message);
+          setSaving(false);
+          return;
+        }
+        uploadedImageUrl = insforge.storage
+          .from("product-images")
+          .getPublicUrl(uploadedStoragePath);
+      }
+
       const updatePayload: Record<string, unknown> = {
         name: formData.name,
         sku: formData.sku,
@@ -406,6 +422,10 @@ export default function AdminProductsPage() {
         return;
       }
 
+      if (uploadedStoragePath && uploadedImageUrl) {
+        await syncPrimaryGallery(editingId, uploadedStoragePath);
+      }
+
       const isPurchasableEdit = PURCHASABLE_TYPES.includes(formData.type);
       if (isPurchasableEdit && selectedSupplierIds.length > 0) {
         const effective =
@@ -413,6 +433,7 @@ export default function AdminProductsPage() {
         await linkSuppliersToProduct(editingId, selectedSupplierIds, effective);
       }
     } else {
+      // CREATE: insert first (no image) to get id, then upload + sync gallery
       const { data: newProduct, error: insertErr } = await insforge.database
         .from("products")
         .insert({
@@ -425,7 +446,7 @@ export default function AdminProductsPage() {
           cost_per_unit: isAutoCost ? 0 : (Number(formData.cost_per_unit) || 0),
           min_stock_alert: formData.min_stock_alert !== "" ? Number(formData.min_stock_alert) : 0,
           description: formData.description || null,
-          image_url: uploadedImageUrl ?? null,
+          image_url: null,
           capacity: hasCapacity && formData.capacity ? Number(formData.capacity) : null,
         })
         .select()
@@ -437,12 +458,35 @@ export default function AdminProductsPage() {
         return;
       }
 
+      const newId = (newProduct as Product).id;
+
+      if (isAdmin && imageFile) {
+        const ext = imageFile.name.split(".").pop() ?? "jpg";
+        const storagePath = `products/${newId}/${Date.now()}.${ext}`;
+        const { error: upErr } = await insforge.storage
+          .from("product-images")
+          .upload(storagePath, imageFile);
+        if (upErr) {
+          setError("Error al subir imagen: " + (upErr as Error).message);
+          setSaving(false);
+          return;
+        }
+        const publicUrl = insforge.storage
+          .from("product-images")
+          .getPublicUrl(storagePath);
+        await insforge.database
+          .from("products")
+          .update({ image_url: publicUrl })
+          .eq("id", newId);
+        await syncPrimaryGallery(newId, storagePath);
+      }
+
       const isPurchasableCreate = PURCHASABLE_TYPES.includes(formData.type);
       if (isPurchasableCreate && selectedSupplierIds.length > 0) {
         const effective =
           selectedSupplierIds.length === 1 ? selectedSupplierIds[0] : primarySupplierId;
         const { error: linkErr } = await linkSuppliersToProduct(
-          (newProduct as Product).id,
+          newId,
           selectedSupplierIds,
           effective
         );

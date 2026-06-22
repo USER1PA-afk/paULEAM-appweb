@@ -3,6 +3,7 @@
 import { getInsforge, resetBrowserClient } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback } from "react";
 import { useAuditActions } from "@features/audit/hooks";
+import { CART_KEY_PREFIX } from "@features/checkout/hooks";
 
 // Module-level deduplication: HomeAuthNav, HomeMobileNav, and shop/admin layouts
 // each mount their own useAuth() + useRole() instances. Without this, every
@@ -302,13 +303,24 @@ export function useAuth() {
     } finally {
       setState({ user: null, loading: false, error: null });
       if (typeof window !== "undefined") {
-        // Preserve cart + theme preference; wipe everything else (catches any SDK token key name)
-        const cartSnapshot = localStorage.getItem("pauleam_cart");
+        // Preserve theme + any per-user cart keys (pauleam_cart_<userId>).
+        // Wipe everything else (catches any SDK token key name) — including
+        // the legacy single-key `pauleam_cart` (no suffix) which was the
+        // source of the cross-user cart leak.
         const themeSnapshot = localStorage.getItem("theme");
+        const cartSnapshots: Record<string, string> = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(CART_KEY_PREFIX)) {
+            cartSnapshots[key] = localStorage.getItem(key) ?? "";
+          }
+        }
         try { localStorage.clear(); } catch { /* ignore */ }
         try { sessionStorage.clear(); } catch { /* ignore */ }
-        if (cartSnapshot) localStorage.setItem("pauleam_cart", cartSnapshot);
         if (themeSnapshot) localStorage.setItem("theme", themeSnapshot);
+        for (const [key, value] of Object.entries(cartSnapshots)) {
+          try { localStorage.setItem(key, value); } catch { /* ignore */ }
+        }
       }
       if (shouldRedirect) {
         window.location.replace("/");

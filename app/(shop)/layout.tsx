@@ -18,7 +18,7 @@ export default function ShopLayout({
   const pathname = usePathname();
   const { user, isAuthenticated, signOut } = useAuth();
   const { role } = useRole();
-  const { itemCount } = useCart();
+  const { itemCount } = useCart(user?.id ?? null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const close = () => setMenuOpen(false);

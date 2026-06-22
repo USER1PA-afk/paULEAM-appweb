@@ -30,9 +30,9 @@ interface ReceiptSnapshot {
 }
 
 export default function CheckoutPage() {
-  const { items, total, isEmpty, clearCart } = useCart();
+  const { isAuthenticated, user } = useAuth();
+  const { items, total, isEmpty, clearCart } = useCart(user?.id ?? null);
   const { submitOrder, loading, error } = useCheckout();
-  const { isAuthenticated } = useAuth();
 
   const [fulfillmentType, setFulfillmentType] = useState<"ENVIO" | "RETIRO_EN_PLANTA">("RETIRO_EN_PLANTA");
   const [address, setAddress] = useState("");
