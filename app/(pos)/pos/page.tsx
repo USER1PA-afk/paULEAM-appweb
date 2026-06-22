@@ -16,6 +16,7 @@ import {
   type PosCustomer,
   type PosCartItem,
 } from "@features/pos";
+import { usePaymentConfig, paymentQrUrl } from "@features/checkout/hooks";
 import { formatCurrency } from "@shared/lib/utils";
 import {
   ShoppingCart,
@@ -459,6 +460,8 @@ export default function PosPage() {
   const { items, total, isEmpty, addItem, increaseQty, decreaseQty, setQty, removeItem, clearCart } = usePosCart();
   const { submitSale, loading: checkoutLoading, error: checkoutError } = usePosCheckout();
   const { query, setQuery, results, searching } = usePosCustomerSearch();
+  const { config: paymentConfig } = usePaymentConfig();
+  const deunaQrSrc = paymentQrUrl(paymentConfig?.pichincha_qr_key ?? null);
 
   // ── Local State ──────────────────────────────────────────
   const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>("EFECTIVO");
@@ -928,19 +931,33 @@ export default function PosPage() {
           {/* ── QR Deuna mode ── */}
           {paymentMethod === "QR_DEUNA" && (
             <div className="px-4 pb-3 flex flex-col items-center gap-2.5">
-              {/* QR image */}
+              {/* QR image — same image uploaded by admin for the storefront */}
               <div className="relative overflow-hidden rounded-xl border border-neutral-250 dark:border-white/10 bg-white p-2">
-                <Image
-                  src="/deuna-qr.png"
-                  alt="Código QR Deuna para pago"
-                  width={160}
-                  height={160}
-                  className="block"
-                  priority
-                />
+                {deunaQrSrc ? (
+                  <Image
+                    src={deunaQrSrc}
+                    alt="Código QR Deuna para pago"
+                    width={160}
+                    height={160}
+                    className="block"
+                    priority
+                    unoptimized
+                  />
+                ) : (
+                  <div
+                    role="img"
+                    aria-label="QR Pichincha pendiente de configuración"
+                    className="flex h-40 w-40 flex-col items-center justify-center gap-1 text-center text-[10px] text-neutral-400"
+                  >
+                    <QrCode className="h-8 w-8 opacity-40" aria-hidden="true" />
+                    <span>QR pendiente de<br />configuración</span>
+                  </div>
+                )}
               </div>
               <p className="text-[10px] text-center text-neutral-500 dark:text-neutral-400 leading-snug max-w-[200px]">
-                Muestre este QR al cliente para completar el pago con Deuna
+                {deunaQrSrc
+                  ? "Muestre este QR al cliente para completar el pago con Deuna"
+                  : "El administrador aún no ha cargado el QR de Pichincha."}
               </p>
 
               {/* Confirm button */}

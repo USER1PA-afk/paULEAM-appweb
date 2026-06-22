@@ -1,19 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { usePaymentConfig } from "@features/checkout/hooks";
+import { usePaymentConfig, paymentQrUrl } from "@features/checkout/hooks";
 import type { PaymentConfig } from "@features/checkout/hooks";
 
 const METHODS = [
   {
-    value: "TRANSFERENCIA_PICHINCHA",
+    value: "PICHINCHA",
     label: "Banco Pichincha",
-    sub:   "Transferencia Bancaria",
-  },
-  {
-    value: "QR_PICHINCHA",
-    label: "Banco Pichincha",
-    sub:   "Código QR",
+    sub:   "Transferencia o código QR (DeUna)",
   },
   {
     value: "TRANSFERENCIA_GUAYAQUIL",
@@ -42,49 +37,68 @@ function AccountDetail({ label, value }: { label: string; value: string | null }
   );
 }
 
-function MethodDetails({ method, config }: { method: string; config: PaymentConfig }) {
-  const empty = (
-    <p className="text-xs text-muted-foreground">
-      Datos de pago pendientes de configuración. Contacta al administrador.
-    </p>
+function PichinchaBlock({ config }: { config: PaymentConfig }) {
+  const qrSrc = paymentQrUrl(config.pichincha_qr_key);
+  const hasAccount = Boolean(
+    config.pichincha_account || config.pichincha_holder || config.pichincha_cedula
   );
+  const hasQr = Boolean(qrSrc);
 
-  if (method === "TRANSFERENCIA_PICHINCHA") {
-    if (!config.pichincha_account) return empty;
+  if (!hasAccount && !hasQr) {
     return (
-      <>
-        <AccountDetail label="Titular"    value={config.pichincha_holder} />
-        <AccountDetail label="Cuenta"     value={config.pichincha_account} />
-        <AccountDetail label="Tipo"       value={config.pichincha_account_type} />
-        <AccountDetail label="Cédula/RUC" value={config.pichincha_cedula} />
-      </>
+      <p className="text-xs text-muted-foreground">
+        Datos de pago pendientes de configuración. Contacta al administrador.
+      </p>
     );
   }
 
-  if (method === "QR_PICHINCHA") {
-    if (!config.pichincha_account && !config.pichincha_qr_path) return empty;
-    return (
-      <>
-        {config.pichincha_qr_path && (
-          <div className="flex justify-center py-1">
-            <Image
-              src={config.pichincha_qr_path}
-              alt="Código QR Banco Pichincha"
-              width={160}
-              height={160}
-              className="rounded-lg border border-border"
-              unoptimized
-            />
-          </div>
-        )}
-        <AccountDetail label="Titular" value={config.pichincha_holder} />
-        <AccountDetail label="Cuenta"  value={config.pichincha_account} />
-      </>
-    );
+  return (
+    <div className="space-y-3">
+      {hasQr && qrSrc && (
+        <div className="flex flex-col items-center gap-1.5 py-1">
+          <Image
+            src={qrSrc}
+            alt="Código QR Banco Pichincha (DeUna)"
+            width={176}
+            height={176}
+            className="rounded-lg border border-border bg-white p-1"
+            unoptimized
+          />
+          <p className="text-[11px] text-muted-foreground text-center max-w-[220px]">
+            Escanea con la app DeUna o realiza una transferencia con los datos
+            de abajo.
+          </p>
+        </div>
+      )}
+
+      {hasAccount && (
+        <div className="space-y-1 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Datos para transferencia
+          </p>
+          <AccountDetail label="Titular"    value={config.pichincha_holder} />
+          <AccountDetail label="Cuenta"     value={config.pichincha_account} />
+          <AccountDetail label="Tipo"       value={config.pichincha_account_type} />
+          <AccountDetail label="Cédula/RUC" value={config.pichincha_cedula} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MethodDetails({ method, config }: { method: string; config: PaymentConfig }) {
+  if (method === "PICHINCHA") {
+    return <PichinchaBlock config={config} />;
   }
 
   if (method === "TRANSFERENCIA_GUAYAQUIL") {
-    if (!config.guayaquil_account) return empty;
+    if (!config.guayaquil_account) {
+      return (
+        <p className="text-xs text-muted-foreground">
+          Datos de pago pendientes de configuración. Contacta al administrador.
+        </p>
+      );
+    }
     return (
       <>
         <AccountDetail label="Titular"    value={config.guayaquil_holder} />
@@ -96,7 +110,13 @@ function MethodDetails({ method, config }: { method: string; config: PaymentConf
   }
 
   if (method === "PAYPAL") {
-    if (!config.paypal_email && !config.paypal_me) return empty;
+    if (!config.paypal_email && !config.paypal_me) {
+      return (
+        <p className="text-xs text-muted-foreground">
+          Datos de pago pendientes de configuración. Contacta al administrador.
+        </p>
+      );
+    }
     const href = config.paypal_me
       ? (config.paypal_me.startsWith("http") ? config.paypal_me : `https://${config.paypal_me}`)
       : null;

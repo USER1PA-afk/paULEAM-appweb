@@ -25,6 +25,7 @@ export interface PaymentConfig {
   pichincha_account_type: string | null;
   pichincha_cedula:       string | null;
   pichincha_qr_path:      string | null;
+  pichincha_qr_key:       string | null;
   guayaquil_holder:       string | null;
   guayaquil_account:      string | null;
   guayaquil_account_type: string | null;
@@ -86,6 +87,18 @@ const ORDER_ITEMS_SELECT = `
  */
 export function pickupCode(orderId: string): string {
   return "PAU-" + orderId.replace(/-/g, "").substring(0, 8).toUpperCase();
+}
+
+/**
+ * Convierte la clave de storage (`pichincha_qr_key`) del QR Pichincha/DeUna
+ * en la ruta del proxy autenticado `/api/payment-qr/<key>`.
+ *
+ * Devuelve `null` si no hay clave — el caller debe mostrar el placeholder
+ * de "QR pendiente de configuración".
+ */
+export function paymentQrUrl(key: string | null | undefined): string | null {
+  if (!key) return null;
+  return `/api/payment-qr/${key}`;
 }
 
 /**
