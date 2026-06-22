@@ -48,9 +48,13 @@ export default function CatalogPage() {
   const { isAuthenticated, user } = useAuth();
   const { addItem, loading: cartLoading } = useCart(user?.id ?? null);
   const [addingId, setAddingId] = useState<string | null>(null);
-  const [quantities, setQuantities] = useState<Record<string, number | "">>({});
+  // Store raw string so the user can clear the field and type freely.
+  // Empty string is valid; handleAddToCart defaults it to 1.
+  const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" | "auth" } | null>(null);
+  // In-modal feedback (rendered inside the modal, not behind the backdrop).
+  const [modalFeedback, setModalFeedback] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const insforge = getInsforge();
 
   // Modal State
@@ -175,19 +179,41 @@ export default function CatalogPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Reset modal feedback whenever the modal closes or the product changes.
+  useEffect(() => {
+    if (!selectedProduct) setModalFeedback(null);
+  }, [selectedProduct]);
+
+  // Quantity input change — accept empty string so the user can clear the
+  // default and type freely. type="number" already rejects letters and most
+  // symbols; we just store the raw string and validate on submit.
+  const handleQuantityChange = useCallback((productId: string, value: string) => {
+    setQuantities((prev) => ({ ...prev, [productId]: value }));
+  }, []);
+
   async function handleAddToCart(product: CatalogProduct) {
-    const qty = quantities[product.id] || 1;
-    if (qty <= 0) return;
+    // Parse the raw string. Empty / 0 / NaN → silently default to 1.
+    const raw = quantities[product.id] ?? "";
+    const parsed = parseFloat(raw);
+    const qty = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+
+    const fromModal = selectedProduct?.id === product.id;
 
     // Verificar autenticación antes de intentar agregar
     if (!isAuthenticated) {
-      setMessage({ text: "Debes iniciar sesión para agregar productos al carrito.", type: "auth" });
-      setTimeout(() => setMessage(null), 4000);
+      if (fromModal) {
+        setModalFeedback({ text: "Debes iniciar sesión para agregar productos al carrito.", type: "error" });
+      } else {
+        setMessage({ text: "Debes iniciar sesión para agregar productos al carrito.", type: "auth" });
+        setTimeout(() => setMessage(null), 4000);
+      }
       return;
     }
 
     setAddingId(product.id);
     setMessage(null);
+    setModalFeedback(null);
+
     const result = await addItem(
       {
         id: product.id,
@@ -200,15 +226,36 @@ export default function CatalogPage() {
         sales_unit_name: product.sales_unit_name,
         capacity_unit: product.capacity_unit,
       },
-      Number(qty)
+      qty
     );
+
+    setAddingId(null);
+
     if (result.error) {
-      setMessage({ text: result.error, type: "error" });
+      // Error — keep modal open so the user can fix the quantity and retry.
+      if (fromModal) {
+        setModalFeedback({ text: result.error, type: "error" });
+      } else {
+        setMessage({ text: result.error, type: "error" });
+        setTimeout(() => setMessage(null), 3000);
+      }
+      return;
+    }
+
+    // Success
+    if (fromModal) {
+      setModalFeedback({ text: `${product.name} agregado al carrito`, type: "success" });
+      // Auto-close after a brief moment so the user sees the success feedback.
+      // Guarded by product.id so a quick switch to a different modal doesn't
+      // get nuked by the previous add's timeout.
+      setTimeout(() => {
+        setSelectedProduct((current) => (current?.id === product.id ? null : current));
+        setModalFeedback(null);
+      }, 1200);
     } else {
       setMessage({ text: `${product.name} agregado al carrito`, type: "success" });
+      setTimeout(() => setMessage(null), 3000);
     }
-    setAddingId(null);
-    setTimeout(() => setMessage(null), 3000);
   }
 
   return (
@@ -332,12 +379,10 @@ export default function CatalogPage() {
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
-                      min="1"
-                      step="1"
-                      value={quantities[product.id] || 1}
-                      onChange={(e) =>
-                        setQuantities({ ...quantities, [product.id]: Math.max(1, parseFloat(e.target.value) || 1) })
-                      }
+                      min="0"
+                      step="any"
+                      value={quantities[product.id] ?? ""}
+                      onChange={(e) => handleQuantityChange(product.id, e.target.value)}
                       aria-label={`Cantidad de ${product.name}`}
                       className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     />
@@ -517,28 +562,40 @@ export default function CatalogPage() {
                 </div>
 
                 {isAuthenticated ? (
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col gap-1">
-                      <label htmlFor="modal-qty" className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Cantidad</label>
-                      <input
-                        id="modal-qty"
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={quantities[selectedProduct.id] || 1}
-                        onChange={(e) =>
-                          setQuantities({ ...quantities, [selectedProduct.id]: Math.max(1, parseFloat(e.target.value) || 1) })
-                        }
-                        className="w-24 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
-                      />
-                    </div>
-                    <button
-                      onClick={() => handleAddToCart(selectedProduct)}
-                      disabled={cartLoading || addingId === selectedProduct.id || (availableStock !== null && availableStock <= 0)}
-                      className="flex-1 mt-5 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 transition-all text-center flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      {addingId === selectedProduct.id ? (
-                        "Agregando..."
+                  <div className="flex flex-col gap-3">
+                    {modalFeedback && (
+                      <div
+                        role="alert"
+                        aria-live="polite"
+                        className={`rounded-lg px-3 py-2 text-xs font-medium ${
+                          modalFeedback.type === "success"
+                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800"
+                            : "bg-red-50 text-red-800 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800"
+                        }`}
+                      >
+                        {modalFeedback.text}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label htmlFor="modal-qty" className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Cantidad</label>
+                        <input
+                          id="modal-qty"
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={quantities[selectedProduct.id] ?? ""}
+                          onChange={(e) => handleQuantityChange(selectedProduct.id, e.target.value)}
+                          className="w-24 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                      </div>
+                      <button
+                        onClick={() => handleAddToCart(selectedProduct)}
+                        disabled={cartLoading || addingId === selectedProduct.id || (availableStock !== null && availableStock <= 0)}
+                        className="flex-1 mt-5 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 transition-all text-center flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        {addingId === selectedProduct.id ? (
+                          "Agregando..."
                       ) : (
                         <>
                           <CartIcon aria-hidden="true" className="h-4 w-4" />
@@ -546,6 +603,7 @@ export default function CatalogPage() {
                         </>
                       )}
                     </button>
+                    </div>
                   </div>
                 ) : (
                   <Link

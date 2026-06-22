@@ -310,7 +310,8 @@ export function useCart(userId: string | null = null) {
   }, [insforge]);
 
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  // Distinct products (one tick per SKU, not units). 8 lbs of the same cheese = 1.
+  const itemCount = items.length;
 
   return {
     items,
