@@ -142,15 +142,16 @@ export default function CatalogPage() {
         setProductImages(mappedImgs);
         setActiveImageUrl(selectedProduct.image_url);
 
-        // Fetch stock
+        // Fetch stock — use stock_available (balance minus active reservations)
+        // so the customer sees the real reservable amount, not the total balance.
         const { data: stockRow } = await insforge.database
           .from("stock_summary")
-          .select("stock_actual")
+          .select("stock_available")
           .eq("product_id", selectedProduct.id)
           .single();
         
         if (stockRow) {
-          setAvailableStock(Number(stockRow.stock_actual));
+          setAvailableStock(Number(stockRow.stock_available));
         } else {
           setAvailableStock(0);
         }
