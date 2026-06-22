@@ -437,7 +437,7 @@ export default function EditPackagingTemplatePage() {
                 {materials.map((mat, index) => {
                   const selectedMat = packagingMaterials.find((p) => p.id === mat.material_product_id);
                   return (
-                    <div key={index} className="flex gap-2 items-center bg-muted/20 rounded-lg border border-border/60 p-2.5 overflow-hidden">
+                    <div key={index} className="flex gap-2 items-start bg-muted/20 rounded-lg border border-border/60 p-2.5">
                       <div className="flex-1 min-w-0">
                         <SearchableSelect
                           options={materialOptions}
@@ -446,7 +446,7 @@ export default function EditPackagingTemplatePage() {
                           placeholder={`Material ${index + 1}...`}
                           searchPlaceholder="Buscar material..."
                           emptyMessage="Sin materiales disponibles"
-                          className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                          className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                         {selectedMat && (
                           <p className="text-[9px] text-muted-foreground font-mono mt-0.5 pl-0.5">SKU: {selectedMat.sku}</p>
@@ -455,8 +455,8 @@ export default function EditPackagingTemplatePage() {
                       <input type="number" min="0.001" step="any" value={mat.quantity_per_unit}
                         onChange={(e) => updateMaterial(index, "quantity_per_unit", e.target.value)}
                         placeholder="1"
-                        className="w-14 rounded-lg border border-border bg-background px-1.5 py-1.5 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-ring shrink-0" />
-                      <span className="w-12 shrink-0 inline-flex items-center justify-center rounded-md bg-muted border border-border/60 px-1 py-1.5 text-xs font-mono text-muted-foreground select-none" title="Unidad del producto seleccionado">
+                        className="w-14 rounded-lg border border-border bg-background px-1.5 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-ring shrink-0" />
+                      <span className="w-12 shrink-0 inline-flex items-center justify-center rounded-md bg-muted border border-border/60 px-1 py-2 text-xs font-mono text-muted-foreground select-none" title="Unidad del producto seleccionado">
                         {mat.unit || "—"}
                       </span>
                       <button type="button" onClick={() => removeMaterial(index)} disabled={materials.length === 1}
