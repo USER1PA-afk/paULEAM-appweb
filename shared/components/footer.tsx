@@ -1,6 +1,5 @@
 import React from "react";
 import { logoBase64 } from "./logoBase64";
-import { InstallPwaButton } from "./install-pwa-button";
 
 export function Footer() {
   return (
@@ -20,7 +19,6 @@ export function Footer() {
             {" "}· Planta de Alimentos · ERP
           </p>
         </div>
-        <InstallPwaButton />
       </div>
     </footer>
   );
