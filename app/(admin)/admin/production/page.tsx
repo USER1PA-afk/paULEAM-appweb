@@ -340,31 +340,12 @@ export default function AdminProductionPage() {
                     </div>
 
                     {/* Rendimiento + toggle de unidades */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 min-w-0">
                       <label htmlFor="prod-yield" className="text-sm font-medium text-foreground">
                         Rendimiento Objetivo{activeDisplayUnit ? ` (${activeDisplayUnit})` : ""} <span className="text-brand-500">*</span>
                       </label>
 
-                      <div className="space-y-2">
-                        {unitGroupOptions.length > 0 && (
-                          <div className="flex gap-1 flex-wrap">
-                            {unitGroupOptions.map((opt) => (
-                              <button
-                                key={opt.label}
-                                type="button"
-                                onClick={() => handleUnitChange(opt.label)}
-                                className={`rounded-md px-3 py-1 text-xs font-semibold border transition-colors ${
-                                  activeDisplayUnit === opt.label
-                                    ? "bg-brand-600 text-white border-brand-600"
-                                    : "border-border bg-background text-muted-foreground hover:bg-muted hover:border-brand-400"
-                                }`}
-                              >
-                                {opt.label}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
+                      <div className="flex items-stretch gap-1.5">
                         <input
                           id="prod-yield"
                           type="number"
@@ -374,17 +355,40 @@ export default function AdminProductionPage() {
                           value={form.target_yield}
                           onChange={(e) => setForm((p) => ({ ...p, target_yield: e.target.value }))}
                           placeholder={`Ej: 2.5 ${activeDisplayUnit}`}
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-brand-400"
+                          className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-brand-400"
                         />
-
-                        {unitGroup && selectedRecipe && inputValue > 0 && (
-                          <p className="text-xs text-muted-foreground tabular-nums">
-                            = {storedYield.toLocaleString("es-EC", { maximumFractionDigits: 4 })} {recipeUnit}
-                            <span className="mx-1.5 opacity-40">·</span>
-                            Base: {selectedRecipe.yield_base} {recipeUnit}
-                          </p>
+                        {unitGroupOptions.length > 0 && (
+                          <div
+                            role="group"
+                            aria-label="Unidad de medida"
+                            className="flex shrink-0 flex-wrap items-center gap-1 rounded-lg border border-border bg-muted/30 p-1"
+                          >
+                            {unitGroupOptions.map((opt) => (
+                              <button
+                                key={opt.label}
+                                type="button"
+                                onClick={() => handleUnitChange(opt.label)}
+                                aria-pressed={activeDisplayUnit === opt.label}
+                                className={`min-w-9 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
+                                  activeDisplayUnit === opt.label
+                                    ? "bg-brand-600 text-white shadow-sm"
+                                    : "text-muted-foreground hover:bg-background hover:text-foreground"
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
                         )}
                       </div>
+
+                      {unitGroup && selectedRecipe && inputValue > 0 && (
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          = {storedYield.toLocaleString("es-EC", { maximumFractionDigits: 4 })} {recipeUnit}
+                          <span className="mx-1.5 opacity-40">·</span>
+                          Base: {selectedRecipe.yield_base} {recipeUnit}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
