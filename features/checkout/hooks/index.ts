@@ -49,6 +49,10 @@ interface Order {
   notes: string | null;
   approved_by: string | null;
   approved_at: string | null;
+  /** Set by the POS kiosk when the cashier ticked "Generar comprobante". */
+  invoice_generated_at: string | null;
+  /** 'ECOMMERCE' (default) or 'KIOSK' for POS sales. */
+  sale_origin: string | null;
   created_at: string;
   updated_at: string;
 }

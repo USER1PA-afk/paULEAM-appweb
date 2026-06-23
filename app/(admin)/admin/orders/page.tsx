@@ -5,9 +5,14 @@ import { formatDate, formatCurrency } from "@shared/lib/utils";
 import { PAYMENT_METHOD_LABELS, FULFILLMENT_TYPE_LABELS } from "@entities/order";
 import { useState } from "react";
 import { getInsforge } from "@shared/lib/insforge/client";
-import { ChevronDown, ChevronUp, Receipt, X, Download, Eye, Loader2, Truck, Store, PackageCheck } from "lucide-react";
+import { ChevronDown, ChevronUp, Receipt, X, Download, Eye, Loader2, Truck, Store, PackageCheck, FileText } from "lucide-react";
 import { usePagination } from "@shared/hooks/use-pagination";
 import { TablePagination } from "@shared/components/ui/table-pagination";
+import {
+  KioskReceiptModal,
+  loadKioskReceipt,
+  type KioskReceiptData,
+} from "@shared/components/kiosk-receipt-modal";
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
   PENDIENTE:  { label: "Pendiente",  dot: "bg-yellow-500",  bg: "bg-yellow-100 dark:bg-yellow-900/20",  text: "text-yellow-700 dark:text-yellow-300"  },
@@ -32,6 +37,13 @@ export default function AdminOrdersPage() {
     originalUrl: string;
     orderCode: string;
   } | null>(null);
+
+  // POS kiosk receipt re-render (orders with invoice_generated_at set).
+  const [kioskReceipt, setKioskReceipt] = useState<{
+    data: KioskReceiptData | null;
+    loading: boolean;
+    error: string | null;
+  }>({ data: null, loading: false, error: null });
 
   async function openPreview(rawUrl: string, orderCode: string) {
     setPreviewLoading(true);
@@ -62,6 +74,28 @@ export default function AdminOrdersPage() {
   function closePreview() {
     if (preview) URL.revokeObjectURL(preview.blobUrl);
     setPreview(null);
+  }
+
+  async function openKioskReceipt(orderId: string) {
+    setKioskReceipt({ data: null, loading: true, error: null });
+    try {
+      const data = await loadKioskReceipt(orderId);
+      if (!data) {
+        setKioskReceipt({ data: null, loading: false, error: "No se pudo cargar el comprobante" });
+      } else {
+        setKioskReceipt({ data, loading: false, error: null });
+      }
+    } catch (err) {
+      setKioskReceipt({
+        data: null,
+        loading: false,
+        error: err instanceof Error ? err.message : "Error al cargar el comprobante",
+      });
+    }
+  }
+
+  function closeKioskReceipt() {
+    setKioskReceipt({ data: null, loading: false, error: null });
   }
 
   function downloadPreview() {
@@ -237,6 +271,15 @@ export default function AdminOrdersPage() {
                         <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
                         {status.label}
                       </span>
+                      {order.invoice_generated_at && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-brand-50 dark:bg-brand-900/20 px-2 py-0.5 text-[10px] font-semibold text-brand-700 dark:text-brand-300 ring-1 ring-brand-200 dark:ring-brand-800"
+                          title={`Comprobante generado el ${formatDate(order.invoice_generated_at)}`}
+                        >
+                          <FileText aria-hidden="true" className="h-2.5 w-2.5" />
+                          Comprobante
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
                       <span className="text-xs text-muted-foreground">
@@ -328,6 +371,23 @@ export default function AdminOrdersPage() {
                       {previewLoading
                         ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
                         : <Eye aria-hidden="true" className="h-4 w-4" />
+                      }
+                    </button>
+                  )}
+
+                  {/* Kiosk receipt re-render — only for orders whose
+                      invoice_generated_at was set by the POS cashier. */}
+                  {order.invoice_generated_at && (
+                    <button
+                      onClick={() => openKioskReceipt(order.id)}
+                      disabled={kioskReceipt.loading}
+                      aria-label="Ver comprobante de venta (POS)"
+                      title="Comprobante generado en POS"
+                      className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-brand-600 hover:bg-brand-100 hover:border-brand-400 transition-colors disabled:opacity-50 dark:bg-brand-900/20 dark:border-brand-800 dark:hover:bg-brand-800/40"
+                    >
+                      {kioskReceipt.loading
+                        ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+                        : <FileText aria-hidden="true" className="h-4 w-4" />
                       }
                     </button>
                   )}
@@ -465,6 +525,14 @@ export default function AdminOrdersPage() {
           />
         </div>
       )}
+
+      {/* ─── Kiosk receipt modal (re-rendered from order data) ─── */}
+      <KioskReceiptModal
+        data={kioskReceipt.data}
+        loading={kioskReceipt.loading}
+        errorMessage={kioskReceipt.error}
+        onClose={closeKioskReceipt}
+      />
     </div>
   );
 }

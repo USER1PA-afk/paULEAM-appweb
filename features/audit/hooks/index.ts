@@ -2,7 +2,13 @@
 
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback } from "react";
-import type { AuditLog, AuditFilters, AuditAction, AuditEntityType } from "@entities/audit";
+import {
+  AuditLogSchema,
+  type AuditLog,
+  type AuditFilters,
+  type AuditAction,
+  type AuditEntityType,
+} from "@entities/audit";
 
 const DEFAULT_PAGE_SIZE = 50;
 
@@ -39,7 +45,22 @@ export function useAuditLog(filters: AuditFilters = {}) {
       const { data, error: queryError, count } = await query;
       if (queryError) throw queryError;
 
-      setEntries((data as AuditLog[]) ?? []);
+      // Validate each row — the audit_log.action column is plain TEXT, so
+      // unknown actions (e.g. a new POS action added in a proxy before the
+      // entity enum is updated) can slip past the database. SafeParse each
+      // row and keep only the well-formed ones; log the rest for triage.
+      const raw = (data ?? []) as unknown[];
+      const valid: AuditLog[] = [];
+      for (const row of raw) {
+        const parsed = AuditLogSchema.safeParse(row);
+        if (parsed.success) {
+          valid.push(parsed.data);
+        } else {
+          console.warn("[audit] dropping malformed row:", parsed.error.issues[0]?.message);
+        }
+      }
+
+      setEntries(valid);
       setTotal(count ?? 0);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al cargar auditoría");

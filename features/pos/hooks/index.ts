@@ -338,6 +338,7 @@ export function usePosCheckout() {
       paymentMethod: PosPaymentMethod;
       items: PosCartItem[];
       total: number;
+      generateInvoice?: boolean;
     }) => {
       setLoading(true);
       setError(null);
@@ -350,6 +351,7 @@ export function usePosCheckout() {
           customerId:    params.customerId,
           paymentMethod: params.paymentMethod,
           total:         Number(params.total.toFixed(2)),
+          invoice:       params.generateInvoice === true,
           items: params.items.map((item) => ({
             product_id:       item.product_id,
             qty_commercial:   Number(item.quantity.toFixed(4)),

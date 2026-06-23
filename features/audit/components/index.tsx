@@ -17,6 +17,28 @@ import { formatDate } from "@shared/lib/utils";
 import { Shield, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { TablePagination } from "@shared/components/ui/table-pagination";
 
+// Fallback colors for any action not registered in the entity map yet.
+// Prevents the table from crashing if the DB gains a new action before
+// the frontend is updated. See AuditLogTable / AuditStats consumers.
+const FALLBACK_ACTION_COLORS = {
+  dot: "bg-zinc-400",
+  bg:  "bg-zinc-100 dark:bg-zinc-800/40",
+  text: "text-zinc-600 dark:text-zinc-400",
+};
+
+/**
+ * Look up a human-readable label for an action/entity. Falls back to the
+ * raw DB value (replacing underscores) when not in the registered map,
+ * so unknown actions render something readable instead of "undefined".
+ */
+function labelFor(
+  raw: string,
+  map: Readonly<Record<string, string>>
+): string {
+  if (map[raw]) return map[raw];
+  return raw.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 // ============================================================
 // AuditStats — tarjetas de resumen
 // ============================================================
@@ -48,11 +70,11 @@ export function AuditStats({ entries }: { entries: AuditLog[] }) {
       </div>
 
       {topActions.map(([action, count]) => {
-        const colors = AUDIT_ACTION_COLORS[action as AuditAction];
+        const colors = (AUDIT_ACTION_COLORS as Readonly<Record<string, typeof FALLBACK_ACTION_COLORS>>)[action] ?? FALLBACK_ACTION_COLORS;
         return (
           <div key={action} className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground/60 mb-1">
-              {AUDIT_ACTION_LABELS[action as AuditAction]}
+              {labelFor(action, AUDIT_ACTION_LABELS)}
             </p>
             <p className="text-2xl font-bold tabular-nums">{count}</p>
             <span
@@ -211,7 +233,7 @@ export function AuditLogTable() {
             </thead>
             <tbody className="divide-y divide-border/50">
               {entries.map((entry) => {
-                const colors = AUDIT_ACTION_COLORS[entry.action];
+                const colors = (AUDIT_ACTION_COLORS as Readonly<Record<string, typeof FALLBACK_ACTION_COLORS>>)[entry.action] ?? FALLBACK_ACTION_COLORS;
                 const isOpen = expanded === entry.id;
                 const hasDetail = !!(entry.old_values || entry.new_values);
 
@@ -234,11 +256,11 @@ export function AuditLogTable() {
                             aria-hidden="true"
                             className={`h-1.5 w-1.5 rounded-full ${colors.dot}`}
                           />
-                          {AUDIT_ACTION_LABELS[entry.action]}
+                          {labelFor(entry.action, AUDIT_ACTION_LABELS)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell">
-                        {AUDIT_ENTITY_LABELS[entry.entity_type]}
+                        {labelFor(entry.entity_type, AUDIT_ENTITY_LABELS)}
                         {entry.entity_id && (
                           <span className="ml-1 font-mono text-[10px] text-muted-foreground/60">
                             #{entry.entity_id.slice(0, 8)}

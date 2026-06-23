@@ -142,6 +142,7 @@ export async function POST(req: NextRequest) {
   const paymentMethod = b.paymentMethod;
   const total = b.total;
   const items = b.items;
+  const generateInvoice = b.invoice === true;
 
   if (!isUuid(customerId) && customerId !== "00000000-0000-0000-0000-999999999999") {
     return NextResponse.json({ error: "customerId inválido" }, { status: 400 });
@@ -202,7 +203,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 6. Audit trail (best-effort — failure does not roll back the sale) ──
+  // ── 6. Persist "Generar comprobante" choice (best-effort) ──────────────
+  //    The RPC just created the order. If the cashier ticked the toggle we
+  //    stamp invoice_generated_at so the Sales Orders module can show a
+  //    "Comprobante generado" badge and re-render the receipt from order
+  //    data. Failure here is logged but does not fail the sale.
+  if (generateInvoice && orderId) {
+    try {
+      const { error: invoiceErr } = await insforge.database
+        .from("orders")
+        .update({ invoice_generated_at: new Date().toISOString() })
+        .eq("id", orderId as string);
+      if (invoiceErr) {
+        console.warn("[pos/sale] invoice flag update failed:", invoiceErr.message);
+      }
+    } catch (invErr) {
+      console.warn("[pos/sale] invoice flag update threw:", invErr);
+    }
+  }
+
+  // ── 7. Audit trail (best-effort — failure does not roll back the sale) ──
   const saleHash = createHash("sha256")
     .update(`${operatorId}|${customerId}|${total}|${JSON.stringify(cleanItems)}`)
     .digest("hex")
@@ -212,9 +232,9 @@ export async function POST(req: NextRequest) {
     await insforge.database.rpc("log_audit_event", {
       p_user_id:     operatorId,
       p_action:      "POS_SALE",
-      p_entity_type: "order",
+      p_entity_type: "orders",
       p_entity_id:   (orderId as string) ?? null,
-      p_details:     `Sale ${saleHash} — ${paymentMethod} — $${total.toFixed(2)}`,
+      p_details:     `Sale ${saleHash} — ${paymentMethod} — $${total.toFixed(2)}${generateInvoice ? " — comprobante generado" : ""}`,
     });
   } catch (auditErr) {
     console.warn("[pos/sale] audit log failed:", auditErr);

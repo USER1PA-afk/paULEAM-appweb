@@ -545,6 +545,7 @@ export default function PosPage() {
       paymentMethod: salePayment,
       items: saleItems,
       total: saleTotal,
+      generateInvoice,
     });
 
     if (error || !orderId) return;
