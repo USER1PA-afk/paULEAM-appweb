@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Download, Share, X } from "lucide-react";
+
+const PWA_CTA_PATHS = new Set<string>(["/", "/shop/catalog"]);
 
 // Not in the TS lib DOM types yet.
 interface BeforeInstallPromptEvent extends Event {
@@ -76,7 +79,14 @@ export function InstallPwaButton() {
     };
   }, [installed]);
 
+  const pathname = usePathname();
+  const ctaVisible = PWA_CTA_PATHS.has(pathname ?? "");
+
   if (installed || dismissed) return null;
+
+  // Listener must stay mounted on every route (event is single-shot per
+  // origin) — only the visible CTA is restricted to landing + catalog.
+  if (!ctaVisible) return null;
 
   const handleDismiss = () => {
     setDismissed(true);
