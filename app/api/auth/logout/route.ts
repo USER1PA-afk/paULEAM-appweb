@@ -32,9 +32,21 @@ export async function POST() {
     path: "/",
     maxAge: 0,
   };
+  // pauleam-jwt-hmac was set non-httpOnly — must mirror that here so the
+  // browser actually deletes it. If we sent httpOnly:true on clear while
+  // the original cookie was httpOnly:false, the browser treats them as
+  // different cookies and the clear is a no-op.
+  const hmacCookieClear = {
+    httpOnly: false,
+    secure: isProd,
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: 0,
+  };
 
   const response = NextResponse.json({ ok: true });
   response.cookies.set("pauleam-session", "", cookieClear);
   response.cookies.set("pauleam-role", "", cookieClear);
+  response.cookies.set("pauleam-jwt-hmac", "", hmacCookieClear);
   return response;
 }

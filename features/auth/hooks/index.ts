@@ -1,6 +1,7 @@
 "use client";
 
 import { getInsforge, resetBrowserClient } from "@shared/lib/insforge/client";
+import { signAndStoreJwt, clearSignedJwt, readSignedJwt } from "@shared/lib/auth/jwt-integrity";
 import { useState, useEffect, useCallback } from "react";
 import { useAuditActions } from "@features/audit/hooks";
 import { CART_KEY_PREFIX } from "@features/checkout/hooks";
@@ -176,7 +177,35 @@ export function useAuth() {
     }
 
     checkSession();
-    return () => { active = false; };
+
+    // Periodic integrity check on the localStorage JWT envelope. Runs every
+    // 60s while a session is active. If the HMAC fails (token was tampered
+    // with locally — e.g. by a buggy extension or curious user), wipe the
+    // envelope and force a hard re-auth so the server-side cookie becomes
+    // the only auth source. We go through /api/auth/logout + /logout so
+    // every Track A cookie is cleared; window.location.replace is used to
+    // avoid mobile redirect-loop races documented in signOut.
+    const integrityInterval = setInterval(async () => {
+      if (!active) return;
+      const verified = await readSignedJwt();
+      const envelope = (await import("@shared/lib/auth/jwt-integrity")).peekRawEnvelope();
+      if (envelope && !verified) {
+        console.warn("[auth] JWT envelope integrity check failed — forcing re-auth");
+        const mod = await import("@shared/lib/auth/jwt-integrity");
+        mod.clearSignedJwt();
+        try {
+          await fetch("/api/auth/logout", { method: "POST" });
+        } catch { /* ignore */ }
+        if (typeof window !== "undefined") {
+          window.location.replace("/login?reason=tampered");
+        }
+      }
+    }, 60_000);
+
+    return () => {
+      active = false;
+      clearInterval(integrityInterval);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const signIn = useCallback(
@@ -204,6 +233,11 @@ export function useAuth() {
           if (!cookieRes?.ok) {
             throw new Error("No se pudo establecer la sesión. Intenta de nuevo.");
           }
+          // Sign the JWT envelope for tamper-evidence in localStorage. If the
+          // HMAC cookie didn't arrive (e.g. browser rejected Set-Cookie), we
+          // silently skip — the SDK still works, we just don't get integrity
+          // verification on this session.
+          await signAndStoreJwt(token);
         } else {
           throw new Error("Token de sesión no disponible. Intenta de nuevo.");
         }
@@ -262,6 +296,7 @@ export function useAuth() {
           if (!regCookieRes?.ok) {
             throw new Error("No se pudo establecer la sesión. Intenta de nuevo.");
           }
+          await signAndStoreJwt(regToken);
         } else {
           throw new Error("Token de sesión no disponible. Intenta de nuevo.");
         }
@@ -321,6 +356,9 @@ export function useAuth() {
         for (const [key, value] of Object.entries(cartSnapshots)) {
           try { localStorage.setItem(key, value); } catch { /* ignore */ }
         }
+        // Belt and suspenders — even though localStorage.clear() above wipes
+        // our envelope, call this explicitly so the intent is documented.
+        clearSignedJwt();
       }
       if (shouldRedirect) {
         window.location.replace("/");

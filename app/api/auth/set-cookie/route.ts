@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@insforge/sdk";
+import { randomBytes } from "crypto";
 
 /**
  * POST /api/auth/set-cookie — TRACK A WRITER
  *
  * Sets the httpOnly auth cookies that Track A (proxy middleware) depends on.
  * Called immediately after every successful signInWithPassword() or signUp().
+ *
+ * Also sets `pauleam-jwt-hmac` (non-httpOnly) — the per-session secret the
+ * browser uses to HMAC the localStorage JWT envelope. See
+ * shared/lib/auth/jwt-integrity.ts for what this does and does not protect.
  *
  * CRITICAL RULES:
  *   1. BOTH cookies (pauleam-session AND pauleam-role) must always be set
@@ -73,8 +78,22 @@ export async function POST(request: Request) {
     maxAge: 60 * 60 * 24,
   };
 
+  // Per-session HMAC secret for the localStorage JWT envelope. Regenerated
+  // on every login. The cookie is intentionally NOT httpOnly — the browser
+  // needs to read it to compute the HMAC. See shared/lib/auth/jwt-integrity.ts
+  // for the security analysis of this trade-off.
+  const hmacSecret = randomBytes(32).toString("base64url");
+  const hmacCookieOpts = {
+    httpOnly: false,
+    secure: isProd,
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: 60 * 60 * 24,
+  };
+
   const response = NextResponse.json({ ok: true, role });
   response.cookies.set("pauleam-session", token, cookieOpts);
   response.cookies.set("pauleam-role", role, cookieOpts);
+  response.cookies.set("pauleam-jwt-hmac", hmacSecret, hmacCookieOpts);
   return response;
 }

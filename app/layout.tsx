@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@shared/components/theme-provider";
 import { ServiceWorkerRegister } from "@shared/components/service-worker-register";
+import { InstallPwaButton } from "@shared/components/install-pwa-button";
+import { AuthRecoveryBoot } from "@shared/components/auth-recovery-boot";
 import "./globals.css";
 
 const inter = Inter({
@@ -47,6 +49,8 @@ export default function RootLayout({
           {children}
         </ThemeProvider>
         <ServiceWorkerRegister />
+        <AuthRecoveryBoot />
+        <InstallPwaButton />
       </body>
     </html>
   );

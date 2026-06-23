@@ -3,6 +3,141 @@
 import { useState, useEffect, useCallback } from "react";
 import { getInsforge } from "@shared/lib/insforge/client";
 
+/**
+ * Resilient POS product loader.
+ *
+ * Why three fallbacks:
+ *   The stock_summary view's column list is hand-curated (CREATE VIEW ...
+ *   SELECT id, name, ...). Each new product column requires a migration
+ *   to DROP/CREATE the view. If a deployment is missing the latest view
+ *   migration, queries against it 400 with "column does not exist". This
+ *   function tries progressively older column lists, then falls back to
+ *   the products table directly, so the kiosk never goes dark.
+ *
+ * Tiers (each tried only if the previous one 400s):
+ *   1. stock_summary with show_in_pos (newest view, admin-controlled visibility)
+ *   2. stock_summary without show_in_pos column/filter (mid-era view)
+ *   3. stock_summary minimal select (early view — stock_actual only)
+ *   4. products table directly (view is broken or missing — last resort;
+ *      stock_actual/stock_available will be undefined; cashier sees "Agotado"
+ *      for everything but the rest of the UI works)
+ */
+async function loadPosProducts(
+  db: ReturnType<typeof getInsforge>
+): Promise<PosProduct[]> {
+  type Row = Omit<PosProduct, "stock_commercial">;
+
+  const PRIMARY = [
+    "product_id, name, sku, unit, price, image_url, capacity_unit, show_in_pos, conversion_factor, sales_unit_name, stock_actual, stock_available",
+  ] as const;
+
+  const FALLBACK_NO_SHOW = [
+    "product_id, name, sku, unit, price, image_url, capacity_unit, conversion_factor, sales_unit_name, stock_actual, stock_available",
+  ] as const;
+
+  const FALLBACK_MINIMAL = [
+    "product_id, name, sku, unit, price, image_url, conversion_factor, sales_unit_name, stock_actual, stock_available",
+  ] as const;
+
+  const isMissingColumn = (err: { message?: string; code?: string } | null) => {
+    if (!err) return false;
+    const msg = err.message ?? "";
+    return (
+      err.code === "PGRST204" ||
+      err.code === "42703" ||
+      /column .* does not exist/i.test(msg) ||
+      /could not find .* column/i.test(msg) ||
+      /schema cache/i.test(msg)
+    );
+  };
+
+  const tryView = async (
+    select: string,
+    includeShowInPos: boolean
+  ): Promise<{ rows: Row[]; error: { message?: string; code?: string } | null }> => {
+    let q = db.database
+      .from("stock_summary")
+      .select(select)
+      .eq("type", "PRODUCTO_TERMINADO")
+      .eq("is_active", true)
+      .gt("price", 0);
+    if (includeShowInPos) q = q.eq("show_in_pos", true);
+    q = q.order("name");
+    const { data, error } = await q;
+    if (error) return { rows: [], error: error as { message?: string; code?: string } };
+    return { rows: ((data ?? []) as unknown as Row[]), error: null };
+  };
+
+  // Tier 1
+  let res = await tryView(PRIMARY[0], true);
+  if (res.error && isMissingColumn(res.error)) {
+    console.warn(
+      "[pos] stock_summary view missing show_in_pos (or another column). " +
+      "Apply migrations 20260616000000_add-show-in-pos.sql + " +
+      "20260616000001_stock-summary-add-pos-fields.sql. Trying fallback #1."
+    );
+    res = await tryView(FALLBACK_NO_SHOW[0], false);
+  }
+
+  // Tier 2 → Tier 3 if the view is older still
+  if (res.error && isMissingColumn(res.error)) {
+    console.warn(
+      "[pos] stock_summary view missing newer columns. " +
+      "Rebuild it via migration 20260616000001. Trying fallback #2 (minimal select)."
+    );
+    res = await tryView(FALLBACK_MINIMAL[0], false);
+  }
+
+  // Tier 3 → products table (last resort)
+  if (res.error) {
+    console.warn(
+      "[pos] stock_summary view is unusable (" + (res.error.message ?? "unknown") + "). " +
+      "Falling back to the products table directly. Stock numbers will read 0 " +
+      "until the view migration is applied. Cashier can still select products " +
+      "and complete sales; the RPC will validate actual stock server-side."
+    );
+    const { data: prodRows, error: prodErr } = await db.database
+      .from("products")
+      .select("id, name, sku, unit, price, image_url, capacity_unit, conversion_factor, sales_unit_name, is_active, show_in_pos")
+      .eq("type", "PRODUCTO_TERMINADO")
+      .eq("is_active", true)
+      .gt("price", 0)
+      .order("name");
+    if (prodErr) throw prodErr;
+    const mapped: Row[] = ((prodRows as Array<Record<string, unknown>>) ?? []).map((p) => ({
+      product_id: String(p.id),
+      name: String(p.name ?? ""),
+      sku: String(p.sku ?? ""),
+      unit: String(p.unit ?? "kg"),
+      price: Number(p.price ?? 0),
+      image_url: (p.image_url as string | null) ?? null,
+      capacity_unit: (p.capacity_unit as string | null) ?? null,
+      show_in_pos: p.show_in_pos === undefined ? true : Boolean(p.show_in_pos),
+      conversion_factor: Number(p.conversion_factor ?? 1),
+      sales_unit_name: String(p.sales_unit_name ?? p.unit ?? "unidad"),
+      // View-derived columns absent in this tier — set to 0 so the UI shows
+      // the product as "Agotado" rather than crashing. The kiosk still
+      // works; actual availability is validated by process_kiosk_sale.
+      stock_actual: 0,
+      stock_available: 0,
+    }));
+    res = { rows: mapped, error: null };
+  }
+
+  if (res.error) throw res.error;
+
+  return res.rows.map((p) => {
+    const cf = p.conversion_factor ?? 1;
+    const stockCommercial = Math.floor((p.stock_available ?? 0) * cf * 10000) / 10000;
+    return {
+      ...p,
+      conversion_factor: cf,
+      sales_unit_name: p.sales_unit_name ?? p.unit,
+      stock_commercial: stockCommercial,
+    };
+  });
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 /** UUID fijo del usuario "Consumidor Final" (espejado en la migración SQL). */
@@ -64,34 +199,8 @@ export function usePosProducts() {
     setError(null);
     const db = getInsforge();
     try {
-      const { data, error: dbError } = await db.database
-        .from("stock_summary")
-        .select(
-          "product_id, name, sku, unit, price, image_url, capacity_unit, show_in_pos, conversion_factor, sales_unit_name, stock_actual, stock_available"
-        )
-        .eq("type", "PRODUCTO_TERMINADO")
-        .eq("is_active", true)
-        .eq("show_in_pos", true)
-        .gt("price", 0)
-        .order("name");
-
-      if (dbError) throw dbError;
-
-      const rows = (data as Omit<PosProduct, "stock_commercial">[]) ?? [];
-
-      setProducts(
-        rows
-          .map((p) => {
-            const cf = p.conversion_factor ?? 1;
-            const stockCommercial = Math.floor((p.stock_available ?? 0) * cf * 10000) / 10000;
-            return {
-              ...p,
-              conversion_factor: cf,
-              sales_unit_name: p.sales_unit_name ?? p.unit,
-              stock_commercial: stockCommercial,
-            };
-          })
-      );
+      const rows = await loadPosProducts(db);
+      setProducts(rows);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al cargar productos");
     } finally {
@@ -207,8 +316,15 @@ export function usePosCart() {
 // ─── usePosCheckout ───────────────────────────────────────────────────────────
 
 /**
- * Ejecuta la venta kiosko mediante la RPC atómica process_kiosk_sale.
- * El backend convierte unidades comerciales → kg dentro de la transacción.
+ * Ejecuta la venta kiosko mediante el proxy server-side /api/pos/sale.
+ *
+ * WHY A PROXY (no longer direct SDK RPC):
+ *   The Insforge SDK on the browser sometimes holds an edgeFunctionToken
+ *   in its HTTP client (set by resetBrowserClient after a localStorage miss).
+ *   PostgREST does not recognise edgeFunctionToken as a user context, so
+ *   SECURITY DEFINER RPCs fail with "AUTH_INVALID_CREDENTIALS". The proxy
+ *   uses the httpOnly pauleam-session cookie server-side — the SDK and
+ *   localStorage are NOT involved in the critical write path.
  */
 export function usePosCheckout() {
   const [loading, setLoading] = useState(false);
@@ -227,35 +343,41 @@ export function usePosCheckout() {
       setError(null);
       setLastOrderId(null);
 
-      const db = getInsforge();
-
       try {
-        // Construir el array de ítems para la RPC.
-        // La conversión kg se calcula en el backend (process_kiosk_sale),
-        // pero enviamos conversion_factor para que la función lo use.
-        const rpcItems = params.items.map((item) => ({
-          product_id: item.product_id,
-          qty_commercial: Number(item.quantity.toFixed(4)),
-          unit_price: Number(item.price.toFixed(2)),
-          conversion_factor: Number((item.conversion_factor ?? 1).toFixed(4)),
-        }));
+        // Items tal cual los espera el proxy. El proxy valida y sanitiza
+        // los rangos antes de invocar process_kiosk_sale server-side.
+        const body = {
+          customerId:    params.customerId,
+          paymentMethod: params.paymentMethod,
+          total:         Number(params.total.toFixed(2)),
+          items: params.items.map((item) => ({
+            product_id:       item.product_id,
+            qty_commercial:   Number(item.quantity.toFixed(4)),
+            unit_price:       Number(item.price.toFixed(2)),
+            conversion_factor: Number((item.conversion_factor ?? 1).toFixed(4)),
+          })),
+        };
 
-        const { data, error: rpcError } = await db.database.rpc(
-          "process_kiosk_sale",
-          {
-            p_operator_id: params.operatorId,
-            p_customer_id: params.customerId,
-            p_payment_method: params.paymentMethod,
-            p_items: rpcItems,
-            p_total: Number(params.total.toFixed(2)),
-          }
-        );
+        const res = await fetch("/api/pos/sale", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          credentials: "same-origin",
+        });
 
-        if (rpcError) throw rpcError;
+        const result = (await res.json().catch(() => ({}))) as {
+          orderId?: string;
+          error?: string;
+          detail?: string;
+        };
 
-        const orderId = data as string;
-        setLastOrderId(orderId);
-        return { orderId, error: null };
+        if (!res.ok || !result.orderId) {
+          const message = result.error ?? `Error ${res.status} al procesar la venta`;
+          throw new Error(result.detail ? `${message} (${result.detail})` : message);
+        }
+
+        setLastOrderId(result.orderId);
+        return { orderId: result.orderId, error: null };
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : "Error al procesar la venta";

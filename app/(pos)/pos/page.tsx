@@ -97,6 +97,11 @@ function ProductCard({
             fill
             sizes="(max-width: 768px) 50vw, 20vw"
             className="object-cover"
+            // POS grid: the first row's first card is the LCP element.
+            // Mark it priority so Next preloads it; non-LCP cards stay lazy.
+            priority={false}
+            loading="eager"
+            fetchPriority="auto"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">

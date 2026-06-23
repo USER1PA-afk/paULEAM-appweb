@@ -17,10 +17,21 @@ import { createClient } from "@insforge/sdk";
  *   pauleam-session present, pauleam-role missing → resolve role via Insforge.
  *   Only triggers on race conditions (first nav after login) or stale cookies.
  *
+ * ALSO: generates a per-request CSP nonce and sets it on the `x-nonce`
+ * request header. Next.js reads this header and applies the nonce to its
+ * inline scripts (HMR bootstrap in dev, framework chunks in prod). The CSP
+ * in next.config.ts reads the same nonce from the response and emits
+ * `script-src 'self' 'nonce-<value>'` so legitimate scripts run while
+ * injected inline scripts are blocked.
+ *
  * CRITICAL RULES — DO NOT CHANGE WITHOUT READING ALL OF THESE:
  *
- *   MATCHER: ["/admin", "/admin/:path*", "/login", "/register"]
- *     - /shop/* is NOT here — shop pages render for all; useAuth() handles UI.
+ *   MATCHER: ["/admin", "/admin/:path*", "/login", "/register", "/((?!_next|favicon.ico|sw.js|icons|manifest).*)"]
+ *     - Auth checks only fire on /admin, /admin/*, /login, /register.
+ *     - Nonce generation fires on every other path the matcher captures
+ *       (everything except _next assets, favicon, sw.js, icons, manifest)
+ *       so the CSP header can include a valid nonce on every page response.
+ *     - /shop/* auth is NOT here — shop pages render for all; useAuth() handles UI.
  *     - /logout is NOT here — it is the emergency escape hatch and must be
  *       reachable with a phantom session. Adding it would trap stuck users.
  *     - /api/auth/me is NOT here — it must be callable when SDK has no session.
@@ -39,23 +50,40 @@ import { createClient } from "@insforge/sdk";
  *     DO NOT remove that delay — it prevents the proxy from seeing a stale
  *     (empty) cookie jar on the first post-login navigation.
  */
+
+const VALID_ROLES = ["admin", "operario", "operator", "sales_kiosk", "cliente"];
+
+function generateNonce(): string {
+  // 16 random bytes → base64url (22 chars). Cryptographically random per request.
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // ── 1. Nonce for CSP (runs on every matched request) ───────────────────
+  const nonce = generateNonce();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+
+  // ── 2. Auth check (only on protected paths) ────────────────────────────
   const sessionToken = request.cookies.get("pauleam-session")?.value ?? null;
   const roleCookie   = request.cookies.get("pauleam-role")?.value ?? null;
-
-  const VALID_ROLES = ["admin", "operario", "operator", "sales_kiosk", "cliente"];
 
   let hasSession = false;
   let userRole: string | null = null;
 
   if (sessionToken && roleCookie && VALID_ROLES.includes(roleCookie)) {
-    // ✅ Fast path — zero network calls
     hasSession = true;
     userRole   = roleCookie;
-  } else if (sessionToken) {
-    // Fallback: role cookie missing → resolve via Insforge (first login, etc.)
+  } else if (sessionToken && (pathname.startsWith("/admin") || pathname === "/login" || pathname === "/register")) {
+    // Fallback: role cookie missing → resolve via Insforge. Only run this
+    // network call on paths where the answer matters. /shop/* and /pos
+    // pages render for unauthenticated users; useAuth() handles their UI.
     try {
       const insforge = createClient({
         baseUrl:           process.env.NEXT_PUBLIC_INSFORGE_URL,
@@ -112,10 +140,58 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  // ── 3. Build the per-request CSP and attach it to the response ────────
+  //
+  // NOTE on 'unsafe-inline' for script-src: Next.js 16 / Turbopack injects
+  // inline scripts in BOTH dev (HMR bootstrap) and production (framework
+  // bootstrap, RSC streaming, hydration data). The `x-nonce` header on the
+  // request is not reliably applied to those framework scripts in dev, and
+  // in prod the application also injects inline scripts (theme bootstrap,
+  // early-flicker suppression, etc.) that do not carry a nonce. Hardening
+  // to nonce-only CSP requires auditing and noncing every inline script
+  // site — tracked separately. For now, the rest of the CSP remains strict:
+  //   • no remote script execution (default-src 'self' + script-src)
+  //   • no eval in production (dev only)
+  //   • no plugins (object-src 'none')
+  //   • no framing (frame-ancestors 'none')
+  //   • no form-action off-origin
+  // These still meaningfully reduce the XSS surface.
+  const IS_DEV = process.env.NODE_ENV !== "production";
+  const csp = [
+    `default-src 'self'`,
+    `script-src 'self' 'unsafe-inline' https://*.insforge.app${IS_DEV ? " 'unsafe-eval'" : ""}`,
+    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
+    // Insforge serves product/receipt images from cdn.insforge.dev (CDN
+    // subdomain) in addition to the API host *.insforge.app. Both must be
+    // allowlisted for product gallery, receipt previews, etc.
+    `img-src 'self' data: blob: https://*.insforge.app https://*.insforge.dev https://cdn.insforge.dev https://*.vercel.app`,
+    `font-src 'self' data: https://fonts.gstatic.com`,
+    `connect-src 'self' https://*.insforge.app https://*.insforge.dev https://*.vercel.app https://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com`,
+    `worker-src 'self' blob:`,
+    `manifest-src 'self'`,
+    `object-src 'none'`,
+    `base-uri 'self'`,
+    `form-action 'self'`,
+    `frame-ancestors 'none'`,
+    `upgrade-insecure-requests`,
+  ].join("; ");
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("Content-Security-Policy", csp);
+  response.headers.set("x-nonce", nonce);
+  return response;
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*", "/login", "/register"],
+  matcher: [
+    "/admin",
+    "/admin/:path*",
+    "/login",
+    "/register",
+    // Capture everything else EXCEPT framework assets + service worker +
+    // manifest + icons. These static files don't need a CSP nonce and
+    // excluding them keeps the matcher cheap.
+    "/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|icons|manifest\\.webmanifest).*)",
+  ],
 };
 

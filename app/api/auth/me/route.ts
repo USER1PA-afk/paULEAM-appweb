@@ -62,9 +62,11 @@ export async function GET(request: NextRequest) {
       // (network failure) to avoid logging users out during Insforge outages.
       const isProd = process.env.NODE_ENV === "production";
       const clear = { httpOnly: true, secure: isProd, sameSite: "lax" as const, path: "/", maxAge: 0 };
+      const hmacClear = { httpOnly: false, secure: isProd, sameSite: "lax" as const, path: "/", maxAge: 0 };
       const response = NextResponse.json({ user: null });
-      response.cookies.set("pauleam-session", "", clear);
-      response.cookies.set("pauleam-role",    "", clear);
+      response.cookies.set("pauleam-session",  "", clear);
+      response.cookies.set("pauleam-role",     "", clear);
+      response.cookies.set("pauleam-jwt-hmac", "", hmacClear);
       return response;
     }
 
