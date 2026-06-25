@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>PAuleam Beat 1 — Brand Hero (Portrait)</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  </head>
+  <body>
+    <template id="beat-1-template">
+      <style>
+        #root {
+          position: relative;
+          width: 1080px;
+          height: 1920px;
+          background: #FFFFFF;
+          overflow: hidden;
+          font-family: "Inter", system-ui, sans-serif;
+          color: #121212;
+        }
+
+        .ecuador-stripe {
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 16px;
+          height: 1920px;
+          display: flex;
+          flex-direction: column;
+          z-index: 10;
+        }
+        .ecuador-stripe > div { flex: 1; }
+        .s-y { background: #FCD116; }
+        .s-b { background: #003893; }
+        .s-r { background: #CC0000; }
+
+        .content {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 0 60px 0 60px;
+        }
+
+        .logo-row {
+          display: flex;
+          align-items: center;
+          gap: 22px;
+        }
+
+        .plant-icon {
+          width: 80px;
+          height: 80px;
+          display: block;
+          transform-origin: center center;
+        }
+
+        .wordmark {
+          display: inline-block;
+          font-family: "Inter", system-ui, sans-serif;
+          font-weight: 800;
+          font-size: 80px;
+          line-height: 1;
+          color: #CC0000;
+          letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+          display: block;
+          margin-top: 20px;
+          font-family: "Inter", system-ui, sans-serif;
+          font-weight: 500;
+          font-size: 18px;
+          line-height: 1;
+          color: #4A4A49;
+          letter-spacing: 0.02em;
+        }
+
+        .tagline {
+          display: block;
+          margin: 56px 0 0;
+          font-family: "Inter", system-ui, sans-serif;
+          font-weight: 700;
+          font-size: 44px;
+          line-height: 1.25;
+          color: #121212;
+          letter-spacing: -0.01em;
+          text-align: center;
+          max-width: 900px;
+        }
+
+        .tagline-word {
+          display: inline-block;
+        }
+
+        .footer {
+          position: absolute;
+          bottom: 80px;
+          left: 0;
+          right: 0;
+          text-align: center;
+          font-family: ui-monospace, "SF Mono", Consolas, monospace;
+          font-size: 16px;
+          font-weight: 400;
+          color: #121212;
+          opacity: 0;
+          letter-spacing: 0.04em;
+        }
+      </style>
+
+      <div
+        id="root"
+        data-composition-id="beat-1"
+        data-start="0"
+        data-duration="5"
+        data-width="1080"
+        data-height="1920"
+      >
+        <div class="ecuador-stripe" aria-hidden="true">
+          <div class="s-y"></div>
+          <div class="s-b"></div>
+          <div class="s-r"></div>
+        </div>
+
+        <div class="content">
+          <div class="logo-row">
+            <svg class="plant-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M32 60 L32 12" stroke="#CC0000" stroke-width="3" stroke-linecap="round" fill="none"/>
+              <ellipse cx="32" cy="10" rx="3" ry="6" fill="#CC0000"/>
+              <path d="M32 22 C 22 22, 16 18, 14 14" stroke="#CC0000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M32 22 C 42 22, 48 18, 50 14" stroke="#CC0000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M32 34 C 22 34, 16 30, 14 26" stroke="#CC0000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M32 34 C 42 34, 48 30, 50 26" stroke="#CC0000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M32 46 C 22 46, 16 42, 14 38" stroke="#CC0000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M32 46 C 42 46, 48 42, 50 38" stroke="#CC0000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            </svg>
+            <span class="wordmark">PAuleam</span>
+          </div>
+          <div class="subtitle">Sistema ERP v2</div>
+          <h1 class="tagline">
+            <span class="tagline-word">Gestión</span>
+            <span class="tagline-word">Integral</span>
+            <span class="tagline-word">de</span>
+            <span class="tagline-word">tu</span>
+            <span class="tagline-word">Planta</span>
+          </h1>
+        </div>
+
+        <div class="footer">ULEAM &middot; Planta de Alimentos &middot; 2026</div>
+      </div>
+
+      <script>
+        (function () {
+          if (typeof window === "undefined" || !window.gsap) return;
+          window.__timelines = window.__timelines || {};
+          const tl = window.gsap.timeline({ paused: true });
+
+          tl.fromTo(".ecuador-stripe > div:nth-child(1)", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out", transformOrigin: "top center" }, 0);
+          tl.fromTo(".ecuador-stripe > div:nth-child(2)", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out", transformOrigin: "top center" }, 0.05);
+          tl.fromTo(".ecuador-stripe > div:nth-child(3)", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out", transformOrigin: "top center" }, 0.1);
+
+          tl.fromTo(".content", { y: 0 }, { y: -10, duration: 5, ease: "none" }, 0);
+
+          tl.fromTo(".plant-icon", { scale: 0.3 }, { scale: 1, duration: 0.5, ease: "back.out(1.6)" }, 0.3);
+
+          tl.fromTo(".wordmark", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 0.5);
+
+          tl.fromTo(".subtitle", { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 0.8);
+
+          tl.fromTo(".tagline-word", { y: 20, opacity: 0 }, {
+            y: 0,
+            opacity: 1,
+            duration: 0.5,
+            stagger: 0.08,
+            ease: "power3.out"
+          }, 1.5);
+
+          tl.fromTo(".footer", { opacity: 0 }, { opacity: 0.5, duration: 0.4, ease: "power2.out" }, 4.2);
+
+          window.__timelines["beat-1"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>PAuleam Beat 5 — Administrador</title>
+  </head>
+  <body>
+    <template id="beat-5-template">
+      <style>
+        #root {
+          position: relative;
+          width: 1920px;
+          height: 1080px;
+          overflow: hidden;
+          background: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          color: #121212;
+        }
+
+        .ecuador-stripe {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 12px;
+          display: flex;
+          z-index: 30;
+        }
+        .ecuador-stripe > div {
+          flex: 1 1 0;
+          height: 100%;
+        }
+        .stripe-yellow { background: #fcd116; }
+        .stripe-blue   { background: #003893; }
+        .stripe-red    { background: #cc0000; }
+
+        .role-badge {
+          position: absolute;
+          top: 36px;
+          left: 32px;
+          z-index: 25;
+          padding: 8px 16px;
+          border-radius: 999px;
+          background: #cc0000;
+          color: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 14px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          line-height: 1;
+        }
+
+        .camera {
+          position: absolute;
+          inset: 0;
+          transform-origin: 50% 50%;
+          will-change: transform;
+        }
+
+        .moment {
+          position: absolute;
+          inset: 0;
+          z-index: 10;
+          will-change: opacity, transform;
+        }
+
+        .label-eyebrow {
+          position: absolute;
+          top: 100px;
+          left: 32px;
+          z-index: 12;
+          color: #cc0000;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 14px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          line-height: 1;
+          white-space: nowrap;
+        }
+        .label-desc {
+          position: absolute;
+          top: 132px;
+          left: 32px;
+          z-index: 12;
+          color: #121212;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 22px;
+          font-weight: 500;
+          line-height: 1.2;
+          max-width: 520px;
+        }
+
+        .screenshot-anchor {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 1344px;
+          height: 648px;
+          max-width: 70%;
+          max-height: 60%;
+        }
+        .screenshot-frame {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          border: 1px solid #e5e5e5;
+          border-radius: 10px;
+          background: #ffffff;
+          will-change: transform, opacity;
+          transform-origin: 50% 50%;
+        }
+        .screenshot-frame img {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: top center;
+        }
+
+        /* ---- Moment A overlay: green counter chip ---- */
+        .counter-chip {
+          position: absolute;
+          top: 250px;
+          left: 880px;
+          z-index: 20;
+          padding: 8px 18px;
+          background: #94c11f;
+          border-radius: 999px;
+          color: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 18px;
+          font-weight: 800;
+          font-variant-numeric: tabular-nums;
+          letter-spacing: 0.02em;
+          line-height: 1;
+          white-space: nowrap;
+          transform-origin: 50% 50%;
+          will-change: transform, opacity;
+          box-shadow: 0 4px 14px rgba(148, 193, 31, 0.35);
+        }
+        .counter-chip .counter-value { display: inline-block; }
+        .counter-chip .counter-unit {
+          display: inline-block;
+          margin-left: 6px;
+          font-weight: 600;
+          font-size: 14px;
+          letter-spacing: 0.04em;
+          opacity: 0.92;
+        }
+
+        /* ---- Moment B overlays: category chips row ---- */
+        .chips-row {
+          position: absolute;
+          top: 200px;
+          left: 32px;
+          z-index: 13;
+          display: flex;
+          gap: 10px;
+        }
+        .chip {
+          padding: 8px 16px;
+          border-radius: 999px;
+          color: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          line-height: 1;
+          white-space: nowrap;
+          transform-origin: 50% 50%;
+          will-change: transform, opacity;
+        }
+        .chip-mp { background: #cc0000; }
+        .chip-in { background: #f59e0b; }
+        .chip-en { background: #3b82f6; }
+
+        /* ---- Moment C overlays: red ring + green checkmark ---- */
+        .ring-wrap {
+          position: absolute;
+          top: 337px;
+          left: 1107px;
+          width: 96px;
+          height: 96px;
+          z-index: 20;
+          transform-origin: 50% 50%;
+          will-change: transform, opacity;
+          pointer-events: none;
+        }
+        .ring-wrap svg {
+          width: 100%;
+          height: 100%;
+          display: block;
+          overflow: visible;
+        }
+        .ring-wrap .ring-circle {
+          fill: none;
+          stroke: #cc0000;
+          stroke-width: 4;
+          stroke-dasharray: 283;
+          stroke-dashoffset: 283;
+          transform: rotate(-90deg);
+          transform-origin: 50% 50%;
+        }
+        .ring-wrap .ring-circle-pulse {
+          fill: none;
+          stroke: #cc0000;
+          stroke-width: 2;
+          opacity: 0.5;
+        }
+
+        .check-wrap {
+          position: absolute;
+          top: 371px;
+          left: 298px;
+          width: 28px;
+          height: 28px;
+          z-index: 20;
+          transform-origin: 50% 50%;
+          will-change: transform, opacity;
+          pointer-events: none;
+        }
+        .check-wrap svg {
+          width: 100%;
+          height: 100%;
+          display: block;
+        }
+        .check-wrap .check-path {
+          fill: none;
+          stroke: #94c11f;
+          stroke-width: 3.5;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          stroke-dasharray: 32;
+          stroke-dashoffset: 32;
+        }
+      </style>
+
+      <div
+        id="root"
+        data-composition-id="beat-5"
+        data-start="0"
+        data-duration="12"
+        data-width="1920"
+        data-height="1080"
+      >
+        <div class="ecuador-stripe">
+          <div class="stripe-yellow"></div>
+          <div class="stripe-blue"></div>
+          <div class="stripe-red"></div>
+        </div>
+
+        <div class="role-badge">ADMINISTRADOR</div>
+
+        <div class="camera">
+          <!-- ============================================================
+               MOMENT A — INVENTARIO (0.0 - 4.0s)
+               ============================================================ -->
+          <div id="moment-a" class="moment">
+            <div class="label-eyebrow">1. INVENTARIO</div>
+            <div class="label-desc">Doble entrada inmutable. Cada movimiento es un registro.</div>
+            <div class="screenshot-anchor">
+              <div class="screenshot-frame">
+                <img src="capture/screenshots/admin/02-inventory.png" alt="Inventario" />
+                <div class="counter-chip" id="counter-chip">
+                  <span class="counter-value" id="counter-value">0,00</span>
+                  <span class="counter-unit">lt</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============================================================
+               MOMENT B — PROVEEDORES (4.0 - 8.0s)
+               ============================================================ -->
+          <div id="moment-b" class="moment">
+            <div class="label-eyebrow">2. PROVEEDORES</div>
+            <div class="label-desc">Materia prima, insumos, envases. Un producto, N proveedores.</div>
+            <div class="screenshot-anchor">
+              <div class="screenshot-frame">
+                <img src="capture/screenshots/admin/09-suppliers.png" alt="Proveedores" />
+              </div>
+            </div>
+            <div class="chips-row">
+              <div class="chip chip-mp" id="chip-mp">MATERIA_PRIMA</div>
+              <div class="chip chip-in" id="chip-in">INSUMO</div>
+              <div class="chip chip-en" id="chip-en">ENVASE_EMPAQUE</div>
+            </div>
+          </div>
+
+          <!-- ============================================================
+               MOMENT C — ÓRDENES (8.0 - 12.0s)
+               ============================================================ -->
+          <div id="moment-c" class="moment">
+            <div class="label-eyebrow">3. ÓRDENES</div>
+            <div class="label-desc">Aprueba o rechaza cada pedido.</div>
+            <div class="screenshot-anchor">
+              <div class="screenshot-frame">
+                <img src="capture/screenshots/admin/10-orders.png" alt="Órdenes de Venta" />
+                <div class="ring-wrap" id="ring-wrap">
+                  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <circle class="ring-circle-pulse" cx="50" cy="50" r="45" />
+                    <circle class="ring-circle" cx="50" cy="50" r="45" />
+                  </svg>
+                </div>
+                <div class="check-wrap" id="check-wrap">
+                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path class="check-path" d="M4 12.5 L10 18.5 L20 6.5" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          if (typeof window === "undefined" || !window.gsap) return;
+          window.__timelines = window.__timelines || {};
+          const tl = window.gsap.timeline({ paused: true });
+
+          // ============================================================
+          // INITIAL STATES (frame 0)
+          // ============================================================
+          tl.set("#moment-a", { opacity: 1, scale: 1, x: 0, y: 0 }, 0);
+          tl.set("#moment-b", { opacity: 0, scale: 1, x: 0, y: 0 }, 0);
+          tl.set("#moment-c", { opacity: 0, scale: 1, x: 0, y: 0 }, 0);
+
+          // Moment A
+          tl.set(
+            "#moment-a .label-eyebrow, #moment-a .label-desc",
+            { x: -40, opacity: 0 },
+            0
+          );
+          tl.set(
+            "#moment-a .screenshot-frame",
+            { scale: 0.94, y: 12, opacity: 0 },
+            0
+          );
+          tl.set(
+            "#counter-chip",
+            { scale: 0.7, opacity: 0 },
+            0
+          );
+          tl.set("#counter-value", { textContent: "0,00" }, 0);
+
+          // Moment B
+          tl.set(
+            "#moment-b .label-eyebrow, #moment-b .label-desc",
+            { x: -40, opacity: 0 },
+            0
+          );
+          tl.set(
+            "#moment-b .screenshot-frame",
+            { scale: 0.94, y: 12, opacity: 0 },
+            0
+          );
+          tl.set(
+            "#chip-mp, #chip-in, #chip-en",
+            { x: -12, opacity: 0, scale: 0.9 },
+            0
+          );
+
+          // Moment C
+          tl.set(
+            "#moment-c .label-eyebrow, #moment-c .label-desc",
+            { x: -40, opacity: 0 },
+            0
+          );
+          tl.set(
+            "#moment-c .screenshot-frame",
+            { scale: 0.94, y: 12, opacity: 0 },
+            0
+          );
+          tl.set(
+            "#ring-wrap",
+            { opacity: 0, scale: 0.85 },
+            0
+          );
+          tl.set(
+            "#check-wrap",
+            { opacity: 0, scale: 0.5 },
+            0
+          );
+
+          // ============================================================
+          // MOMENT A — INVENTARIO (0.0s -> 4.0s)
+          // ============================================================
+          // 0.0 - 0.4s : label slides in (x:-40 -> 0, fade up, power2.out)
+          tl.fromTo(
+            "#moment-a .label-eyebrow",
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            0.0
+          );
+          tl.fromTo(
+            "#moment-a .label-desc",
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            0.0
+          );
+
+          // 0.2 - 0.9s : screenshot scales in (0.94 -> 1.0, y 12 -> 0, power2.out)
+          tl.fromTo(
+            "#moment-a .screenshot-frame",
+            { scale: 0.94, y: 12, opacity: 0 },
+            { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" },
+            0.2
+          );
+
+          // 1.0 - 1.4s : green counter chip bounces in (back.out)
+          tl.fromTo(
+            "#counter-chip",
+            { scale: 0.7, opacity: 0 },
+            { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(1.6)" },
+            1.0
+          );
+
+          // 1.0 - 2.2s : counter ticks 0 -> 390 over 1.2s (use tl.set on text)
+          const counterEl = document.querySelector("#counter-value");
+          const counterProxy = { n: 0 };
+          tl.set("#counter-value", { textContent: "0,00" }, 1.0);
+          tl.to(
+            counterProxy,
+            {
+              n: 390,
+              duration: 1.2,
+              ease: "power2.out",
+              onUpdate: function () {
+                counterEl.textContent = counterProxy.n
+                  .toFixed(2)
+                  .replace(".", ",");
+              },
+            },
+            1.0
+          );
+
+          // 2.5 - 3.8s : hold with parallax drift (y 0 -> -3px, 1.3s, sine.inOut, yoyo)
+          tl.fromTo(
+            "#moment-a .screenshot-frame",
+            { y: 0 },
+            { y: -3, duration: 1.3, ease: "sine.inOut", yoyo: true },
+            2.5
+          );
+
+          // ============================================================
+          // MOMENT B — PROVEEDORES (4.0s -> 8.0s)
+          // ============================================================
+          // 4.0 - 4.3s : previous (moment-a) fades out
+          tl.fromTo(
+            "#moment-a",
+            { opacity: 1, scale: 1 },
+            { opacity: 0, scale: 0.97, duration: 0.3, ease: "power2.in" },
+            4.0
+          );
+
+          // 4.0 - 4.4s : new label slides in
+          tl.fromTo(
+            "#moment-b",
+            { opacity: 0 },
+            { opacity: 1, duration: 0.2, ease: "power2.out" },
+            4.0
+          );
+          tl.fromTo(
+            "#moment-b .label-eyebrow",
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            4.0
+          );
+          tl.fromTo(
+            "#moment-b .label-desc",
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            4.0
+          );
+
+          // 4.2 - 4.9s : new screenshot scales in
+          tl.fromTo(
+            "#moment-b .screenshot-frame",
+            { scale: 0.94, y: 12, opacity: 0 },
+            { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" },
+            4.2
+          );
+
+          // 5.0 / 5.1 / 5.2 : category chips stagger in (0.1s apart)
+          tl.fromTo(
+            "#chip-mp",
+            { x: -12, opacity: 0, scale: 0.9 },
+            { x: 0, opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.4)" },
+            5.0
+          );
+          tl.fromTo(
+            "#chip-in",
+            { x: -12, opacity: 0, scale: 0.9 },
+            { x: 0, opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.4)" },
+            5.1
+          );
+          tl.fromTo(
+            "#chip-en",
+            { x: -12, opacity: 0, scale: 0.9 },
+            { x: 0, opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.4)" },
+            5.2
+          );
+
+          // 6.0 - 7.3s : hold with parallax drift
+          tl.fromTo(
+            "#moment-b .screenshot-frame",
+            { y: 0 },
+            { y: -3, duration: 1.3, ease: "sine.inOut", yoyo: true },
+            6.0
+          );
+
+          // ============================================================
+          // MOMENT C — ÓRDENES (8.0s -> 12.0s)
+          // ============================================================
+          // Camera dolly-in: subtle focus pull (scale 1.0 -> 1.04 over 4s)
+          tl.fromTo(
+            ".camera",
+            { scale: 1.0 },
+            { scale: 1.04, duration: 4.0, ease: "sine.inOut" },
+            8.0
+          );
+
+          // 8.0 - 8.3s : previous (moment-b) fades out
+          tl.fromTo(
+            "#moment-b",
+            { opacity: 1, scale: 1 },
+            { opacity: 0, scale: 0.97, duration: 0.3, ease: "power2.in" },
+            8.0
+          );
+
+          // 8.0 - 8.4s : new label slides in
+          tl.fromTo(
+            "#moment-c",
+            { opacity: 0 },
+            { opacity: 1, duration: 0.2, ease: "power2.out" },
+            8.0
+          );
+          tl.fromTo(
+            "#moment-c .label-eyebrow",
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            8.0
+          );
+          tl.fromTo(
+            "#moment-c .label-desc",
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            8.0
+          );
+
+          // 8.2 - 8.9s : screenshot scales in
+          tl.fromTo(
+            "#moment-c .screenshot-frame",
+            { scale: 0.94, y: 12, opacity: 0 },
+            { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" },
+            8.2
+          );
+
+          // 9.5 - 10.3s : red ring fades in + draws (stroke-dasharray 283 -> 0, 0.8s, power2.out)
+          tl.fromTo(
+            "#ring-wrap",
+            { opacity: 0, scale: 0.85 },
+            { opacity: 1, scale: 1, duration: 0.3, ease: "power2.out" },
+            9.5
+          );
+          tl.fromTo(
+            "#ring-wrap .ring-circle",
+            { strokeDashoffset: 283 },
+            { strokeDashoffset: 0, duration: 0.8, ease: "power2.out" },
+            9.5
+          );
+
+          // 10.3 - 11.5s : red ring pulses (scale 1 -> 1.05 -> 1, 1.2s, sine.inOut, yoyo, 1 repeat)
+          tl.fromTo(
+            "#ring-wrap",
+            { scale: 1 },
+            { scale: 1.05, duration: 0.6, ease: "sine.inOut", yoyo: true, repeat: 1 },
+            10.3
+          );
+
+          // 10.8 - 11.0s : green checkmark stamp appears (scale pop)
+          tl.fromTo(
+            "#check-wrap",
+            { opacity: 0, scale: 0.5 },
+            { opacity: 1, scale: 1.15, duration: 0.18, ease: "back.out(1.6)" },
+            10.8
+          );
+          tl.fromTo(
+            "#check-wrap",
+            { scale: 1.15 },
+            { scale: 1, duration: 0.22, ease: "power2.out" },
+            10.98
+          );
+
+          // 10.8 - 11.2s : checkmark path draws in (stroke-dashoffset 32 -> 0, 0.4s, power2.out)
+          tl.fromTo(
+            "#check-wrap .check-path",
+            { strokeDashoffset: 32 },
+            { strokeDashoffset: 0, duration: 0.4, ease: "power2.out" },
+            10.8
+          );
+
+          // 11.2 - 12.0s : hold
+          tl.fromTo(
+            "#moment-c .screenshot-frame",
+            { y: 0 },
+            { y: -3, duration: 0.8, ease: "sine.inOut", yoyo: true },
+            11.2
+          );
+
+          window.__timelines["beat-5"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

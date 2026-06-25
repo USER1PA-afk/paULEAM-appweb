@@ -1,0 +1,28 @@
+[a] Saltar al contenido principal
+[span] PAuleam
+[span] Sistema ERP v2
+[h2] Gestión Integral
+[span] de tu Planta
+[p] Inventario, producción, recetas y ventas en un solo lugar. Control total de tu operación alimentaria con trazabilidad completa.
+[div] 100%
+[div] Trazable
+[div] 24/7
+[div] Disponible
+[div] Escalable
+[span] Inventario
+[span] Producción
+[span] Recetas
+[span] E-Commerce
+[p] 2026
+[p] ULEAM · Planta de Alimentos · ERP
+[a] Regresar al inicio
+[span] PAuleam
+[h1] Bienvenido de vuelta
+[p] Ingresa tus credenciales para acceder al sistema.
+[label] Correo Electrónico
+[label] Contraseña
+[button] Iniciar Sesión
+[p] ¿No tienes cuenta?
+[a] Regístrate
+[a] ¿Olvidaste tu contraseña?
+[button] Continuar con Google

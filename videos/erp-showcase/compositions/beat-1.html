@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>PAuleam Beat 1 — Brand Hero</title>
+  </head>
+  <body>
+    <template>
+      <style>
+        #root {
+          position: relative;
+          width: 1920px;
+          height: 1080px;
+          background: #FFFFFF;
+          overflow: hidden;
+          font-family: "Inter", system-ui, sans-serif;
+          color: #121212;
+        }
+
+        .stripe {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 12px;
+          display: flex;
+          flex-direction: column;
+          z-index: 10;
+          transform-origin: top center;
+        }
+
+        .stripe-band {
+          width: 100%;
+          height: 4px;
+          flex-shrink: 0;
+        }
+        .stripe-yellow { background: #FCD116; }
+        .stripe-blue { background: #003893; }
+        .stripe-red { background: #CC0000; }
+
+        .content {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .logo-row {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+        }
+
+        .plant-icon {
+          width: 64px;
+          height: 64px;
+          display: block;
+          transform-origin: center center;
+        }
+
+        .wordmark {
+          display: inline-block;
+          font-family: "Inter", system-ui, sans-serif;
+          font-weight: 800;
+          font-size: 64px;
+          line-height: 1;
+          color: #CC0000;
+          letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+          display: block;
+          margin-top: 14px;
+          font-family: "Inter", system-ui, sans-serif;
+          font-weight: 500;
+          font-size: 14px;
+          line-height: 1;
+          color: #4A4A49;
+          letter-spacing: 0.02em;
+        }
+
+        .tagline {
+          display: block;
+          margin: 36px 0 0;
+          font-family: "Inter", system-ui, sans-serif;
+          font-weight: 700;
+          font-size: 36px;
+          line-height: 1.25;
+          color: #121212;
+          letter-spacing: -0.01em;
+          white-space: nowrap;
+          text-align: center;
+        }
+
+        .tagline-word {
+          display: inline-block;
+        }
+
+        .footer {
+          position: absolute;
+          bottom: 32px;
+          left: 0;
+          right: 0;
+          text-align: center;
+          font-family: ui-monospace, "SF Mono", Consolas, monospace;
+          font-size: 11px;
+          font-weight: 400;
+          color: #121212;
+          opacity: 0;
+          letter-spacing: 0.04em;
+        }
+      </style>
+
+      <div
+        id="root"
+        data-composition-id="beat-1"
+        data-start="0"
+        data-duration="5"
+        data-width="1920"
+        data-height="1080"
+      >
+        <div class="stripe">
+          <div class="stripe-band stripe-yellow"></div>
+          <div class="stripe-band stripe-blue"></div>
+          <div class="stripe-band stripe-red"></div>
+        </div>
+
+        <div class="content">
+          <div class="logo-row">
+            <svg class="plant-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M32 60 L32 12" stroke="#CC0000" stroke-width="3" stroke-linecap="round" fill="none"/>
+              <ellipse cx="32" cy="10" rx="3" ry="6" fill="#CC0000"/>
+              <path d="M32 22 C 22 22, 16 18, 14 14" stroke="#CC0000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M32 22 C 42 22, 48 18, 50 14" stroke="#CC0000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M32 34 C 22 34, 16 30, 14 26" stroke="#CC0000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M32 34 C 42 34, 48 30, 50 26" stroke="#CC0000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M32 46 C 22 46, 16 42, 14 38" stroke="#CC0000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M32 46 C 42 46, 48 42, 50 38" stroke="#CC0000" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            </svg>
+            <span class="wordmark">PAuleam</span>
+          </div>
+          <div class="subtitle">Sistema ERP v2</div>
+          <h1 class="tagline">
+            <span class="tagline-word">Gestión</span>
+            <span class="tagline-word">Integral</span>
+            <span class="tagline-word">de</span>
+            <span class="tagline-word">tu</span>
+            <span class="tagline-word">Planta</span>
+          </h1>
+        </div>
+
+        <div class="footer">ULEAM &middot; Planta de Alimentos &middot; 2026</div>
+      </div>
+
+      <script>
+        window.__timelines = window.__timelines || {};
+        const tl = gsap.timeline({ paused: true });
+
+        tl.fromTo(".stripe", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out" }, 0);
+
+        tl.fromTo(".content", { y: 0 }, { y: -6, duration: 5, ease: "none" }, 0);
+
+        tl.fromTo(".plant-icon", { scale: 0.3 }, { scale: 1, duration: 0.5, ease: "back.out(1.6)" }, 0.3);
+
+        tl.fromTo(".wordmark", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 0.5);
+
+        tl.fromTo(".subtitle", { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 0.8);
+
+        tl.fromTo(".tagline-word", { y: 20, opacity: 0 }, {
+          y: 0,
+          opacity: 1,
+          duration: 0.5,
+          stagger: 0.08,
+          ease: "power3.out"
+        }, 1.5);
+
+        tl.fromTo(".footer", { opacity: 0 }, { opacity: 0.5, duration: 0.4, ease: "power2.out" }, 4.2);
+
+        window.__timelines["beat-1"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>PAuleam — Beat 3: Cliente</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  </head>
+  <body>
+    <template id="beat-3-template">
+      <style>
+        #root {
+          position: relative;
+          width: 1920px;
+          height: 1080px;
+          overflow: hidden;
+          background: #FFFFFF;
+          font-family: "Inter", system-ui, sans-serif;
+          color: #121212;
+        }
+        .ecuador-stripe {
+          position: absolute;
+          top: 0; left: 0;
+          width: 1920px;
+          height: 12px;
+          display: flex;
+          z-index: 10;
+        }
+        .ecuador-stripe > div { flex: 1; height: 100%; }
+        .ecuador-stripe .y { background: #FCD116; }
+        .ecuador-stripe .b { background: #003893; }
+        .ecuador-stripe .r { background: #CC0000; }
+        .role-badge {
+          position: absolute;
+          top: 48px; left: 64px;
+          background: #CC0000;
+          color: #FFFFFF;
+          font-family: "Inter", system-ui, sans-serif;
+          font-weight: 700;
+          font-size: 14px;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          padding: 8px 20px;
+          border-radius: 999px;
+          z-index: 5;
+        }
+        .headline {
+          position: absolute;
+          top: 130px; left: 64px;
+          font-family: "Inter", system-ui, sans-serif;
+          font-weight: 700;
+          font-size: 32px;
+          color: #121212;
+          z-index: 5;
+          margin: 0;
+        }
+        .camera {
+          position: absolute;
+          inset: 0;
+          width: 1920px;
+          height: 1080px;
+          transform-origin: center center;
+          z-index: 1;
+        }
+        .screenshot-wrap {
+          position: absolute;
+          top: 220px;
+          left: 10%;
+          width: 80%;
+          height: 60%;
+          background: #FFFFFF;
+          border-radius: 10px;
+          overflow: hidden;
+        }
+        .screenshot-wrap img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          object-position: top center;
+          display: block;
+        }
+        .product-overlay {
+          position: absolute;
+          width: 360px;
+          height: 360px;
+          background: transparent;
+          border: 2px solid transparent;
+          border-radius: 10px;
+          z-index: 4;
+        }
+        .product-overlay.o1 { top: 320px; left: 16%; }
+        .product-overlay.o2 { top: 320px; left: 38%; }
+        .product-overlay.o3 { top: 320px; left: 60%; }
+        .agregar-overlay {
+          position: absolute;
+          top: 670px;
+          left: 18%;
+          width: 100px;
+          height: 40px;
+          background: #CC0000;
+          border-radius: 10px;
+          z-index: 4;
+        }
+        .pickup-card {
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 60px;
+          margin: 0 auto;
+          width: 900px;
+          max-width: calc(100% - 128px);
+          background: #FFFFFF;
+          border: 2px solid #E5E5E5;
+          border-radius: 10px;
+          padding: 32px 56px;
+          text-align: center;
+          z-index: 8;
+          box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+        }
+        .pickup-eyebrow {
+          font-family: "Inter", system-ui, sans-serif;
+          font-weight: 500;
+          font-size: 14px;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: #4A4A49;
+          margin-bottom: 14px;
+        }
+        .pickup-code {
+          font-family: ui-monospace, "SF Mono", "JetBrains Mono", Consolas, monospace;
+          font-weight: 800;
+          font-size: 72px;
+          line-height: 1;
+          color: #CC0000;
+          font-variant-numeric: tabular-nums;
+          letter-spacing: 0.02em;
+          margin-bottom: 16px;
+        }
+        .pickup-code .prefix {
+          font-weight: 500;
+          font-size: 32px;
+          color: #4A4A49;
+          margin-right: 6px;
+        }
+        .verificado {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          font-family: "Inter", system-ui, sans-serif;
+          font-weight: 600;
+          font-size: 18px;
+          color: #4A4A49;
+          margin-top: 4px;
+        }
+        .verificado .dot {
+          display: inline-block;
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background: #94C11F;
+          box-shadow: 0 0 0 0 rgba(148,193,31,0.6);
+        }
+      </style>
+
+      <div id="root" data-composition-id="beat-3" data-width="1920" data-height="1080">
+        <div class="ecuador-stripe"><div class="y"></div><div class="b"></div><div class="r"></div></div>
+        <div class="role-badge">Cliente</div>
+        <h1 class="headline">Compra y retira con código</h1>
+        <div class="camera">
+          <div class="screenshot-wrap">
+            <img src="capture/screenshots/admin/14-shop-catalog.png" alt="Catálogo de productos PAuleam" />
+          </div>
+          <div class="product-overlay o1"></div>
+          <div class="product-overlay o2"></div>
+          <div class="product-overlay o3"></div>
+          <div class="agregar-overlay"></div>
+        </div>
+        <div class="pickup-card">
+          <div class="pickup-eyebrow">Tu código de retiro</div>
+          <div class="pickup-code"><span class="prefix">PAU-</span><span id="pickup-suffix">79C209F3</span></div>
+          <div class="verificado"><span class="dot"></span>Verificado</div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          if (typeof window === "undefined" || !window.gsap) return;
+          const tl = window.gsap.timeline({ paused: true });
+
+          tl.fromTo(".ecuador-stripe", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out" }, 0);
+          tl.fromTo(".role-badge", { opacity: 0, y: -12 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.2);
+          tl.fromTo(".headline", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.3);
+          tl.fromTo(".camera .screenshot-wrap", { opacity: 0, y: 16, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: "power2.out" }, 0);
+          tl.fromTo(".product-overlay.o1", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.5);
+          tl.fromTo(".product-overlay.o2", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.6);
+          tl.fromTo(".product-overlay.o3", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.7);
+          tl.fromTo(".agregar-overlay", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, 1.0);
+          tl.to(".agregar-overlay", { scale: 1.05, duration: 0.2, yoyo: true, repeat: 1, ease: "power2.inOut" }, 2.5);
+
+          tl.fromTo(".pickup-card", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.7, ease: "back.out(1.6)" }, 3.5);
+
+          const fullCode = "79C209F3";
+          const target = document.getElementById("pickup-suffix");
+          if (target) {
+            tl.set(target, { textContent: "" }, 0);
+            for (let i = 1; i <= fullCode.length; i++) {
+              tl.set(target, { textContent: fullCode.slice(0, i) }, 4.4 + i * 0.06);
+            }
+          }
+
+          tl.fromTo(".verificado", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, transformOrigin: "center center", duration: 0.4, ease: "back.out(1.4)" }, 5.0);
+          tl.to(".verificado .dot", { scale: 1.2, duration: 0.7, yoyo: true, repeat: 1, ease: "sine.inOut" }, 5.4);
+          tl.to(".verificado .dot", { opacity: 0.5, duration: 0.7, yoyo: true, repeat: 1, ease: "sine.inOut" }, 5.4);
+
+          tl.fromTo(".camera", { scale: 1.0 }, { scale: 1.03, duration: 5.5, ease: "sine.inOut" }, 3.5);
+
+          window.__timelines = window.__timelines || {};
+          window.__timelines["beat-3"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

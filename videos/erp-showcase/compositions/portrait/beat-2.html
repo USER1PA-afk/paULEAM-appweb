@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>PAuleam — Beat 2: Dashboard Pulse (Portrait)</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  </head>
+  <body>
+    <template id="beat-2-template">
+      <style>
+        #root {
+          position: relative;
+          width: 1080px;
+          height: 1920px;
+          background: #FFFFFF;
+          overflow: hidden;
+          font-family: "Inter", system-ui, "Segoe UI", sans-serif;
+        }
+
+        .ecuador-stripe {
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 16px;
+          height: 1920px;
+          display: flex;
+          flex-direction: column;
+          z-index: 20;
+        }
+        .ecuador-stripe > div { flex: 1; }
+        .ecuador-stripe .s-y { background: #FCD116; }
+        .ecuador-stripe .s-b { background: #003893; }
+        .ecuador-stripe .s-r { background: #CC0000; }
+
+        .header {
+          position: absolute;
+          top: 60px;
+          left: 60px;
+          z-index: 10;
+        }
+        .eyebrow {
+          font-weight: 500;
+          font-size: 18px;
+          color: #CC0000;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          line-height: 1;
+          margin-bottom: 14px;
+        }
+        .headline {
+          font-weight: 700;
+          font-size: 40px;
+          color: #121212;
+          line-height: 1.1;
+          letter-spacing: -0.5px;
+          max-width: 900px;
+        }
+
+        .camera {
+          position: absolute;
+          inset: 0;
+          transform-origin: center center;
+        }
+
+        .screenshot-wrap {
+          position: absolute;
+          left: 108px;
+          top: 300px;
+          width: 864px;
+          height: 900px;
+          border: 1px solid #E5E5E5;
+          border-radius: 10px;
+          overflow: hidden;
+          background: #FFFFFF;
+          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+        }
+        .screenshot-wrap img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: top center;
+          display: block;
+        }
+
+        .kpi-cover {
+          position: absolute;
+          width: 70px;
+          height: 50px;
+          background: #FFFFFF;
+          border-radius: 4px;
+        }
+        .kpi-cover-1 { top: 376px; left: 216px; }
+        .kpi-cover-2 { top: 376px; left: 365px; }
+        .kpi-cover-3 { top: 376px; left: 518px; }
+        .kpi-cover-4 { top: 376px; left: 671px; }
+
+        .kpi-counter {
+          position: absolute;
+          font-weight: 800;
+          font-size: 40px;
+          color: #121212;
+          font-variant-numeric: tabular-nums;
+          line-height: 1;
+          letter-spacing: -0.5px;
+        }
+        .kpi-1 { top: 376px; left: 216px; }
+        .kpi-2 { top: 376px; left: 365px; }
+        .kpi-3 { top: 376px; left: 518px; }
+        .kpi-4 { top: 376px; left: 671px; }
+
+        .stock-bajo-pulse {
+          position: absolute;
+          top: 350px;
+          left: 540px;
+          width: 80px;
+          height: 80px;
+          border: 3px solid #F59E0B;
+          border-radius: 16px;
+          background: rgba(245, 158, 11, 0.12);
+          box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55);
+          transform-origin: center center;
+          pointer-events: none;
+        }
+
+        .stock-card {
+          position: absolute;
+          left: 108px;
+          top: 820px;
+          width: 864px;
+          background: #FFFFFF;
+          border: 1px solid #E5E5E5;
+          border-radius: 10px;
+          padding: 18px 24px;
+        }
+
+        .stock-cover {
+          position: absolute;
+          left: 132px;
+          top: 870px;
+          width: 816px;
+          height: 200px;
+          background: #FFFFFF;
+        }
+
+        .stock-row {
+          position: absolute;
+          left: 132px;
+          width: 816px;
+          height: 56px;
+          display: flex;
+          align-items: center;
+          padding: 0 4px;
+          gap: 14px;
+          color: #121212;
+          background: #FFFFFF;
+        }
+        .stock-row .row-icon {
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .stock-row .row-icon svg { width: 20px; height: 20px; display: block; }
+        .stock-row .row-text {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          min-width: 0;
+        }
+        .stock-row .row-name {
+          font-weight: 600;
+          font-size: 17px;
+          color: #121212;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .stock-row .row-sku {
+          font-size: 13px;
+          color: #4A4A49;
+          font-family: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+        }
+        .stock-row .row-qty-area {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 2px;
+          min-width: 80px;
+        }
+        .stock-row .row-qty {
+          font-weight: 700;
+          font-size: 18px;
+          font-variant-numeric: tabular-nums;
+          color: #121212;
+        }
+        .stock-row .row-unit {
+          font-size: 13px;
+          color: #4A4A49;
+        }
+        .stock-row-1 { top: 870px; }
+        .stock-row-2 { top: 932px; }
+        .stock-row-3 { top: 994px; }
+
+        .en-vivo {
+          position: absolute;
+          bottom: 80px;
+          right: 60px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-weight: 600;
+          font-size: 16px;
+          color: #94C11F;
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          z-index: 10;
+        }
+        .en-vivo-dot {
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background: #94C11F;
+          box-shadow: 0 0 12px rgba(148, 193, 31, 0.8);
+        }
+
+        .caption {
+          position: absolute;
+          bottom: 80px;
+          left: 60px;
+          max-width: 720px;
+          font-family: "Inter", system-ui, sans-serif;
+          font-weight: 500;
+          font-size: 18px;
+          line-height: 1.4;
+          color: #4A4A49;
+        }
+      </style>
+
+      <div
+        id="root"
+        data-composition-id="beat-2"
+        data-width="1080"
+        data-height="1920"
+        data-duration="7"
+      >
+        <div class="ecuador-stripe" aria-hidden="true">
+          <div class="s-y"></div>
+          <div class="s-b"></div>
+          <div class="s-r"></div>
+        </div>
+
+        <div class="header">
+          <div class="eyebrow">DASHBOARD</div>
+          <div class="headline">Resumen general del sistema</div>
+        </div>
+
+        <div class="camera">
+          <div class="screenshot-wrap" id="dashboard">
+            <img src="capture/screenshots/admin/01-dashboard.png" alt="Dashboard" />
+
+            <div class="kpi-cover kpi-cover-1"></div>
+            <div class="kpi-cover kpi-cover-2"></div>
+            <div class="kpi-cover kpi-cover-3"></div>
+            <div class="kpi-cover kpi-cover-4"></div>
+
+            <div class="kpi-counter kpi-1" id="kpi-1">0</div>
+            <div class="kpi-counter kpi-2" id="kpi-2">0</div>
+            <div class="kpi-counter kpi-3" id="kpi-3">0</div>
+            <div class="kpi-counter kpi-4" id="kpi-4">0</div>
+
+            <div class="stock-bajo-pulse" id="stock-bajo-pulse"></div>
+          </div>
+
+          <div class="stock-cover" id="stock-cover"></div>
+
+          <div class="stock-row stock-row-1" id="stock-row-1">
+            <span class="row-icon">
+              <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 2 L16 15 L2 15 Z" fill="#F59E0B"/>
+                <rect x="8.25" y="6" width="1.5" height="5" fill="#FFFFFF"/>
+                <rect x="8.25" y="12" width="1.5" height="1.5" fill="#FFFFFF"/>
+              </svg>
+            </span>
+            <div class="row-text">
+              <div class="row-name">Queso Manaba</div>
+              <div class="row-sku">PT-001</div>
+            </div>
+            <div class="row-qty-area">
+              <div class="row-qty">7</div>
+              <div class="row-unit">lb</div>
+            </div>
+          </div>
+          <div class="stock-row stock-row-2" id="stock-row-2">
+            <span class="row-icon">
+              <svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="9" cy="9" r="5" fill="#94C11F"/>
+              </svg>
+            </span>
+            <div class="row-text">
+              <div class="row-name">Requesón Manaba</div>
+              <div class="row-sku">PT-004</div>
+            </div>
+            <div class="row-qty-area">
+              <div class="row-qty">14</div>
+              <div class="row-unit">unid.</div>
+            </div>
+          </div>
+          <div class="stock-row stock-row-3" id="stock-row-3">
+            <span class="row-icon">
+              <svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="9" cy="9" r="5" fill="#94C11F"/>
+              </svg>
+            </span>
+            <div class="row-text">
+              <div class="row-name">Chifle Alargado 150g</div>
+              <div class="row-sku">PT-002</div>
+            </div>
+            <div class="row-qty-area">
+              <div class="row-qty">88</div>
+              <div class="row-unit">unid.</div>
+            </div>
+          </div>
+
+          <div class="en-vivo">
+            <div class="en-vivo-dot" id="en-vivo-dot"></div>
+            <span>EN VIVO</span>
+          </div>
+
+          <div class="caption">El sistema refleja la operación en tiempo real.</div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          if (typeof window === "undefined" || !window.gsap) return;
+          window.__timelines = window.__timelines || {};
+          const tl = window.gsap.timeline({ paused: true });
+
+          tl.fromTo(".ecuador-stripe > div:nth-child(1)", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out", transformOrigin: "top center" }, 0);
+          tl.fromTo(".ecuador-stripe > div:nth-child(2)", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out", transformOrigin: "top center" }, 0.05);
+          tl.fromTo(".ecuador-stripe > div:nth-child(3)", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out", transformOrigin: "top center" }, 0.1);
+
+          tl.fromTo(".camera", { scale: 1.0 }, { scale: 1.02, duration: 7, ease: "none" }, 0);
+
+          tl.fromTo("#dashboard", { scale: 0.96, y: 16, opacity: 0 }, { scale: 1, y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 0);
+
+          tl.fromTo(".header", { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 0.2);
+
+          const counters = [
+            { id: "#kpi-1", target: 3 },
+            { id: "#kpi-2", target: 1 },
+            { id: "#kpi-3", target: 0 },
+            { id: "#kpi-4", target: 1 },
+          ];
+          counters.forEach(function (c) {
+            const el = document.querySelector(c.id);
+            if (!el) return;
+            const proxy = { n: 0 };
+            tl.set(c.id, { textContent: "0" }, 0.4);
+            tl.to(
+              proxy,
+              {
+                n: c.target,
+                duration: 1.2,
+                ease: "power2.out",
+                onUpdate: function () {
+                  el.textContent = String(Math.round(proxy.n));
+                },
+              },
+              0.4
+            );
+          });
+
+          tl.fromTo("#stock-row-1", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 1.8);
+          tl.fromTo("#stock-row-2", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 1.9);
+          tl.fromTo("#stock-row-3", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 2.0);
+
+          tl.fromTo("#stock-bajo-pulse", { scale: 1, opacity: 0.85 }, {
+            scale: 1.08, opacity: 1, duration: 0.7, ease: "sine.inOut", yoyo: true, repeat: 3
+          }, 3.0);
+
+          tl.fromTo("#en-vivo-dot", { scale: 1, opacity: 0.85 }, {
+            scale: 1.15, opacity: 1, duration: 0.8, ease: "sine.inOut", yoyo: true, repeat: 3
+          }, 0);
+
+          tl.fromTo(".caption", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 4.0);
+
+          window.__timelines["beat-2"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
