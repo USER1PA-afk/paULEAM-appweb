@@ -6,6 +6,8 @@ import { getInsforge } from "@shared/lib/insforge/client";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 
+export { GoogleSignInButton } from "./google-sign-in-button";
+
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

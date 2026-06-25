@@ -1,4 +1,4 @@
-import { RegisterForm } from "@features/auth/components";
+import { RegisterForm, GoogleSignInButton } from "@features/auth/components";
 
 export default function RegisterPage() {
   return (
@@ -12,6 +12,7 @@ export default function RegisterPage() {
         </p>
       </div>
       <RegisterForm />
+      <GoogleSignInButton mode="register" />
     </div>
   );
 }
