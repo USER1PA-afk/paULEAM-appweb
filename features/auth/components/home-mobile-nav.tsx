@@ -42,11 +42,11 @@ export function HomeMobileNav() {
                   <p className="px-3 py-1 text-xs text-muted-foreground truncate">{user.email}</p>
                 )}
                 <Link
-                  href={role === "cliente" ? "/shop/catalog" : "/admin/dashboard"}
+                  href={role === "cliente" ? "/shop/orders" : "/admin/dashboard"}
                   onClick={() => setOpen(false)}
                   className="flex items-center rounded-lg px-3 py-2.5 text-sm font-medium text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
                 >
-                  {role === "cliente" ? "Ir a la Tienda" : "Ir al Panel"}
+                  {role === "cliente" ? "Mis Pedidos" : "Ir al Panel"}
                 </Link>
                 <button
                   onClick={() => { setOpen(false); signOut(); }}

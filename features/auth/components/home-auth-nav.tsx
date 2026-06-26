@@ -15,10 +15,10 @@ export function HomeAuthNav() {
     return (
       <div className="flex items-center gap-4">
         <Link
-          href={role === "cliente" ? "/shop/catalog" : "/admin/dashboard"}
+          href={role === "cliente" ? "/shop/orders" : "/admin/dashboard"}
           className="text-sm font-medium text-brand-600 hover:text-brand-700 transition-colors"
         >
-          {role === "cliente" ? "Ir a la Tienda" : "Ir al Panel"}
+          {role === "cliente" ? "Mis Pedidos" : "Ir al Panel"}
         </Link>
         <button
           onClick={() => signOut()}

@@ -234,22 +234,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Image
             src="/logo-pauleam.png"
             alt="Logo PAuleam"
-            width={26}
-            height={26}
-            style={{ width: 26, height: 26 }}
+            width={34}
+            height={34}
+            style={{ width: 34, height: 34 }}
             className="shrink-0 object-contain dark:invert"
-          />
-          <Image
-            src="/PANCHITOS_logo_page-0001.png"
-            alt="Logo Panchitos"
-            width={36}
-            height={36}
-            style={{ width: 36, height: 36 }}
-            className="shrink-0 object-contain"
           />
           <span className="hidden sm:block text-[13px] font-extrabold uppercase tracking-tight text-foreground">
             PAuleam
           </span>
+          <Image
+            src="/PANCHITOS_logo_page-0001.png"
+            alt="Logo Panchitos"
+            width={97}
+            height={32}
+            style={{ width: 97, height: 32 }}
+            className="shrink-0 object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
+          />
         </Link>
 
         <div className="flex-1" />

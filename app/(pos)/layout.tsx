@@ -67,7 +67,7 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
             width={38}
             height={38}
             style={{ width: 38, height: 38 }}
-            className="object-contain"
+            className="object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
           />
           <div className="flex flex-col leading-tight">
             <span className="text-[11px] font-black uppercase tracking-[0.2em] text-neutral-900 dark:text-white">

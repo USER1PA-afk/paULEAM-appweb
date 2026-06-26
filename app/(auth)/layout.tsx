@@ -28,22 +28,24 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <Image
               src="/logo-pauleam.png"
               alt="Logo PAuleam"
-              width={40}
-              height={40}
+              width={44}
+              height={44}
               className="shrink-0 object-contain drop-shadow-md"
-            />
-            <Image
-              src="/PANCHITOS_logo_page-0001.png"
-              alt="Logo Panchitos"
-              width={48}
-              height={48}
-              className="shrink-0 object-contain"
             />
             <div className="flex flex-col leading-tight">
               <span className="text-base font-extrabold text-white uppercase tracking-tight">
                 PAuleam
               </span>
             </div>
+            {/* Resplandor blanco sutil para destacar el logo sobre el panel rojo */}
+            <Image
+              src="/PANCHITOS_logo_page-0001.png"
+              alt="Logo Panchitos"
+              width={121}
+              height={40}
+              style={{ width: 121, height: 40 }}
+              className="shrink-0 object-contain drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
+            />
           </Link>
 
           {/* Main copy — centered vertically */}
@@ -129,7 +131,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               alt="Logo Panchitos"
               width={40}
               height={40}
-              className="shrink-0 object-contain"
+              className="shrink-0 object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
             />
             <div className="flex flex-col leading-tight">
               <span className="text-sm font-extrabold uppercase tracking-tight text-foreground">PAuleam</span>

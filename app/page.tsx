@@ -5,6 +5,7 @@ import { HomeAuthNav } from "@features/auth/components/home-auth-nav";
 import { HomeMobileNav } from "@features/auth/components/home-mobile-nav";
 import { Footer } from "@shared/components/footer";
 import { ProductCarousel } from "@features/store-products/components/product-carousel";
+import { LandingHeaderLogo } from "@shared/components/landing-header-logo";
 import { Leaf, Award, Truck } from "lucide-react";
 
 // ─── Value props ──────────────────────────────────────────────────────────────
@@ -47,22 +48,15 @@ export default function HomePage() {
             <Image
               src="/logo-pauleam.png"
               alt="Logo PAuleam"
-              width={36}
-              height={36}
-              style={{ width: 36, height: 36 }}
+              width={40}
+              height={40}
+              style={{ width: 40, height: 40 }}
               className="shrink-0 object-contain dark:invert"
-            />
-            <Image
-              src="/PANCHITOS_logo_page-0001.png"
-              alt="Logo Panchitos"
-              width={52}
-              height={52}
-              style={{ width: 52, height: 52 }}
-              className="shrink-0 object-contain"
             />
             <span className="text-sm font-extrabold tracking-tight text-foreground uppercase">
               PAuleam
             </span>
+            <LandingHeaderLogo />
           </Link>
 
           <nav aria-label="Principal" className="hidden items-center gap-6 sm:flex">
@@ -112,6 +106,7 @@ export default function HomePage() {
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-4">
               <div className="lg:hidden mb-6">
                 <Image
+                  data-hero-panchito
                   src="/PANCHITOS_logo_page-0001.png"
                   alt="Logo Panchitos"
                   width={300}
@@ -160,6 +155,7 @@ export default function HomePage() {
 
               <div className="hidden lg:flex lg:flex-1 lg:justify-end">
                 <Image
+                  data-hero-panchito
                   src="/PANCHITOS_logo_page-0001.png"
                   alt="Logo Panchitos"
                   width={640}

@@ -34,22 +34,22 @@ export default function ShopLayout({
             <Image
               src="/logo-pauleam.png"
               alt="Logo PAuleam"
-              width={32}
-              height={32}
-              style={{ width: 32, height: 32 }}
+              width={36}
+              height={36}
+              style={{ width: 36, height: 36 }}
               className="shrink-0 object-contain dark:invert"
-            />
-            <Image
-              src="/PANCHITOS_logo_page-0001.png"
-              alt="Logo Panchitos"
-              width={44}
-              height={44}
-              style={{ width: 44, height: 44 }}
-              className="shrink-0 object-contain"
             />
             <span className="text-base font-bold tracking-tight text-foreground">
               PAuleam
             </span>
+            <Image
+              src="/PANCHITOS_logo_page-0001.png"
+              alt="Logo Panchitos"
+              width={97}
+              height={32}
+              style={{ width: 97, height: 32 }}
+              className="shrink-0 object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
+            />
           </Link>
 
           {/* ── Desktop nav (≥ sm) ── */}
