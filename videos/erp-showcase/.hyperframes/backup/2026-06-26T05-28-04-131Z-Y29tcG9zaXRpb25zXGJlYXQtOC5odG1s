@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>PAuleam Beat 8 — Tagline Close</title>
+  </head>
+  <body>
+    <template id="beat-8-template">
+      <style>
+        #root {
+          position: relative;
+          width: 1920px;
+          height: 1080px;
+          background: #FFFFFF;
+          overflow: hidden;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          color: #121212;
+        }
+
+        .ecuador-stripe {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 12px;
+          display: flex;
+          z-index: 20;
+        }
+        .ecuador-stripe > div {
+          flex: 1 1 0;
+          height: 100%;
+        }
+        .s-yellow { background: #FCD116; }
+        .s-blue   { background: #003893; }
+        .s-red    { background: #CC0000; }
+
+        .content {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          will-change: transform;
+        }
+
+        .tagline {
+          margin: 0;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-weight: 700;
+          font-size: 36px;
+          line-height: 1.25;
+          color: #121212;
+          letter-spacing: -0.01em;
+          text-align: center;
+          white-space: nowrap;
+          will-change: transform, opacity;
+        }
+
+        .logo-row {
+          margin-top: 36px;
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          will-change: transform, opacity;
+        }
+
+        .plant-icon {
+          width: 80px;
+          height: 80px;
+          display: block;
+        }
+        .plant-path {
+          stroke: #CC0000;
+          stroke-width: 3;
+          fill: none;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+        }
+
+        .wordmark {
+          display: inline-block;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-weight: 800;
+          font-size: 64px;
+          line-height: 1;
+          color: #CC0000;
+          letter-spacing: -0.02em;
+          will-change: transform, opacity;
+        }
+
+        .footer {
+          position: absolute;
+          bottom: 32px;
+          left: 0;
+          right: 0;
+          text-align: center;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 12px;
+          font-weight: 500;
+          line-height: 1;
+          color: #4A4A49;
+          opacity: 0;
+          letter-spacing: 0.02em;
+          will-change: opacity;
+        }
+
+        .accent-line {
+          position: absolute;
+          left: 0;
+          bottom: 25%;
+          width: 100%;
+          height: 2px;
+          background: #CC0000;
+          transform-origin: left center;
+          z-index: 15;
+          will-change: transform;
+        }
+
+        .black-out {
+          position: absolute;
+          inset: 0;
+          background: #000000;
+          opacity: 0;
+          z-index: 50;
+          pointer-events: none;
+          will-change: opacity;
+        }
+      </style>
+
+      <div id="root" data-composition-id="beat-8" data-start="0" data-duration="3" data-width="1920" data-height="1080">
+        <img id="logo-pauleam" class="clip" src="../assets/logo-pauleam.png" data-start="0" data-duration="3" data-track-index="2" style="position: absolute; left: 0px; top: 0px; width: 1920px; height: 1080px; object-fit: contain; z-index: 8">
+        <div class="ecuador-stripe">
+          <div class="s-yellow"></div>
+          <div class="s-blue"></div>
+          <div class="s-red"></div>
+        </div>
+
+        <div class="content">
+          <h1 class="tagline">De la materia prima a la venta, en un solo sistema.</h1>
+
+          <div class="logo-row">
+            
+            <span class="wordmark">PAuleam</span>
+          </div>
+        </div>
+
+        <div class="footer">uleam.edu.ec · Planta de Alimentos · 2026</div>
+
+        <div class="accent-line"></div>
+
+        <div class="black-out"></div>
+      </div>
+
+      <script>
+        (function () {
+          if (typeof window === "undefined" || !window.gsap) return;
+          window.__timelines = window.__timelines || {};
+          const tl = window.gsap.timeline({ paused: true });
+
+          tl.set(".tagline", { y: 16, opacity: 0 }, 0);
+          tl.set(".plant-path", { strokeDasharray: 100, strokeDashoffset: 100 }, 0);
+          tl.set(".wordmark", { y: 12, opacity: 0 }, 0);
+          tl.set(".footer", { opacity: 0 }, 0);
+          tl.set(".accent-line", { scaleX: 0 }, 0);
+          tl.set(".black-out", { opacity: 0 }, 0);
+
+          tl.to(
+            ".tagline",
+            { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" },
+            0.0
+          );
+
+          tl.to(
+            ".plant-path",
+            { strokeDashoffset: 0, duration: 0.8, ease: "power2.out", stagger: 0.04 },
+            0.6
+          );
+
+          tl.to(
+            ".wordmark",
+            { y: 0, opacity: 1, duration: 0.3, ease: "power2.out" },
+            0.9
+          );
+
+          tl.to(
+            ".footer",
+            { opacity: 0.6, duration: 0.2, ease: "power2.out" },
+            1.2
+          );
+
+          tl.to(
+            ".accent-line",
+            { scaleX: 1, duration: 0.6, ease: "expo.out", transformOrigin: "left center" },
+            1.4
+          );
+
+          tl.to(
+            ".content",
+            { y: -3, duration: 1.0, ease: "sine.inOut", yoyo: true, repeat: 0 },
+            2.0
+          );
+
+          tl.to(
+            ".black-out",
+            { opacity: 1, duration: 0.3, ease: "power2.in" },
+            2.7
+          );
+
+          tl.set("#logo-pauleam", { width: 134, height: 128, immediateRender: true }, 0);
+
+          tl.to("#logo-pauleam", {
+            keyframes: {
+              "0%": { x: 636, y: 607 },
+
+              "65.8%": { x: 723, y: 596 },
+
+              "94.5%": { x: 703, y: 491, transformPerspective: 743 },
+
+              "100%": { x: 708, y: 499 }
+            },
+            duration: 2.482
+          }, 0);
+
+          tl.to("#logo-pauleam", {
+            keyframes: {
+              "0%": { x: 665, y: 476 },
+              "2.2%": { x: 671, y: 500 },
+              "100%": { x: 711, y: 496 },
+              easeEach: "power2.out"
+            },
+            duration: 3,
+            ease: "none"
+          }, 0);
+
+          tl.to("#logo-pauleam", { opacity: 1, duration: 3, ease: "power2.out" }, 0);
+
+          window.__timelines["beat-8"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

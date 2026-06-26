@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="es">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=1920, height=1080" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
     <title>PAuleam Beat 7 — Four Roles Grid</title>
   </head>
   <body>
@@ -27,14 +27,13 @@
           display: flex;
           z-index: 30;
         }
-        .ecuador-stripe > div {
-          flex: 1 1 0;
-          height: 100%;
-        }
+        .ecuador-stripe > div { flex: 1 1 0; height: 100%; }
         .stripe-yellow { background: #fcd116; }
         .stripe-blue   { background: #003893; }
         .stripe-red    { background: #cc0000; }
 
+        /* Grid: 1280x720 centered in the 1920x1080 viewport
+           (left:320 right:320 top:180 bottom:180) */
         .grid {
           position: absolute;
           top: 180px;
@@ -46,7 +45,6 @@
           grid-template-rows: 344px 344px;
           gap: 32px;
           z-index: 10;
-          will-change: opacity;
         }
 
         .quad {
@@ -56,13 +54,12 @@
           background: #ffffff;
           border: 1px solid #e5e5e5;
           border-radius: 10px;
-          padding: 32px;
+          padding: 24px;
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 12px;
           box-sizing: border-box;
-          transform-origin: 50% 50%;
-          will-change: transform, opacity;
+          opacity: 0;
         }
 
         .role-badge {
@@ -83,17 +80,19 @@
         .badge-admin      { background: #cc0000; }
         .badge-pos        { background: #94c11f; }
 
+        /* Fixed 16:9 frame — matches the admin captures' aspect ratio.
+           Previously the frame used flex:1 which made it arbitrarily wide/short,
+           giving the "horizontally stretched" look the user reported. */
         .screenshot-frame {
           position: relative;
-          width: 320px;
-          height: 180px;
+          width: 100%;
+          max-width: 526px;
+          aspect-ratio: 16 / 9;
           align-self: center;
           overflow: hidden;
           border: 1px solid #e5e5e5;
           border-radius: 6px;
           background: #f9f9f9;
-          transform-origin: 50% 50%;
-          will-change: transform;
         }
         .screenshot-frame img {
           display: block;
@@ -105,23 +104,16 @@
 
         .quad-desc {
           font-family: "Inter", "Segoe UI", system-ui, sans-serif;
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 500;
-          line-height: 1.4;
+          line-height: 1.35;
           color: #4a4a49;
           margin: 0;
           text-align: left;
         }
       </style>
 
-      <div
-        id="root"
-        data-composition-id="beat-7"
-        data-start="52"
-        data-duration="5"
-        data-width="1920"
-        data-height="1080"
-      >
+      <div id="root" data-composition-id="beat-7" data-start="52" data-duration="5" data-width="1920" data-height="1080">
         <div class="ecuador-stripe">
           <div class="stripe-yellow"></div>
           <div class="stripe-blue"></div>
@@ -132,7 +124,7 @@
           <div id="q1" class="quad">
             <div class="role-badge badge-cliente">CLIENTE</div>
             <div class="screenshot-frame">
-              <img src="capture/screenshots/admin/14-shop-catalog.png" alt="Catálogo de tienda" />
+              <img src="capture/screenshots/cliente-mobile/01-catalog.png" alt="Catálogo de tienda" />
             </div>
             <p class="quad-desc">Compra en línea y retira con código PAU.</p>
           </div>
@@ -169,76 +161,11 @@
           window.__timelines = window.__timelines || {};
           const tl = window.gsap.timeline({ paused: true });
 
-          // ---------- Initial states (frame 0) ----------
-          tl.set("#grid", { opacity: 0 }, 0);
-
-          tl.set("#q1, #q2, #q3, #q4", { scale: 0.7, opacity: 0, transformOrigin: "50% 50%" }, 0);
-
-          // ============================================================
-          // GRID FADE IN — 0.0s -> 0.3s
-          // ============================================================
-          tl.fromTo(
-            "#grid",
-            { opacity: 0 },
-            { opacity: 1, duration: 0.3, ease: "power2.out" },
-            0.0
-          );
-
-          // ============================================================
-          // QUADRANT POP-INS (staggered, back.out(1.6), 0.6s each)
-          // ============================================================
-          tl.fromTo(
-            "#q1",
-            { scale: 0.7, opacity: 0 },
-            { scale: 1.0, opacity: 1, duration: 0.6, ease: "back.out(1.6)" },
-            0.3
-          );
-          tl.fromTo(
-            "#q2",
-            { scale: 0.7, opacity: 0 },
-            { scale: 1.0, opacity: 1, duration: 0.6, ease: "back.out(1.6)" },
-            0.6
-          );
-          tl.fromTo(
-            "#q3",
-            { scale: 0.7, opacity: 0 },
-            { scale: 1.0, opacity: 1, duration: 0.6, ease: "back.out(1.6)" },
-            0.9
-          );
-          tl.fromTo(
-            "#q4",
-            { scale: 0.7, opacity: 0 },
-            { scale: 1.0, opacity: 1, duration: 0.6, ease: "back.out(1.6)" },
-            1.2
-          );
-
-          // ============================================================
-          // SCREENSHOT BREATHE — 1.8s onward (stagger 0.2s, 2s yoyo, 1 repeat)
-          // ============================================================
-          tl.fromTo(
-            "#q1 .screenshot-frame",
-            { scale: 1.0 },
-            { scale: 1.03, duration: 2.0, ease: "sine.inOut", yoyo: true, repeat: 1 },
-            1.8
-          );
-          tl.fromTo(
-            "#q2 .screenshot-frame",
-            { scale: 1.0 },
-            { scale: 1.03, duration: 2.0, ease: "sine.inOut", yoyo: true, repeat: 1 },
-            2.0
-          );
-          tl.fromTo(
-            "#q3 .screenshot-frame",
-            { scale: 1.0 },
-            { scale: 1.03, duration: 2.0, ease: "sine.inOut", yoyo: true, repeat: 1 },
-            2.2
-          );
-          tl.fromTo(
-            "#q4 .screenshot-frame",
-            { scale: 1.0 },
-            { scale: 1.03, duration: 2.0, ease: "sine.inOut", yoyo: true, repeat: 1 },
-            2.4
-          );
+          // Pure opacity fade-in for each quadrant. NO translate / NO scale.
+          tl.fromTo("#q1", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" }, 0.0);
+          tl.fromTo("#q2", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" }, 0.3);
+          tl.fromTo("#q3", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" }, 0.6);
+          tl.fromTo("#q4", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" }, 0.9);
 
           window.__timelines["beat-7"] = tl;
         })();

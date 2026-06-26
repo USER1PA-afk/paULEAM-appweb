@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+  </head>
+  <body>
+    <template id="beat-4-template">
+      <style>
+        #root {
+          position: relative;
+          width: 1920px;
+          height: 1080px;
+          overflow: hidden;
+          background: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        }
+
+        .ecuador-stripe {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 12px;
+          display: flex;
+          z-index: 30;
+        }
+        .ecuador-stripe > div {
+          flex: 1 1 0;
+          height: 100%;
+        }
+        .stripe-yellow { background: #fcd116; }
+        .stripe-blue   { background: #003893; }
+        .stripe-red    { background: #cc0000; }
+
+        .role-badge {
+          position: absolute;
+          top: 36px;
+          left: 32px;
+          z-index: 25;
+          padding: 8px 16px;
+          border-radius: 999px;
+          background: #f59e0b;
+          color: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 14px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          line-height: 1;
+          box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+        }
+
+        .moment {
+          position: absolute;
+          inset: 0;
+          z-index: 10;
+          will-change: opacity, transform;
+        }
+
+        .label-eyebrow {
+          position: absolute;
+          top: 100px;
+          left: 32px;
+          z-index: 12;
+          color: #cc0000;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 14px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          line-height: 1;
+          white-space: nowrap;
+        }
+        .label-desc {
+          position: absolute;
+          top: 132px;
+          left: 32px;
+          z-index: 12;
+          color: #121212;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 22px;
+          font-weight: 500;
+          line-height: 1.2;
+          max-width: 520px;
+        }
+
+        .screenshot-anchor {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 1344px;
+          height: 648px;
+          max-width: 70%;
+          max-height: 60%;
+        }
+        .screenshot-frame {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          border: 1px solid #e5e5e5;
+          border-radius: 10px;
+          background: #ffffff;
+          will-change: transform, opacity;
+          transform-origin: 50% 50%;
+        }
+        .screenshot-frame img {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: top center;
+        }
+
+        .batch-chip {
+          position: absolute;
+          top: 18px;
+          right: 18px;
+          z-index: 20;
+          padding: 8px 18px;
+          background: #ffffff;
+          border: 2px solid #cc0000;
+          border-radius: 999px;
+          color: #cc0000;
+          font-family: ui-monospace, "SF Mono", "JetBrains Mono", Consolas, monospace;
+          font-size: 28px;
+          font-weight: 800;
+          letter-spacing: 0.02em;
+          line-height: 1;
+          white-space: nowrap;
+          transform-origin: 50% 50%;
+          will-change: transform, opacity;
+          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.6);
+        }
+      </style>
+
+      <div id="root" data-composition-id="beat-4" data-width="1920" data-height="1080" data-duration="10">
+        <div class="ecuador-stripe">
+          <div class="stripe-yellow"></div>
+          <div class="stripe-blue"></div>
+          <div class="stripe-red"></div>
+        </div>
+
+        <div class="role-badge">OPERARIO</div>
+
+        <div id="moment-a" class="moment">
+          <div class="label-eyebrow">1. RECETAS</div>
+          <div class="label-desc">Materias Primas + Insumos</div>
+          <div class="screenshot-anchor">
+            <div class="screenshot-frame">
+              <img src="capture/screenshots/admin/05-recipes.png" alt="Recipes">
+            </div>
+          </div>
+        </div>
+
+        <div id="moment-b" class="moment">
+          <div class="label-eyebrow">2. PRODUCCIÓN</div>
+          <div class="label-desc">Lote PROD-2026-0001 generado automáticamente.</div>
+          <div class="screenshot-anchor">
+            <div class="screenshot-frame">
+              <img src="capture/screenshots/admin/06-production.png" alt="Production">
+              <div class="batch-chip">PROD-2026-0001</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="moment-c" class="moment">&lt;div data-hf-id="hf-b6pz" class="label-eyebrow" data-start="0" data-duration="28.867" data-hf-autostamped="1" data-hf-text-key="child:0:div" style="opacity: 1; transform: translate(0px, 0px)"&gt;3. EMPAQUE&lt;/div&gt;&lt;div data-hf-id="hf-5l0u" class="label-desc" data-start="0" data-duration="28.867" data-hf-autostamped="1" data-hf-text-key="child:1:div" style="opacity: 1; transform: translate(0px, 0px)"&gt;Plantilla + materiales consumidos en una sola vur.&lt;/div&gt;</div>
+      </div>
+
+      <script>
+        (function () {
+          if (typeof window === "undefined" || !window.gsap) return;
+          window.__timelines = window.__timelines || {};
+          const tl = window.gsap.timeline({ paused: true });
+
+          tl.set("#moment-c .screenshot-frame", { x: 0, y: 0, data: "hf-hold" }, 0);
+
+          tl.set("#moment-b .batch-chip", { x: 0, y: 0, data: "hf-hold" }, 0);
+
+          // ---------- Initial states (frame 0) ----------
+          tl.set("#moment-a", { opacity: 1, scale: 1, x: 0, y: 0 }, 0);
+          tl.set("#moment-b", { opacity: 0, scale: 1, x: 0, y: 0 }, 0);
+          tl.set("#moment-c", { opacity: 0, scale: 1, x: 0, y: 0 }, 0);
+
+          tl.set(
+            "#moment-a .label-eyebrow, #moment-a .label-desc",
+            { x: -40, opacity: 0 },
+            0
+          );
+
+          tl.set(
+            "#moment-b .label-eyebrow, #moment-b .label-desc",
+            { x: -40, opacity: 0 },
+            0
+          );
+          tl.set(
+            "#moment-b .screenshot-frame",
+            { scale: 0.94, y: 12, opacity: 0 },
+            0
+          );
+
+          tl.set(
+            "#moment-c .label-eyebrow, #moment-c .label-desc",
+            { x: -40, opacity: 0 },
+            0
+          );
+          tl.set(
+            "#moment-c .screenshot-frame",
+            { scale: 0.94, y: 12, opacity: 0 },
+            0
+          );
+
+          // ============================================================
+          // MOMENT A — RECETAS (0.0s -> 3.3s)
+          // ============================================================
+          // 0.0 - 0.4s : label slides in from x:-40 + fades up
+          tl.fromTo(
+            "#moment-a .label-eyebrow",
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            0.0
+          );
+          tl.fromTo(
+            "#moment-a .label-desc",
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            0.0
+          );
+
+          // 0.2 - 0.9s : screenshot scales in
+          tl.fromTo(
+            "#moment-a .screenshot-frame",
+            { scale: 0.94, y: 12, opacity: 0 },
+            { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" },
+            0.2
+          );
+
+          // 2.0 - 3.3s : subtle parallax drift (yoyo, single back-and-forth)
+          tl.fromTo(
+            "#moment-a .screenshot-frame",
+            { y: 0 },
+            { y: -3, duration: 1.3, ease: "sine.inOut", yoyo: true },
+            2.0
+          );
+
+          // ============================================================
+          // MOMENT B — PRODUCCIÓN (3.3s -> 6.6s)
+          // ============================================================
+          // 3.3 - 3.6s : previous (moment-a) fades out
+          tl.fromTo(
+            "#moment-a",
+            { opacity: 1, scale: 1 },
+            { opacity: 0, scale: 0.97, duration: 0.3, ease: "power2.in" },
+            3.3
+          );
+
+          // 3.3 - 3.7s : new label slides in
+          tl.fromTo(
+            "#moment-b",
+            { opacity: 0 },
+            { opacity: 1, duration: 0.2, ease: "power2.out" },
+            3.3
+          );
+          tl.fromTo(
+            "#moment-b .label-eyebrow",
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            3.3
+          );
+          tl.fromTo(
+            "#moment-b .label-desc",
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            3.3
+          );
+
+          // 3.5 - 4.2s : new screenshot scales in
+          tl.fromTo(
+            "#moment-b .screenshot-frame",
+            { scale: 0.94, y: 12, opacity: 0 },
+            { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" },
+            3.5
+          );
+
+          // 5.0 - 6.6s : hold with drift
+          tl.fromTo(
+            "#moment-b .screenshot-frame",
+            { y: 0 },
+            { y: -3, duration: 1.6, ease: "sine.inOut", yoyo: true },
+            5.0
+          );
+
+          // ============================================================
+          // MOMENT C — EMPAQUE (6.6s -> 10.0s)
+          // ============================================================
+          // 6.6 - 6.9s : previous (moment-b) fades out
+          tl.fromTo(
+            "#moment-b",
+            { opacity: 1, scale: 1 },
+            { opacity: 0, scale: 0.97, duration: 0.3, ease: "power2.in" },
+            6.6
+          );
+
+          // 6.6 - 7.0s : new label slides in
+          tl.fromTo(
+            "#moment-c",
+            { opacity: 0 },
+            { opacity: 1, duration: 0.2, ease: "power2.out" },
+            6.6
+          );
+          tl.fromTo(
+            "#moment-c .label-eyebrow",
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            6.6
+          );
+          tl.fromTo(
+            "#moment-c .label-desc",
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            6.6
+          );
+
+          // 6.8 - 7.5s : screenshot scales in
+          tl.fromTo(
+            "#moment-c .screenshot-frame",
+            { scale: 0.94, y: 12, opacity: 0 },
+            { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" },
+            6.8
+          );
+
+          tl.set("#moment-b .batch-chip", { scale: 0.5, immediateRender: true }, 0);
+
+          tl.set("#moment-b .batch-chip", { opacity: 0, immediateRender: true }, 0);
+
+          tl.fromTo("#moment-b .batch-chip", { scale: 0.5 }, { scale: 1, duration: 0.5, ease: "back.out(1.6)" }, 4.5);
+
+          tl.fromTo("#moment-b .batch-chip", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "back.out(1.6)" }, 4.5);
+
+          tl.to("#moment-b .batch-chip", { keyframes: { "0%": { x: 0, y: 0 }, "2.3%": { x: 0, y: 0 }, "100%": { x: -236, y: 485 } }, duration: 21.9 }, 4.5);
+
+          tl.set(".screenshot-anchor", { x: 50, y: 40, immediateRender: true }, 0);
+
+          tl.set("#moment-a .screenshot-frame", { y: 12, immediateRender: true }, 0);
+
+          tl.set("#moment-a .screenshot-frame", { opacity: 0, immediateRender: true }, 0);
+
+          tl.set(".screenshot-frame", { width: 1460, height: 733, immediateRender: true }, 0);
+
+          tl.to(".screenshot-frame", { keyframes: { "0%": { width: 1344, height: 648 }, "11.7%": { width: 1344, height: 648 }, "88.5%": { width: 1418, height: 702 }, "100%": { width: 1491, height: 758 } }, duration: 21.367 }, 7.5);
+
+          tl.set(".screenshot-anchor", { width: 1393, height: 677, immediateRender: true }, 0);
+
+          tl.to("#moment-c .screenshot-frame", { keyframes: { "0%": { x: 0, y: 0 }, "11.7%": { x: 0, y: 0 }, "88.4%": { x: -65, y: 2 }, "97.5%": { x: 131, y: 36 }, "100%": { x: 58, y: 2 } }, duration: 21.367 }, 7.5);
+
+          window.__timelines["beat-4"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

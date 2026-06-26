@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>PAuleam — Beat 3: Cliente</title>
+    <title>PAuleam — Beat 3: Cliente (Móvil + Características)</title>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
   </head>
   <body>
@@ -30,6 +30,7 @@
         .ecuador-stripe .y { background: #FCD116; }
         .ecuador-stripe .b { background: #003893; }
         .ecuador-stripe .r { background: #CC0000; }
+
         .role-badge {
           position: absolute;
           top: 48px; left: 64px;
@@ -46,66 +47,177 @@
         }
         .headline {
           position: absolute;
-          top: 130px; left: 64px;
+          top: 120px; left: 64px;
           font-family: "Inter", system-ui, sans-serif;
           font-weight: 700;
-          font-size: 32px;
+          font-size: 36px;
           color: #121212;
           z-index: 5;
           margin: 0;
+          line-height: 1.1;
         }
+        .subhead {
+          position: absolute;
+          top: 168px; left: 64px;
+          font-family: "Inter", system-ui, sans-serif;
+          font-weight: 500;
+          font-size: 18px;
+          color: #4A4A49;
+          z-index: 5;
+          margin: 0;
+        }
+
         .camera {
           position: absolute;
           inset: 0;
-          width: 1920px;
-          height: 1080px;
           transform-origin: center center;
           z-index: 1;
         }
-        .screenshot-wrap {
+
+        /* Phone frame on the left */
+        .phone {
           position: absolute;
-          top: 220px;
-          left: 10%;
-          width: 80%;
-          height: 60%;
-          background: #FFFFFF;
-          border-radius: 10px;
-          overflow: hidden;
+          top: 240px;
+          left: 100px;
+          width: 360px;
+          height: 760px;
+          background: #121212;
+          border-radius: 40px;
+          padding: 12px;
+          box-shadow:
+            0 30px 60px rgba(0,0,0,0.12),
+            0 0 0 2px #1f1f1f;
+          will-change: transform, opacity;
         }
-        .screenshot-wrap img {
+        .phone-screen {
+          position: relative;
           width: 100%;
           height: 100%;
-          object-fit: contain;
+          border-radius: 28px;
+          overflow: hidden;
+          background: #FFFFFF;
+        }
+        .phone-slide {
+          position: absolute;
+          inset: 12px;
+          border-radius: 28px;
+          overflow: hidden;
+          opacity: 0;
+          will-change: opacity;
+        }
+        .phone-slide img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
           object-position: top center;
-          display: block;
         }
-        .product-overlay {
+        .phone-notch {
           position: absolute;
-          width: 360px;
-          height: 360px;
-          background: transparent;
-          border: 2px solid transparent;
-          border-radius: 10px;
-          z-index: 4;
-        }
-        .product-overlay.o1 { top: 320px; left: 16%; }
-        .product-overlay.o2 { top: 320px; left: 38%; }
-        .product-overlay.o3 { top: 320px; left: 60%; }
-        .agregar-overlay {
-          position: absolute;
-          top: 670px;
-          left: 18%;
+          top: 8px;
+          left: 50%;
+          transform: translateX(-50%);
           width: 100px;
-          height: 40px;
-          background: #CC0000;
-          border-radius: 10px;
-          z-index: 4;
+          height: 18px;
+          background: #121212;
+          border-radius: 0 0 14px 14px;
+          z-index: 5;
         }
+        .phone-caption {
+          position: absolute;
+          top: 1010px;
+          left: 100px;
+          width: 360px;
+          text-align: center;
+          font-family: "Inter", system-ui, sans-serif;
+          font-weight: 600;
+          font-size: 14px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #4A4A49;
+          z-index: 5;
+          will-change: opacity;
+        }
+
+        /* Feature callouts (right of phone) */
+        .callouts {
+          position: absolute;
+          top: 260px;
+          left: 540px;
+          width: 1240px;
+          height: 740px;
+          display: flex;
+          gap: 24px;
+          z-index: 5;
+        }
+        .callout {
+          position: relative;
+          flex: 1 1 0;
+          background: #FFFFFF;
+          border: 1px solid #E5E5E5;
+          border-radius: 18px;
+          padding: 32px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          box-sizing: border-box;
+          will-change: transform, opacity;
+        }
+        .callout::before {
+          content: "";
+          position: absolute;
+          top: 0; left: 0;
+          width: 6px; height: 100%;
+          border-radius: 18px 0 0 18px;
+        }
+        .callout.green::before  { background: #94C11F; }
+        .callout.red::before    { background: #CC0000; }
+        .callout.amber::before  { background: #F59E0B; }
+
+        .callout-icon {
+          width: 72px;
+          height: 72px;
+          border-radius: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          will-change: transform, opacity;
+        }
+        .callout-icon.green  { background: rgba(148, 193, 31, 0.14); color: #4F7A0E; }
+        .callout-icon.red    { background: rgba(204, 0, 0, 0.10);   color: #CC0000; }
+        .callout-icon.amber  { background: rgba(245, 158, 11, 0.12); color: #B45309; }
+        .callout-icon svg { width: 40px; height: 40px; display: block; }
+
+        .callout-eyebrow {
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          line-height: 1;
+        }
+        .callout-eyebrow.green  { color: #4F7A0E; }
+        .callout-eyebrow.red    { color: #CC0000; }
+        .callout-eyebrow.amber  { color: #B45309; }
+
+        .callout-title {
+          font-size: 28px;
+          font-weight: 800;
+          line-height: 1.1;
+          color: #121212;
+          letter-spacing: -0.01em;
+        }
+        .callout-desc {
+          font-size: 16px;
+          font-weight: 500;
+          line-height: 1.4;
+          color: #4A4A49;
+        }
+
+        /* Pickup code card at bottom */
         .pickup-card {
           position: absolute;
           left: 0;
           right: 0;
-          bottom: 60px;
+          bottom: 50px;
           margin: 0 auto;
           width: 900px;
           max-width: calc(100% - 128px);
@@ -116,6 +228,7 @@
           text-align: center;
           z-index: 8;
           box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+          will-change: transform, opacity;
         }
         .pickup-eyebrow {
           font-family: "Inter", system-ui, sans-serif;
@@ -151,6 +264,7 @@
           font-size: 18px;
           color: #4A4A49;
           margin-top: 4px;
+          will-change: transform, opacity;
         }
         .verificado .dot {
           display: inline-block;
@@ -162,59 +276,143 @@
         }
       </style>
 
-      <div id="root" data-composition-id="beat-3" data-width="1920" data-height="1080">
+      <div id="root" data-composition-id="beat-3" data-width="1920" data-height="1080" data-start="12" data-duration="9">
         <div class="ecuador-stripe"><div class="y"></div><div class="b"></div><div class="r"></div></div>
         <div class="role-badge">Cliente</div>
         <h1 class="headline">Compra y retira con código</h1>
+        <p class="subhead">Catálogo, carrito y pago. Todo desde el móvil.</p>
+
         <div class="camera">
-          <div class="screenshot-wrap">
-            <img src="capture/screenshots/admin/14-shop-catalog.png" alt="Catálogo de productos PAuleam" />
+          <div class="phone" id="phone">
+            <div class="phone-notch" aria-hidden="true"></div>
+            <div class="phone-screen">
+              <div class="phone-slide" id="phone-slide-1">
+                <img src="capture/screenshots/cliente-mobile/01-catalog.png" alt="Catálogo" />
+              </div>
+              <div class="phone-slide" id="phone-slide-2">
+                <img src="capture/screenshots/cliente-mobile/03-cart.png" alt="Carrito" />
+              </div>
+              <div class="phone-slide" id="phone-slide-3">
+                <img src="capture/screenshots/cliente-mobile/04-checkout.png" alt="Checkout" />
+              </div>
+            </div>
           </div>
-          <div class="product-overlay o1"></div>
-          <div class="product-overlay o2"></div>
-          <div class="product-overlay o3"></div>
-          <div class="agregar-overlay"></div>
+
+          <p class="phone-caption" id="phone-caption">Catálogo</p>
+
+          <div class="callouts">
+            <div class="callout green" id="callout-1">
+              <div class="callout-icon green" id="callout-icon-1">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M12 22s-7-7.58-7-13a7 7 0 0114 0c0 5.42-7 13-7 13z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                  <circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="callout-eyebrow green">RETIRO</div>
+              <h2 class="callout-title">Retiro en planta</h2>
+              <p class="callout-desc">Recoge tu pedido en la Planta de Alimentos. Te entregamos un código único para retirar sin filas.</p>
+            </div>
+
+            <div class="callout red" id="callout-2">
+              <div class="callout-icon red" id="callout-icon-2">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M1 4h13v12H1V4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                  <path d="M14 8h5l3 3v5h-8V8z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                  <circle cx="6" cy="19" r="2" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="18" cy="19" r="2" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="callout-eyebrow red">ENVÍO</div>
+              <h2 class="callout-title">Envío a domicilio</h2>
+              <p class="callout-desc">Recibe tus productos en la dirección que indiques. Confirmas la entrega y se descuenta del inventario.</p>
+            </div>
+
+            <div class="callout amber" id="callout-3">
+              <div class="callout-icon amber" id="callout-icon-3">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
+                  <line x1="2" y1="10" x2="22" y2="10" stroke="currentColor" stroke-width="2"/>
+                  <rect x="5" y="13" width="4" height="3" fill="currentColor"/>
+                </svg>
+              </div>
+              <div class="callout-eyebrow amber">PAGO</div>
+              <h2 class="callout-title">Pago seguro</h2>
+              <p class="callout-desc">Transferencia bancaria, Banco Pichincha, Guayaquil, PayPal o QR Deuna. Subes el comprobante y el operario aprueba.</p>
+            </div>
+          </div>
         </div>
-        <div class="pickup-card">
+
+        <div class="pickup-card" id="pickup-card">
           <div class="pickup-eyebrow">Tu código de retiro</div>
           <div class="pickup-code"><span class="prefix">PAU-</span><span id="pickup-suffix">79C209F3</span></div>
-          <div class="verificado"><span class="dot"></span>Verificado</div>
+          <div class="verificado" id="verificado"><span class="dot"></span>Verificado</div>
         </div>
       </div>
 
       <script>
         (function () {
           if (typeof window === "undefined" || !window.gsap) return;
+          window.__timelines = window.__timelines || {};
           const tl = window.gsap.timeline({ paused: true });
 
-          tl.fromTo(".ecuador-stripe", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out" }, 0);
+          tl.fromTo(".ecuador-stripe", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out", transformOrigin: "top center" }, 0);
           tl.fromTo(".role-badge", { opacity: 0, y: -12 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.2);
           tl.fromTo(".headline", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.3);
-          tl.fromTo(".camera .screenshot-wrap", { opacity: 0, y: 16, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: "power2.out" }, 0);
-          tl.fromTo(".product-overlay.o1", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.5);
-          tl.fromTo(".product-overlay.o2", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.6);
-          tl.fromTo(".product-overlay.o3", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.7);
-          tl.fromTo(".agregar-overlay", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, 1.0);
-          tl.to(".agregar-overlay", { scale: 1.05, duration: 0.2, yoyo: true, repeat: 1, ease: "power2.inOut" }, 2.5);
+          tl.fromTo(".subhead", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.6);
 
-          tl.fromTo(".pickup-card", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.7, ease: "back.out(1.6)" }, 3.5);
+          tl.fromTo("#phone", { opacity: 0, y: 24, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: "power2.out" }, 0.4);
+          tl.fromTo("#phone-caption", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 1.0);
+
+          // Callouts slide in from the right, staggered
+          tl.set("#callout-1", { x: 40, opacity: 0 }, 0);
+          tl.set("#callout-2", { x: 40, opacity: 0 }, 0);
+          tl.set("#callout-3", { x: 40, opacity: 0 }, 0);
+          tl.set("#callout-icon-1", { scale: 0.6, opacity: 0 }, 0);
+          tl.set("#callout-icon-2", { scale: 0.6, opacity: 0 }, 0);
+          tl.set("#callout-icon-3", { scale: 0.6, opacity: 0 }, 0);
+
+          tl.fromTo("#callout-1", { x: 40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 1.1);
+          tl.fromTo("#callout-icon-1", { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(1.4)", transformOrigin: "50% 50%" }, 1.3);
+
+          tl.fromTo("#callout-2", { x: 40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 1.4);
+          tl.fromTo("#callout-icon-2", { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(1.4)", transformOrigin: "50% 50%" }, 1.6);
+
+          tl.fromTo("#callout-3", { x: 40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 1.7);
+          tl.fromTo("#callout-icon-3", { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(1.4)", transformOrigin: "50% 50%" }, 1.9);
+
+          // Phone slide cycle
+          tl.set("#phone-slide-1", { opacity: 1 }, 0);
+          tl.set("#phone-slide-2", { opacity: 0 }, 0);
+          tl.set("#phone-slide-3", { opacity: 0 }, 0);
+
+          tl.fromTo("#phone-slide-1", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 3.6);
+          tl.fromTo("#phone-slide-2", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.inOut" }, 3.6);
+          tl.set("#phone-caption", { textContent: "Carrito" }, 3.6);
+          tl.fromTo("#phone-caption", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 3.7);
+
+          tl.fromTo("#phone-slide-2", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 5.2);
+          tl.fromTo("#phone-slide-3", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.inOut" }, 5.2);
+          tl.set("#phone-caption", { textContent: "Pago" }, 5.2);
+          tl.fromTo("#phone-caption", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 5.3);
+
+          // Pickup card slides in
+          tl.fromTo("#pickup-card", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.7, ease: "back.out(1.6)" }, 4.0);
 
           const fullCode = "79C209F3";
           const target = document.getElementById("pickup-suffix");
           if (target) {
-            tl.set(target, { textContent: "" }, 0);
+            tl.set(target, { textContent: "" }, 4.5);
             for (let i = 1; i <= fullCode.length; i++) {
-              tl.set(target, { textContent: fullCode.slice(0, i) }, 4.4 + i * 0.06);
+              tl.set(target, { textContent: fullCode.slice(0, i) }, 4.6 + i * 0.07);
             }
           }
 
-          tl.fromTo(".verificado", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, transformOrigin: "center center", duration: 0.4, ease: "back.out(1.4)" }, 5.0);
-          tl.to(".verificado .dot", { scale: 1.2, duration: 0.7, yoyo: true, repeat: 1, ease: "sine.inOut" }, 5.4);
-          tl.to(".verificado .dot", { opacity: 0.5, duration: 0.7, yoyo: true, repeat: 1, ease: "sine.inOut" }, 5.4);
+          tl.fromTo("#verificado", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, transformOrigin: "center center", duration: 0.4, ease: "back.out(1.4)" }, 5.4);
+          tl.to("#verificado .dot", { scale: 1.2, duration: 0.7, yoyo: true, repeat: 1, ease: "sine.inOut" }, 5.8);
+          tl.to("#verificado .dot", { opacity: 0.5, duration: 0.7, yoyo: true, repeat: 1, ease: "sine.inOut" }, 5.8);
 
-          tl.fromTo(".camera", { scale: 1.0 }, { scale: 1.03, duration: 5.5, ease: "sine.inOut" }, 3.5);
+          tl.fromTo(".camera", { scale: 1.0 }, { scale: 1.03, duration: 5, ease: "sine.inOut" }, 4.0);
 
-          window.__timelines = window.__timelines || {};
           window.__timelines["beat-3"] = tl;
         })();
       </script>

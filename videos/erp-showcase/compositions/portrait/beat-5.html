@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
-    <title>PAuleam Beat 5 — Administrador (portrait)</title>
+    <title>PAuleam — Beat 5: Administrador (Portrait, no screenshots)</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
   </head>
   <body>
     <template id="beat-5-template">
@@ -35,210 +36,146 @@
 
         .role-badge {
           position: absolute;
-          top: 50px;
+          top: 60px;
           left: 60px;
           z-index: 25;
-          padding: 12px 22px;
+          padding: 12px 24px;
           border-radius: 999px;
           background: #cc0000;
           color: #ffffff;
           font-family: "Inter", "Segoe UI", system-ui, sans-serif;
-          font-size: 18px;
+          font-size: 20px;
           font-weight: 700;
-          letter-spacing: 0.08em;
+          letter-spacing: 0.12em;
           text-transform: uppercase;
           line-height: 1;
+          opacity: 0;
         }
 
-        .scroll-track {
+        .headline-block {
           position: absolute;
-          top: 0;
-          left: 0;
-          width: 1080px;
-          height: 1920px;
-          overflow: hidden;
-          z-index: 10;
-          will-change: transform;
-        }
-
-        .moment {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 1080px;
-          height: 1920px;
-          will-change: transform, opacity;
-        }
-
-        .label-eyebrow {
-          position: absolute;
-          top: 180px;
-          left: 60px;
-          z-index: 12;
-          color: #cc0000;
-          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
-          font-size: 24px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          line-height: 1;
-          white-space: nowrap;
-        }
-        .label-desc {
-          position: absolute;
-          top: 220px;
+          top: 160px;
           left: 60px;
           right: 80px;
           z-index: 12;
-          color: #121212;
-          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
-          font-size: 26px;
-          font-weight: 500;
-          line-height: 1.25;
+          opacity: 0;
         }
-
-        .screenshot-anchor {
-          position: absolute;
-          top: 360px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 864px;
-          height: 486px;
-        }
-        .screenshot-frame {
-          position: relative;
-          width: 100%;
-          height: 100%;
-          overflow: hidden;
-          border: 1px solid #e5e5e5;
-          border-radius: 10px;
-          background: #ffffff;
-          will-change: transform, opacity;
-          transform-origin: 50% 50%;
-        }
-        .screenshot-frame img {
+        .headline-eyebrow {
           display: block;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: top center;
-        }
-
-        /* Moment A: green counter chip on inventory */
-        .counter-chip {
-          position: absolute;
-          top: 80px;
-          left: 540px;
-          z-index: 20;
-          padding: 12px 22px;
-          background: #94c11f;
-          border-radius: 999px;
-          color: #ffffff;
-          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
-          font-size: 26px;
-          font-weight: 800;
-          font-variant-numeric: tabular-nums;
-          letter-spacing: 0.02em;
-          line-height: 1;
-          white-space: nowrap;
-          transform-origin: 50% 50%;
-          will-change: transform, opacity;
-        }
-        .counter-chip .counter-value { display: inline-block; }
-        .counter-chip .counter-unit {
-          display: inline-block;
-          margin-left: 8px;
-          font-weight: 600;
-          font-size: 20px;
-          letter-spacing: 0.04em;
-          opacity: 0.92;
-        }
-
-        /* Moment B: category chips row */
-        .chips-row {
-          position: absolute;
-          top: 310px;
-          left: 60px;
-          z-index: 13;
-          display: flex;
-          gap: 14px;
-        }
-        .chip {
-          padding: 12px 20px;
-          border-radius: 999px;
-          color: #ffffff;
-          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
           font-size: 18px;
           font-weight: 700;
-          letter-spacing: 0.06em;
+          color: #cc0000;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          margin-bottom: 16px;
+        }
+        .headline-title {
+          display: block;
+          font-size: 60px;
+          font-weight: 800;
+          line-height: 1.05;
+          color: #121212;
+          letter-spacing: -0.02em;
+        }
+        .headline-title em {
+          font-style: normal;
+          color: #cc0000;
+        }
+
+        .card-stack {
+          position: absolute;
+          top: 540px;
+          left: 60px;
+          right: 60px;
+          bottom: 100px;
+          z-index: 12;
+          display: flex;
+          flex-direction: column;
+          gap: 28px;
+        }
+        .feature-card {
+          position: relative;
+          flex: 1 1 0;
+          background: #ffffff;
+          border: 1px solid #e5e5e5;
+          border-radius: 18px;
+          padding: 36px 40px 36px 168px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          opacity: 0;
+        }
+        .feature-card::before {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 6px;
+          height: 100%;
+          border-radius: 18px 0 0 18px;
+        }
+        .feature-card.green::before  { background: #94c11f; }
+        .feature-card.red::before    { background: #cc0000; }
+        .feature-card.amber::before  { background: #f59e0b; }
+
+        .feature-icon {
+          position: absolute;
+          top: 50%;
+          left: 36px;
+          transform: translateY(-50%);
+          width: 104px;
+          height: 104px;
+          border-radius: 22px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+        }
+        .feature-icon.green  { background: rgba(148, 193, 31, 0.14); color: #4f7a0e; }
+        .feature-icon.red    { background: rgba(204, 0, 0, 0.10);   color: #cc0000; }
+        .feature-icon.amber  { background: rgba(245, 158, 11, 0.12); color: #b45309; }
+        .feature-icon svg { width: 56px; height: 56px; display: block; }
+
+        .feature-eyebrow {
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.18em;
           text-transform: uppercase;
           line-height: 1;
-          white-space: nowrap;
-          transform-origin: 50% 50%;
-          will-change: transform, opacity;
+          margin-bottom: 12px;
         }
-        .chip-mp { background: #cc0000; }
-        .chip-in { background: #f59e0b; }
-        .chip-en { background: #3b82f6; }
+        .feature-eyebrow.green  { color: #4f7a0e; }
+        .feature-eyebrow.red    { color: #cc0000; }
+        .feature-eyebrow.amber  { color: #b45309; }
 
-        /* Moment C: red ring + green checkmark on orders */
-        .ring-wrap {
-          position: absolute;
-          top: 200px;
-          left: 660px;
-          width: 130px;
-          height: 130px;
-          z-index: 20;
-          transform-origin: 50% 50%;
-          will-change: transform, opacity;
-          pointer-events: none;
-        }
-        .ring-wrap svg {
-          width: 100%;
-          height: 100%;
-          display: block;
-          overflow: visible;
-        }
-        .ring-wrap .ring-circle {
-          fill: none;
-          stroke: #cc0000;
-          stroke-width: 5;
-          stroke-dasharray: 361;
-          stroke-dashoffset: 361;
-          transform: rotate(-90deg);
-          transform-origin: 50% 50%;
-        }
-        .ring-wrap .ring-circle-pulse {
-          fill: none;
-          stroke: #cc0000;
-          stroke-width: 3;
-          opacity: 0.5;
+        .feature-title {
+          font-size: 32px;
+          font-weight: 800;
+          line-height: 1.1;
+          color: #121212;
+          letter-spacing: -0.01em;
+          margin-bottom: 10px;
         }
 
-        .check-wrap {
+        .feature-desc {
+          font-size: 19px;
+          font-weight: 500;
+          line-height: 1.4;
+          color: #4a4a49;
+        }
+
+        .footer-mark {
           position: absolute;
-          top: 244px;
-          left: 178px;
-          width: 40px;
-          height: 40px;
-          z-index: 20;
-          transform-origin: 50% 50%;
-          will-change: transform, opacity;
-          pointer-events: none;
-        }
-        .check-wrap svg {
-          width: 100%;
-          height: 100%;
-          display: block;
-        }
-        .check-wrap .check-path {
-          fill: none;
-          stroke: #94c11f;
-          stroke-width: 5;
-          stroke-linecap: round;
-          stroke-linejoin: round;
-          stroke-dasharray: 32;
-          stroke-dashoffset: 32;
+          bottom: 36px;
+          left: 0;
+          right: 0;
+          text-align: center;
+          font-family: ui-monospace, "SF Mono", Consolas, monospace;
+          font-size: 14px;
+          font-weight: 500;
+          color: #4a4a49;
+          letter-spacing: 0.08em;
+          opacity: 0;
         }
       </style>
 
@@ -250,74 +187,69 @@
         data-width="1080"
         data-height="1920"
       >
-        <div class="ecuador-stripe">
+        <div class="ecuador-stripe" aria-hidden="true">
           <div class="s-y"></div>
           <div class="s-b"></div>
           <div class="s-r"></div>
         </div>
 
-        <div class="role-badge">ADMINISTRADOR</div>
+        <div class="role-badge" id="role-badge">ADMINISTRADOR</div>
 
-        <div class="scroll-track" id="scroll-track">
-          <!-- ============================================================
-               MOMENT A — INVENTARIO (0.0 - 4.0s)
-               ============================================================ -->
-          <div id="moment-a" class="moment">
-            <div class="label-eyebrow">1. INVENTARIO</div>
-            <div class="label-desc">Doble entrada inmutable. Cada movimiento es un registro.</div>
-            <div class="screenshot-anchor">
-              <div class="screenshot-frame">
-                <img src="capture/screenshots/admin/02-inventory.png" alt="Inventario" />
-                <div class="counter-chip" id="counter-chip">
-                  <span class="counter-value" id="counter-value">0,00</span>
-                  <span class="counter-unit">lt</span>
-                </div>
-              </div>
+        <div class="headline-block" id="headline">
+          <span class="headline-eyebrow">ROL 4 / 4</span>
+          <h1 class="headline-title">
+            Decisiones <em>informadas</em>,<br/>
+            control total.
+          </h1>
+        </div>
+
+        <div class="card-stack">
+          <div class="feature-card red" id="card-1">
+            <div class="feature-icon red" id="icon-1">
+              <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <rect x="6"  y="6"  width="20" height="20" rx="3" stroke="#cc0000" stroke-width="3"/>
+                <rect x="30" y="6"  width="20" height="14" rx="3" stroke="#cc0000" stroke-width="3"/>
+                <rect x="6"  y="30" width="20" height="20" rx="3" stroke="#cc0000" stroke-width="3"/>
+                <rect x="30" y="24" width="20" height="26" rx="3" fill="#cc0000"/>
+              </svg>
             </div>
+            <div class="feature-eyebrow red">DASHBOARD</div>
+            <div class="feature-title">Visión general en vivo</div>
+            <div class="feature-desc">KPIs de producción, ventas y stock. Todo en una sola pantalla, actualizado al instante.</div>
           </div>
 
-          <!-- ============================================================
-               MOMENT B — PROVEEDORES (4.0 - 8.0s)
-               ============================================================ -->
-          <div id="moment-b" class="moment">
-            <div class="label-eyebrow">2. PROVEEDORES</div>
-            <div class="label-desc">Materia prima, insumos, envases. Un producto, N proveedores.</div>
-            <div class="screenshot-anchor">
-              <div class="screenshot-frame">
-                <img src="capture/screenshots/admin/09-suppliers.png" alt="Proveedores" />
-              </div>
+          <div class="feature-card amber" id="card-2">
+            <div class="feature-icon amber" id="icon-2">
+              <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M8 18 L28 8 L48 18 L48 38 L28 48 L8 38 Z" stroke="#b45309" stroke-width="3" stroke-linejoin="round"/>
+                <path d="M8 18 L28 28 L48 18" stroke="#b45309" stroke-width="3" stroke-linejoin="round"/>
+                <path d="M28 28 L28 48" stroke="#b45309" stroke-width="3" stroke-linejoin="round"/>
+                <circle cx="40" cy="14" r="3" fill="#f59e0b"/>
+              </svg>
             </div>
-            <div class="chips-row">
-              <div class="chip chip-mp" id="chip-mp">MATERIA_PRIMA</div>
-              <div class="chip chip-in" id="chip-in">INSUMO</div>
-              <div class="chip chip-en" id="chip-en">ENVASE_EMPAQUE</div>
-            </div>
+            <div class="feature-eyebrow amber">CATÁLOGO + PROVEEDORES</div>
+            <div class="feature-title">Control del catálogo</div>
+            <div class="feature-desc">Productos, precios y proveedores. Un producto, N proveedores con rotación automática.</div>
           </div>
 
-          <!-- ============================================================
-               MOMENT C — ÓRDENES (8.0 - 12.0s)
-               ============================================================ -->
-          <div id="moment-c" class="moment">
-            <div class="label-eyebrow">3. ÓRDENES</div>
-            <div class="label-desc">Aprueba o rechaza cada pedido.</div>
-            <div class="screenshot-anchor">
-              <div class="screenshot-frame">
-                <img src="capture/screenshots/admin/10-orders.png" alt="Órdenes de Venta" />
-                <div class="ring-wrap" id="ring-wrap">
-                  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <circle class="ring-circle-pulse" cx="50" cy="50" r="48" />
-                    <circle class="ring-circle" cx="50" cy="50" r="48" />
-                  </svg>
-                </div>
-                <div class="check-wrap" id="check-wrap">
-                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path class="check-path" d="M4 12.5 L10 18.5 L20 6.5" />
-                  </svg>
-                </div>
-              </div>
+          <div class="feature-card green" id="card-3">
+            <div class="feature-icon green" id="icon-3">
+              <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <rect x="10" y="6" width="32" height="42" rx="3" stroke="#4f7a0e" stroke-width="3"/>
+                <line x1="16" y1="16" x2="36" y2="16" stroke="#4f7a0e" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="16" y1="24" x2="36" y2="24" stroke="#4f7a0e" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="16" y1="32" x2="28" y2="32" stroke="#4f7a0e" stroke-width="2.5" stroke-linecap="round"/>
+                <circle cx="40" cy="44" r="11" fill="#94c11f"/>
+                <path d="M34 44 L39 49 L46 41" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
             </div>
+            <div class="feature-eyebrow green">APROBACIÓN DE PEDIDOS</div>
+            <div class="feature-title">Valida y despacha</div>
+            <div class="feature-desc">Aprueba pagos, confirma entregas y asigna código de retiro. Trazabilidad total.</div>
           </div>
         </div>
+
+        <div class="footer-mark" id="footer">ULEAM &middot; Planta de Alimentos &middot; 2026</div>
       </div>
 
       <script>
@@ -326,273 +258,25 @@
           window.__timelines = window.__timelines || {};
           const tl = window.gsap.timeline({ paused: true });
 
-          // ============================================================
-          // INITIAL STATES (frame 0)
-          // ============================================================
-          tl.set("#moment-a", { y: 0, opacity: 1 }, 0);
-          tl.set("#moment-b", { y: 1920, opacity: 1 }, 0);
-          tl.set("#moment-c", { y: 1920, opacity: 1 }, 0);
+          tl.fromTo(".ecuador-stripe > div:nth-child(1)", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out", transformOrigin: "top center" }, 0);
+          tl.fromTo(".ecuador-stripe > div:nth-child(2)", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out", transformOrigin: "top center" }, 0.05);
+          tl.fromTo(".ecuador-stripe > div:nth-child(3)", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out", transformOrigin: "top center" }, 0.1);
 
-          // Moment A
-          tl.set(
-            "#moment-a .label-eyebrow, #moment-a .label-desc",
-            { y: 16, opacity: 0 },
-            0
-          );
-          tl.set(
-            "#moment-a .screenshot-frame",
-            { scale: 0.96, y: 18, opacity: 0 },
-            0
-          );
-          tl.set("#counter-chip", { scale: 0.7, opacity: 0 }, 0);
-          tl.set("#counter-value", { textContent: "0,00" }, 0);
+          // TEXTS: pure opacity fade, NO translate / NO scale
+          tl.fromTo("#role-badge", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 0.3);
+          tl.fromTo("#headline",   { opacity: 0 }, { opacity: 1, duration: 0.6 }, 0.5);
 
-          // Moment B
-          tl.set(
-            "#moment-b .label-eyebrow, #moment-b .label-desc",
-            { y: 16, opacity: 0 },
-            0
-          );
-          tl.set(
-            "#moment-b .screenshot-frame",
-            { scale: 0.96, y: 18, opacity: 0 },
-            0
-          );
-          tl.set(
-            "#chip-mp, #chip-in, #chip-en",
-            { y: -12, opacity: 0, scale: 0.9 },
-            0
-          );
+          // Icons + cards: pure opacity, no movement
+          tl.fromTo("#icon-1", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 1.2);
+          tl.fromTo("#card-1", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 1.4);
 
-          // Moment C
-          tl.set(
-            "#moment-c .label-eyebrow, #moment-c .label-desc",
-            { y: 16, opacity: 0 },
-            0
-          );
-          tl.set(
-            "#moment-c .screenshot-frame",
-            { scale: 0.96, y: 18, opacity: 0 },
-            0
-          );
-          tl.set("#ring-wrap", { opacity: 0, scale: 0.85 }, 0);
-          tl.set("#check-wrap", { opacity: 0, scale: 0.5 }, 0);
+          tl.fromTo("#icon-2", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 1.8);
+          tl.fromTo("#card-2", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 2.0);
 
-          // ============================================================
-          // MOMENT A — INVENTARIO (0.0s -> 4.0s)
-          // ============================================================
-          // 0.0 - 0.4s : label fades up
-          tl.fromTo(
-            "#moment-a .label-eyebrow",
-            { y: 16, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
-            0.0
-          );
-          tl.fromTo(
-            "#moment-a .label-desc",
-            { y: 16, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
-            0.1
-          );
+          tl.fromTo("#icon-3", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 2.4);
+          tl.fromTo("#card-3", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 2.6);
 
-          // 0.2 - 0.9s : screenshot scales in
-          tl.fromTo(
-            "#moment-a .screenshot-frame",
-            { scale: 0.96, y: 18, opacity: 0 },
-            { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" },
-            0.2
-          );
-
-          // 1.0 - 1.4s : green counter chip bounces in
-          tl.fromTo(
-            "#counter-chip",
-            { scale: 0.7, opacity: 0 },
-            { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(1.6)" },
-            1.0
-          );
-
-          // 1.0 - 2.2s : counter ticks 0 -> 390
-          const counterEl = document.querySelector("#counter-value");
-          const counterProxy = { n: 0 };
-          tl.set("#counter-value", { textContent: "0,00" }, 1.0);
-          tl.to(
-            counterProxy,
-            {
-              n: 390,
-              duration: 1.2,
-              ease: "power2.out",
-              onUpdate: function () {
-                counterEl.textContent = counterProxy.n
-                  .toFixed(2)
-                  .replace(".", ",");
-              },
-            },
-            1.0
-          );
-
-          // 2.5 - 3.8s : hold with parallax drift
-          tl.fromTo(
-            "#moment-a .screenshot-frame",
-            { y: 0 },
-            { y: -4, duration: 1.3, ease: "sine.inOut", yoyo: true },
-            2.5
-          );
-
-          // ============================================================
-          // TRANSITION A -> B (3.6s -> 4.0s) : scroll up
-          // ============================================================
-          tl.to(
-            "#moment-a",
-            { y: -1920, duration: 0.45, ease: "power2.inOut" },
-            3.55
-          );
-          tl.to(
-            "#moment-b",
-            { y: 0, duration: 0.45, ease: "power2.inOut" },
-            3.55
-          );
-
-          // ============================================================
-          // MOMENT B — PROVEEDORES (4.0s -> 8.0s)
-          // ============================================================
-          // 4.0 - 4.4s : label fades up
-          tl.fromTo(
-            "#moment-b .label-eyebrow",
-            { y: 16, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
-            4.0
-          );
-          tl.fromTo(
-            "#moment-b .label-desc",
-            { y: 16, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
-            4.1
-          );
-
-          // 4.2 - 4.9s : screenshot scales in
-          tl.fromTo(
-            "#moment-b .screenshot-frame",
-            { scale: 0.96, y: 18, opacity: 0 },
-            { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" },
-            4.2
-          );
-
-          // 5.0 / 5.1 / 5.2 : category chips stagger in
-          tl.fromTo(
-            "#chip-mp",
-            { y: -12, opacity: 0, scale: 0.9 },
-            { y: 0, opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.4)" },
-            5.0
-          );
-          tl.fromTo(
-            "#chip-in",
-            { y: -12, opacity: 0, scale: 0.9 },
-            { y: 0, opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.4)" },
-            5.1
-          );
-          tl.fromTo(
-            "#chip-en",
-            { y: -12, opacity: 0, scale: 0.9 },
-            { y: 0, opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.4)" },
-            5.2
-          );
-
-          // 6.0 - 7.3s : hold with parallax drift
-          tl.fromTo(
-            "#moment-b .screenshot-frame",
-            { y: 0 },
-            { y: -4, duration: 1.3, ease: "sine.inOut", yoyo: true },
-            6.0
-          );
-
-          // ============================================================
-          // TRANSITION B -> C (7.55s -> 8.0s) : scroll up
-          // ============================================================
-          tl.to(
-            "#moment-b",
-            { y: -1920, duration: 0.45, ease: "power2.inOut" },
-            7.55
-          );
-          tl.to(
-            "#moment-c",
-            { y: 0, duration: 0.45, ease: "power2.inOut" },
-            7.55
-          );
-
-          // ============================================================
-          // MOMENT C — ÓRDENES (8.0s -> 12.0s)
-          // ============================================================
-          // 8.0 - 8.4s : label fades up
-          tl.fromTo(
-            "#moment-c .label-eyebrow",
-            { y: 16, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
-            8.0
-          );
-          tl.fromTo(
-            "#moment-c .label-desc",
-            { y: 16, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
-            8.1
-          );
-
-          // 8.2 - 8.9s : screenshot scales in
-          tl.fromTo(
-            "#moment-c .screenshot-frame",
-            { scale: 0.96, y: 18, opacity: 0 },
-            { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" },
-            8.2
-          );
-
-          // 9.5 - 10.3s : red ring fades in + draws
-          tl.fromTo(
-            "#ring-wrap",
-            { opacity: 0, scale: 0.85 },
-            { opacity: 1, scale: 1, duration: 0.3, ease: "power2.out" },
-            9.5
-          );
-          tl.fromTo(
-            "#ring-wrap .ring-circle",
-            { strokeDashoffset: 361 },
-            { strokeDashoffset: 0, duration: 0.8, ease: "power2.out" },
-            9.5
-          );
-
-          // 10.3 - 11.5s : red ring pulses
-          tl.fromTo(
-            "#ring-wrap",
-            { scale: 1 },
-            { scale: 1.05, duration: 0.6, ease: "sine.inOut", yoyo: true, repeat: 1 },
-            10.3
-          );
-
-          // 10.8 - 11.0s : green checkmark stamp
-          tl.fromTo(
-            "#check-wrap",
-            { opacity: 0, scale: 0.5 },
-            { opacity: 1, scale: 1.15, duration: 0.18, ease: "back.out(1.6)" },
-            10.8
-          );
-          tl.fromTo(
-            "#check-wrap",
-            { scale: 1.15 },
-            { scale: 1, duration: 0.22, ease: "power2.out" },
-            10.98
-          );
-          tl.fromTo(
-            "#check-wrap .check-path",
-            { strokeDashoffset: 32 },
-            { strokeDashoffset: 0, duration: 0.4, ease: "power2.out" },
-            10.8
-          );
-
-          // 11.2 - 12.0s : hold
-          tl.fromTo(
-            "#moment-c .screenshot-frame",
-            { y: 0 },
-            { y: -4, duration: 0.8, ease: "sine.inOut", yoyo: true },
-            11.2
-          );
+          tl.fromTo("#footer", { opacity: 0 }, { opacity: 0.5, duration: 0.4 }, 11.0);
 
           window.__timelines["beat-5"] = tl;
         })();

@@ -1,8 +1,8 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=1920, height=1080" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
     <title>PAuleam Beat 8 — Tagline Close</title>
   </head>
   <body>
@@ -129,14 +129,8 @@
         }
       </style>
 
-      <div
-        id="root"
-        data-composition-id="beat-8"
-        data-start="0"
-        data-duration="3"
-        data-width="1920"
-        data-height="1080"
-      >
+      <div id="root" data-composition-id="beat-8" data-start="0" data-duration="3" data-width="1920" data-height="1080">
+        <img id="logo-pauleam" class="clip" src="../assets/logo-pauleam.png" data-start="0" data-duration="3" data-track-index="2" style="position: absolute; left: 0px; top: 0px; width: 1920px; height: 1080px; object-fit: contain; z-index: 8">
         <div class="ecuador-stripe">
           <div class="s-yellow"></div>
           <div class="s-blue"></div>
@@ -147,26 +141,12 @@
           <h1 class="tagline">De la materia prima a la venta, en un solo sistema.</h1>
 
           <div class="logo-row">
-            <svg
-              class="plant-icon"
-              viewBox="0 0 80 80"
-              width="80"
-              height="80"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-            >
-              <path class="plant-path" pathLength="100" d="M40 10 L40 70" />
-              <path class="plant-path" pathLength="100" d="M40 20 Q20 15 15 30 Q35 30 40 25" />
-              <path class="plant-path" pathLength="100" d="M40 20 Q60 15 65 30 Q45 30 40 25" />
-              <path class="plant-path" pathLength="100" d="M40 40 Q20 35 15 50 Q35 50 40 45" />
-              <path class="plant-path" pathLength="100" d="M40 40 Q60 35 65 50 Q45 50 40 45" />
-            </svg>
+            
             <span class="wordmark">PAuleam</span>
           </div>
         </div>
 
-        <div class="footer">uleam.edu.ec &middot; Planta de Alimentos &middot; 2026</div>
+        <div class="footer">uleam.edu.ec · Planta de Alimentos · 2026</div>
 
         <div class="accent-line"></div>
 
@@ -227,6 +207,34 @@
             { opacity: 1, duration: 0.3, ease: "power2.in" },
             2.7
           );
+
+          tl.set("#logo-pauleam", { width: 134, height: 128, immediateRender: true }, 0);
+
+          tl.to("#logo-pauleam", {
+            keyframes: {
+              "0%": { x: 713, y: 621 },
+
+              "65.8%": { x: 619, y: 498 },
+
+              "94.5%": { x: 671, y: 471 },
+
+              "100%": { x: 717, y: 505 }
+            },
+            duration: 2.482
+          }, 0);
+
+          tl.to("#logo-pauleam", {
+            keyframes: {
+              "0%": { x: 665, y: 476 },
+              "2.2%": { x: 671, y: 500 },
+              "100%": { x: 711, y: 496 },
+              easeEach: "power2.out"
+            },
+            duration: 3,
+            ease: "none"
+          }, 0);
+
+          tl.to("#logo-pauleam", { opacity: 1, duration: 3, ease: "power2.out" }, 0);
 
           window.__timelines["beat-8"] = tl;
         })();

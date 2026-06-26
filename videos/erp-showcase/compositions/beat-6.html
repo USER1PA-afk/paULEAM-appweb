@@ -1,8 +1,8 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=1920, height=1080" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
   </head>
   <body>
     <template id="beat-6-template">
@@ -291,14 +291,7 @@
         }
       </style>
 
-      <div
-        id="root"
-        data-composition-id="beat-6"
-        data-width="1920"
-        data-height="1080"
-        data-start="0"
-        data-duration="8"
-      >
+      <div id="root" data-composition-id="beat-6" data-width="1920" data-height="1080" data-start="0" data-duration="8">
         <div class="ecuador-stripe" aria-hidden="true">
           <div class="stripe-yellow"></div>
           <div class="stripe-blue"></div>
@@ -307,7 +300,7 @@
 
         <div class="camera">
           <div class="screenshot-wrap" id="pos-screenshot">
-            <img src="capture/screenshots/admin/13-pos-kiosk.png" alt="Punto de Venta" />
+            <img src="capture/screenshots/admin/13-pos-kiosk.png" alt="Punto de Venta">
             <div class="topbar-left-cover"></div>
             <div class="kiosk-original-cover"></div>
             <div class="topbar-right-cover"></div>
@@ -330,8 +323,8 @@
           <div class="cart-row" id="cart-row">
             <div class="thumb">
               <svg viewBox="0 0 24 24" width="28" height="28" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 6 L19 6 L17 16 L7 16 Z" fill="#cc0000"/>
-                <rect x="9" y="2" width="6" height="4" rx="1" fill="#cc0000"/>
+                <path d="M5 6 L19 6 L17 16 L7 16 Z" fill="#cc0000" />
+                <rect x="9" y="2" width="6" height="4" rx="1" fill="#cc0000" />
               </svg>
             </div>
             <div class="info">
@@ -381,8 +374,6 @@
             { y: 12, opacity: 0 },
             0
           );
-
-          tl.set("#total-text", { textContent: "$0,00" }, 0);
 
           tl.set("#cobrar-btn", { scale: 1 }, 0);
 
@@ -498,6 +489,18 @@
             { scale: 1.02, duration: 3.5, ease: "none" },
             4.5
           );
+
+          tl.set("#total-text", { textContent: "$0,00", immediateRender: true }, 0);
+
+          tl.set("#total-text", {
+            x: 40,
+            immediateRender: true,
+            y: 42
+          }, 0);
+
+          tl.set(".total-cover", { x: 125, y: 45, immediateRender: true }, 0);
+
+          tl.set(".total-cover", { width: 106, height: 56, immediateRender: true }, 0);
 
           window.__timelines["beat-6"] = tl;
         })();

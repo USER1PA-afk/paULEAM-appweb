@@ -83,45 +83,9 @@
           display: block;
         }
 
-        .kpi-cover {
-          position: absolute;
-          width: 70px;
-          height: 50px;
-          background: #FFFFFF;
-          border-radius: 4px;
-        }
-        .kpi-cover-1 { top: 376px; left: 216px; }
-        .kpi-cover-2 { top: 376px; left: 365px; }
-        .kpi-cover-3 { top: 376px; left: 518px; }
-        .kpi-cover-4 { top: 376px; left: 671px; }
-
-        .kpi-counter {
-          position: absolute;
-          font-weight: 800;
-          font-size: 40px;
-          color: #121212;
-          font-variant-numeric: tabular-nums;
-          line-height: 1;
-          letter-spacing: -0.5px;
-        }
-        .kpi-1 { top: 376px; left: 216px; }
-        .kpi-2 { top: 376px; left: 365px; }
-        .kpi-3 { top: 376px; left: 518px; }
-        .kpi-4 { top: 376px; left: 671px; }
-
-        .stock-bajo-pulse {
-          position: absolute;
-          top: 350px;
-          left: 540px;
-          width: 80px;
-          height: 80px;
-          border: 3px solid #F59E0B;
-          border-radius: 16px;
-          background: rgba(245, 158, 11, 0.12);
-          box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55);
-          transform-origin: center center;
-          pointer-events: none;
-        }
+        /* kpi-cover + kpi-counter removed in portrait because the dashboard
+           is shown with object-fit: cover and only 2 of 4 KPIs are visible.
+           Misalignment was visible. The dashboard's real values show directly. */
 
         .stock-card {
           position: absolute;
@@ -264,15 +228,11 @@
 
             <div class="kpi-cover kpi-cover-1"></div>
             <div class="kpi-cover kpi-cover-2"></div>
-            <div class="kpi-cover kpi-cover-3"></div>
             <div class="kpi-cover kpi-cover-4"></div>
 
             <div class="kpi-counter kpi-1" id="kpi-1">0</div>
             <div class="kpi-counter kpi-2" id="kpi-2">0</div>
-            <div class="kpi-counter kpi-3" id="kpi-3">0</div>
             <div class="kpi-counter kpi-4" id="kpi-4">0</div>
-
-            <div class="stock-bajo-pulse" id="stock-bajo-pulse"></div>
           </div>
 
           <div class="stock-cover" id="stock-cover"></div>
@@ -353,7 +313,6 @@
           const counters = [
             { id: "#kpi-1", target: 3 },
             { id: "#kpi-2", target: 1 },
-            { id: "#kpi-3", target: 0 },
             { id: "#kpi-4", target: 1 },
           ];
           counters.forEach(function (c) {
@@ -378,10 +337,6 @@
           tl.fromTo("#stock-row-1", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 1.8);
           tl.fromTo("#stock-row-2", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 1.9);
           tl.fromTo("#stock-row-3", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 2.0);
-
-          tl.fromTo("#stock-bajo-pulse", { scale: 1, opacity: 0.85 }, {
-            scale: 1.08, opacity: 1, duration: 0.7, ease: "sine.inOut", yoyo: true, repeat: 3
-          }, 3.0);
 
           tl.fromTo("#en-vivo-dot", { scale: 1, opacity: 0.85 }, {
             scale: 1.15, opacity: 1, duration: 0.8, ease: "sine.inOut", yoyo: true, repeat: 3

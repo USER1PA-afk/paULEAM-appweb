@@ -18,6 +18,12 @@
           color: #121212;
         }
 
+        .camera {
+          position: absolute;
+          inset: 0;
+          transform-origin: center center;
+        }
+
         .ecuador-stripe {
           position: absolute;
           top: 0;
@@ -27,10 +33,7 @@
           display: flex;
           z-index: 30;
         }
-        .ecuador-stripe > div {
-          flex: 1 1 0;
-          height: 100%;
-        }
+        .ecuador-stripe > div { flex: 1 1 0; height: 100%; }
         .stripe-yellow { background: #fcd116; }
         .stripe-blue   { background: #003893; }
         .stripe-red    { background: #cc0000; }
@@ -52,18 +55,13 @@
           line-height: 1;
         }
 
-        .camera {
-          position: absolute;
-          inset: 0;
-          transform-origin: 50% 50%;
-          will-change: transform;
-        }
-
+        /* All 3 moments fill the viewport. Only one is visible at a time
+           (cross-faded). No movement on the texts/descriptions. */
         .moment {
           position: absolute;
           inset: 0;
           z-index: 10;
-          will-change: opacity, transform;
+          opacity: 0;
         }
 
         .label-eyebrow {
@@ -111,8 +109,6 @@
           border: 1px solid #e5e5e5;
           border-radius: 10px;
           background: #ffffff;
-          will-change: transform, opacity;
-          transform-origin: 50% 50%;
         }
         .screenshot-frame img {
           display: block;
@@ -122,7 +118,7 @@
           object-position: top center;
         }
 
-        /* ---- Moment A overlay: green counter chip ---- */
+        /* Moment A overlay: green counter chip */
         .counter-chip {
           position: absolute;
           top: 250px;
@@ -139,9 +135,8 @@
           letter-spacing: 0.02em;
           line-height: 1;
           white-space: nowrap;
-          transform-origin: 50% 50%;
-          will-change: transform, opacity;
           box-shadow: 0 4px 14px rgba(148, 193, 31, 0.35);
+          opacity: 0;
         }
         .counter-chip .counter-value { display: inline-block; }
         .counter-chip .counter-unit {
@@ -153,7 +148,7 @@
           opacity: 0.92;
         }
 
-        /* ---- Moment B overlays: category chips row ---- */
+        /* Moment B overlays: category chips row */
         .chips-row {
           position: absolute;
           top: 200px;
@@ -173,14 +168,13 @@
           text-transform: uppercase;
           line-height: 1;
           white-space: nowrap;
-          transform-origin: 50% 50%;
-          will-change: transform, opacity;
+          opacity: 0;
         }
         .chip-mp { background: #cc0000; }
         .chip-in { background: #f59e0b; }
         .chip-en { background: #3b82f6; }
 
-        /* ---- Moment C overlays: red ring + green checkmark ---- */
+        /* Moment C overlays: red ring + green checkmark */
         .ring-wrap {
           position: absolute;
           top: 337px;
@@ -188,9 +182,8 @@
           width: 96px;
           height: 96px;
           z-index: 20;
-          transform-origin: 50% 50%;
-          will-change: transform, opacity;
           pointer-events: none;
+          opacity: 0;
         }
         .ring-wrap svg {
           width: 100%;
@@ -221,9 +214,8 @@
           width: 28px;
           height: 28px;
           z-index: 20;
-          transform-origin: 50% 50%;
-          will-change: transform, opacity;
           pointer-events: none;
+          opacity: 0;
         }
         .check-wrap svg {
           width: 100%;
@@ -241,14 +233,7 @@
         }
       </style>
 
-      <div
-        id="root"
-        data-composition-id="beat-5"
-        data-start="0"
-        data-duration="12"
-        data-width="1920"
-        data-height="1080"
-      >
+      <div id="root" data-composition-id="beat-5" data-start="0" data-duration="12" data-width="1920" data-height="1080">
         <div class="ecuador-stripe">
           <div class="stripe-yellow"></div>
           <div class="stripe-blue"></div>
@@ -258,15 +243,13 @@
         <div class="role-badge">ADMINISTRADOR</div>
 
         <div class="camera">
-          <!-- ============================================================
-               MOMENT A — INVENTARIO (0.0 - 4.0s)
-               ============================================================ -->
+          <!-- 1) INVENTARIO (0.0 - 4.0s) -->
           <div id="moment-a" class="moment">
             <div class="label-eyebrow">1. INVENTARIO</div>
             <div class="label-desc">Doble entrada inmutable. Cada movimiento es un registro.</div>
             <div class="screenshot-anchor">
               <div class="screenshot-frame">
-                <img src="capture/screenshots/admin/02-inventory.png" alt="Inventario" />
+                <img src="capture/screenshots/admin/02-inventory.png" alt="Inventario">
                 <div class="counter-chip" id="counter-chip">
                   <span class="counter-value" id="counter-value">0,00</span>
                   <span class="counter-unit">lt</span>
@@ -275,15 +258,13 @@
             </div>
           </div>
 
-          <!-- ============================================================
-               MOMENT B — PROVEEDORES (4.0 - 8.0s)
-               ============================================================ -->
+          <!-- 2) PROVEEDORES (4.0 - 8.0s) -->
           <div id="moment-b" class="moment">
             <div class="label-eyebrow">2. PROVEEDORES</div>
-            <div class="label-desc">Materia prima, insumos, envases. Un producto, N proveedores.</div>
+            <div class="label-desc">Materia prima, insumos, envases. Un producto, muchos proveedores.</div>
             <div class="screenshot-anchor">
               <div class="screenshot-frame">
-                <img src="capture/screenshots/admin/09-suppliers.png" alt="Proveedores" />
+                <img src="capture/screenshots/admin/09-suppliers.png" alt="Proveedores">
               </div>
             </div>
             <div class="chips-row">
@@ -293,15 +274,13 @@
             </div>
           </div>
 
-          <!-- ============================================================
-               MOMENT C — ÓRDENES (8.0 - 12.0s)
-               ============================================================ -->
+          <!-- 3) ÓRDENES (8.0 - 12.0s) -->
           <div id="moment-c" class="moment">
             <div class="label-eyebrow">3. ÓRDENES</div>
             <div class="label-desc">Aprueba o rechaza cada pedido.</div>
             <div class="screenshot-anchor">
               <div class="screenshot-frame">
-                <img src="capture/screenshots/admin/10-orders.png" alt="Órdenes de Venta" />
+                <img src="capture/screenshots/admin/10-orders.png" alt="Órdenes de Venta">
                 <div class="ring-wrap" id="ring-wrap">
                   <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
                     <circle class="ring-circle-pulse" cx="50" cy="50" r="45" />
@@ -325,295 +304,63 @@
           window.__timelines = window.__timelines || {};
           const tl = window.gsap.timeline({ paused: true });
 
-          // ============================================================
-          // INITIAL STATES (frame 0)
-          // ============================================================
-          tl.set("#moment-a", { opacity: 1, scale: 1, x: 0, y: 0 }, 0);
-          tl.set("#moment-b", { opacity: 0, scale: 1, x: 0, y: 0 }, 0);
-          tl.set("#moment-c", { opacity: 0, scale: 1, x: 0, y: 0 }, 0);
+          // ====================================================================
+          // MOMENT A — INVENTARIO (0.0s - 3.3s)
+          // Pure opacity. No movement on text/descriptions.
+          // ====================================================================
+          tl.set("#moment-a", { opacity: 0 });
+          tl.set("#moment-b", { opacity: 0 });
+          tl.set("#moment-c", { opacity: 0 });
+          tl.set("#counter-chip", { opacity: 0 });
+          tl.set("#chip-mp", { opacity: 0 });
+          tl.set("#chip-in", { opacity: 0 });
+          tl.set("#chip-en", { opacity: 0 });
+          tl.set("#ring-wrap", { opacity: 0 });
+          tl.set("#check-wrap", { opacity: 0 });
 
-          // Moment A
-          tl.set(
-            "#moment-a .label-eyebrow, #moment-a .label-desc",
-            { x: -40, opacity: 0 },
-            0
-          );
-          tl.set(
-            "#moment-a .screenshot-frame",
-            { scale: 0.94, y: 12, opacity: 0 },
-            0
-          );
-          tl.set(
-            "#counter-chip",
-            { scale: 0.7, opacity: 0 },
-            0
-          );
-          tl.set("#counter-value", { textContent: "0,00" }, 0);
+          tl.to("#moment-a", { opacity: 1, duration: 0.4, ease: "power2.out" }, 0.0);
 
-          // Moment B
-          tl.set(
-            "#moment-b .label-eyebrow, #moment-b .label-desc",
-            { x: -40, opacity: 0 },
-            0
-          );
-          tl.set(
-            "#moment-b .screenshot-frame",
-            { scale: 0.94, y: 12, opacity: 0 },
-            0
-          );
-          tl.set(
-            "#chip-mp, #chip-in, #chip-en",
-            { x: -12, opacity: 0, scale: 0.9 },
-            0
-          );
+          // 1.0s: green counter chip fades in
+          tl.to("#counter-chip", { opacity: 1, duration: 0.4, ease: "power2.out" }, 1.0);
 
-          // Moment C
-          tl.set(
-            "#moment-c .label-eyebrow, #moment-c .label-desc",
-            { x: -40, opacity: 0 },
-            0
-          );
-          tl.set(
-            "#moment-c .screenshot-frame",
-            { scale: 0.94, y: 12, opacity: 0 },
-            0
-          );
-          tl.set(
-            "#ring-wrap",
-            { opacity: 0, scale: 0.85 },
-            0
-          );
-          tl.set(
-            "#check-wrap",
-            { opacity: 0, scale: 0.5 },
-            0
-          );
-
-          // ============================================================
-          // MOMENT A — INVENTARIO (0.0s -> 4.0s)
-          // ============================================================
-          // 0.0 - 0.4s : label slides in (x:-40 -> 0, fade up, power2.out)
-          tl.fromTo(
-            "#moment-a .label-eyebrow",
-            { x: -40, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
-            0.0
-          );
-          tl.fromTo(
-            "#moment-a .label-desc",
-            { x: -40, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
-            0.0
-          );
-
-          // 0.2 - 0.9s : screenshot scales in (0.94 -> 1.0, y 12 -> 0, power2.out)
-          tl.fromTo(
-            "#moment-a .screenshot-frame",
-            { scale: 0.94, y: 12, opacity: 0 },
-            { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" },
-            0.2
-          );
-
-          // 1.0 - 1.4s : green counter chip bounces in (back.out)
-          tl.fromTo(
-            "#counter-chip",
-            { scale: 0.7, opacity: 0 },
-            { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(1.6)" },
-            1.0
-          );
-
-          // 1.0 - 2.2s : counter ticks 0 -> 390 over 1.2s (use tl.set on text)
+          // 1.0s: counter ticks 0 -> 390 over 1.2s
           const counterEl = document.querySelector("#counter-value");
           const counterProxy = { n: 0 };
           tl.set("#counter-value", { textContent: "0,00" }, 1.0);
-          tl.to(
-            counterProxy,
-            {
-              n: 390,
-              duration: 1.2,
-              ease: "power2.out",
-              onUpdate: function () {
-                counterEl.textContent = counterProxy.n
-                  .toFixed(2)
-                  .replace(".", ",");
-              },
+          tl.to(counterProxy, {
+            n: 390,
+            duration: 1.2,
+            ease: "power2.out",
+            onUpdate: function () {
+              counterEl.textContent = counterProxy.n.toFixed(2).replace(".", ",");
             },
-            1.0
-          );
+          }, 1.0);
 
-          // 2.5 - 3.8s : hold with parallax drift (y 0 -> -3px, 1.3s, sine.inOut, yoyo)
-          tl.fromTo(
-            "#moment-a .screenshot-frame",
-            { y: 0 },
-            { y: -3, duration: 1.3, ease: "sine.inOut", yoyo: true },
-            2.5
-          );
+          // ====================================================================
+          // MOMENT B — PROVEEDORES (3.3s - 6.6s) — cross-fade from A
+          // ====================================================================
+          tl.to("#moment-a", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 3.3);
+          tl.to("#moment-b", { opacity: 1, duration: 0.4, ease: "power2.inOut" }, 3.3);
 
-          // ============================================================
-          // MOMENT B — PROVEEDORES (4.0s -> 8.0s)
-          // ============================================================
-          // 4.0 - 4.3s : previous (moment-a) fades out
-          tl.fromTo(
-            "#moment-a",
-            { opacity: 1, scale: 1 },
-            { opacity: 0, scale: 0.97, duration: 0.3, ease: "power2.in" },
-            4.0
-          );
+          // 4.3/4.45/4.6: category chips stagger in (opacity only)
+          tl.to("#chip-mp", { opacity: 1, duration: 0.4, ease: "power2.out" }, 4.3);
+          tl.to("#chip-in", { opacity: 1, duration: 0.4, ease: "power2.out" }, 4.45);
+          tl.to("#chip-en", { opacity: 1, duration: 0.4, ease: "power2.out" }, 4.6);
 
-          // 4.0 - 4.4s : new label slides in
-          tl.fromTo(
-            "#moment-b",
-            { opacity: 0 },
-            { opacity: 1, duration: 0.2, ease: "power2.out" },
-            4.0
-          );
-          tl.fromTo(
-            "#moment-b .label-eyebrow",
-            { x: -40, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
-            4.0
-          );
-          tl.fromTo(
-            "#moment-b .label-desc",
-            { x: -40, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
-            4.0
-          );
+          // ====================================================================
+          // MOMENT C — ÓRDENES (6.6s - 12.0s) — cross-fade from B
+          // ====================================================================
+          tl.to("#moment-b", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 6.6);
+          tl.to("#moment-c", { opacity: 1, duration: 0.4, ease: "power2.inOut" }, 6.6);
 
-          // 4.2 - 4.9s : new screenshot scales in
-          tl.fromTo(
-            "#moment-b .screenshot-frame",
-            { scale: 0.94, y: 12, opacity: 0 },
-            { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" },
-            4.2
-          );
+          // 8.0s: red ring fades in (no scale, no movement)
+          tl.to("#ring-wrap", { opacity: 1, duration: 0.3, ease: "power2.out" }, 8.0);
+          // ring stroke draws in (stroke-dashoffset)
+          tl.fromTo("#ring-wrap .ring-circle", { strokeDashoffset: 283 }, { strokeDashoffset: 0, duration: 0.8, ease: "power2.out" }, 8.0);
 
-          // 5.0 / 5.1 / 5.2 : category chips stagger in (0.1s apart)
-          tl.fromTo(
-            "#chip-mp",
-            { x: -12, opacity: 0, scale: 0.9 },
-            { x: 0, opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.4)" },
-            5.0
-          );
-          tl.fromTo(
-            "#chip-in",
-            { x: -12, opacity: 0, scale: 0.9 },
-            { x: 0, opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.4)" },
-            5.1
-          );
-          tl.fromTo(
-            "#chip-en",
-            { x: -12, opacity: 0, scale: 0.9 },
-            { x: 0, opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.4)" },
-            5.2
-          );
-
-          // 6.0 - 7.3s : hold with parallax drift
-          tl.fromTo(
-            "#moment-b .screenshot-frame",
-            { y: 0 },
-            { y: -3, duration: 1.3, ease: "sine.inOut", yoyo: true },
-            6.0
-          );
-
-          // ============================================================
-          // MOMENT C — ÓRDENES (8.0s -> 12.0s)
-          // ============================================================
-          // Camera dolly-in: subtle focus pull (scale 1.0 -> 1.04 over 4s)
-          tl.fromTo(
-            ".camera",
-            { scale: 1.0 },
-            { scale: 1.04, duration: 4.0, ease: "sine.inOut" },
-            8.0
-          );
-
-          // 8.0 - 8.3s : previous (moment-b) fades out
-          tl.fromTo(
-            "#moment-b",
-            { opacity: 1, scale: 1 },
-            { opacity: 0, scale: 0.97, duration: 0.3, ease: "power2.in" },
-            8.0
-          );
-
-          // 8.0 - 8.4s : new label slides in
-          tl.fromTo(
-            "#moment-c",
-            { opacity: 0 },
-            { opacity: 1, duration: 0.2, ease: "power2.out" },
-            8.0
-          );
-          tl.fromTo(
-            "#moment-c .label-eyebrow",
-            { x: -40, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
-            8.0
-          );
-          tl.fromTo(
-            "#moment-c .label-desc",
-            { x: -40, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
-            8.0
-          );
-
-          // 8.2 - 8.9s : screenshot scales in
-          tl.fromTo(
-            "#moment-c .screenshot-frame",
-            { scale: 0.94, y: 12, opacity: 0 },
-            { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" },
-            8.2
-          );
-
-          // 9.5 - 10.3s : red ring fades in + draws (stroke-dasharray 283 -> 0, 0.8s, power2.out)
-          tl.fromTo(
-            "#ring-wrap",
-            { opacity: 0, scale: 0.85 },
-            { opacity: 1, scale: 1, duration: 0.3, ease: "power2.out" },
-            9.5
-          );
-          tl.fromTo(
-            "#ring-wrap .ring-circle",
-            { strokeDashoffset: 283 },
-            { strokeDashoffset: 0, duration: 0.8, ease: "power2.out" },
-            9.5
-          );
-
-          // 10.3 - 11.5s : red ring pulses (scale 1 -> 1.05 -> 1, 1.2s, sine.inOut, yoyo, 1 repeat)
-          tl.fromTo(
-            "#ring-wrap",
-            { scale: 1 },
-            { scale: 1.05, duration: 0.6, ease: "sine.inOut", yoyo: true, repeat: 1 },
-            10.3
-          );
-
-          // 10.8 - 11.0s : green checkmark stamp appears (scale pop)
-          tl.fromTo(
-            "#check-wrap",
-            { opacity: 0, scale: 0.5 },
-            { opacity: 1, scale: 1.15, duration: 0.18, ease: "back.out(1.6)" },
-            10.8
-          );
-          tl.fromTo(
-            "#check-wrap",
-            { scale: 1.15 },
-            { scale: 1, duration: 0.22, ease: "power2.out" },
-            10.98
-          );
-
-          // 10.8 - 11.2s : checkmark path draws in (stroke-dashoffset 32 -> 0, 0.4s, power2.out)
-          tl.fromTo(
-            "#check-wrap .check-path",
-            { strokeDashoffset: 32 },
-            { strokeDashoffset: 0, duration: 0.4, ease: "power2.out" },
-            10.8
-          );
-
-          // 11.2 - 12.0s : hold
-          tl.fromTo(
-            "#moment-c .screenshot-frame",
-            { y: 0 },
-            { y: -3, duration: 0.8, ease: "sine.inOut", yoyo: true },
-            11.2
-          );
+          // 9.3s: checkmark appears (opacity + stroke draws)
+          tl.to("#check-wrap", { opacity: 1, duration: 0.3, ease: "power2.out" }, 9.3);
+          tl.fromTo("#check-wrap .check-path", { strokeDashoffset: 32 }, { strokeDashoffset: 0, duration: 0.4, ease: "power2.out" }, 9.3);
 
           window.__timelines["beat-5"] = tl;
         })();
