@@ -103,7 +103,8 @@ paULEAM-appweb/
 │   └── audit/                        # AuditActionEnum, AuditEntityTypeEnum, AuditLogSchema, AUDIT_ACTION_LABELS/COLORS
 ├── shared/
 │   ├── components/
-│   │   ├── footer.tsx
+│   │   ├── footer.tsx                # Includes WhatsApp contact link (whatsappUrl())
+│   │   ├── landing-header-logo.tsx   # Panchito header logo; hidden while hero logo on-screen (IntersectionObserver)
 │   │   ├── theme-toggle.tsx
 │   │   ├── theme-provider.tsx
 │   │   └── ui/                       # Shadcn UI components
@@ -111,6 +112,7 @@ paULEAM-appweb/
 │   │   └── use-session-guard.ts
 │   ├── lib/
 │   │   ├── utils.ts                  # formatCurrency(), formatDate(), cn()
+│   │   ├── contact.ts                # WHATSAPP_NUMBER, WHATSAPP_DEFAULT_MESSAGE, whatsappUrl()
 │   │   └── insforge/client.ts        # getInsforge() singleton
 │   └── types/                        # ApiResponse<T>, PaginationParams, PaginatedResult<T>
 ├── insforge/
@@ -300,6 +302,14 @@ storage.from(bucket).remove(path)                  // async → { data, error }
 - `trg_prevent_product_type_change` — blocks type change if inventory movements exist
 - `trg_enforce_finished_ingress` — PRODUCTO_TERMINADO only accepts INGRESO via PRODUCCION, EMPAQUE, AJUSTE
 - `trg_prevent_packaging_ingredient` — blocks ENVASE_EMPAQUE and PRODUCTO_TERMINADO as recipe ingredients
+
+## UI & Brand Conventions
+
+- **Header logo order:** Every header renders the brand in this order — ULEAM crest (`/logo-pauleam.png`) → "PAuleam" text → Panchitos wordmark (`/PANCHITOS_logo_page-0001.png`). The Panchitos PNG is 575×190 (~3:1, transparent bg); always size it on that ratio (never a square box) so it doesn't squash.
+- **Panchitos dark-mode contrast:** The wordmark's dark-green fill loses contrast on dark/colored backgrounds. Apply `dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]` (white glow). On the always-colored auth left panel the glow is applied without the `dark:` prefix.
+- **Landing header Panchitos logo** uses `LandingHeaderLogo` (`shared/components/landing-header-logo.tsx`): an IntersectionObserver hides it while any `[data-hero-panchito]` hero logo is on-screen, revealing it on scroll.
+- **WhatsApp contact:** `shared/lib/contact.ts` holds `WHATSAPP_NUMBER` (wa.me format: digits + country code, no `+`/spaces/dashes) and `whatsappUrl(message?)`. The footer links to it. Update the number there to change it everywhere.
+- **Footer scope:** `<Footer />` is mounted ONLY on the landing (`app/page.tsx`) and the shop layout (`app/(shop)/layout.tsx`) — NOT admin, POS, or auth. Anything added to the footer is automatically scoped to public/customer pages.
 
 ## Storage Buckets
 

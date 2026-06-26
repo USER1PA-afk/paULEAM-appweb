@@ -444,7 +444,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           <Link
                             href="/admin/store/products"
                             onClick={() => setSidebarOpen(false)}
-                            className="flex items-center gap-3 flex-1 min-w-0"
+                            title="Gestionar Tienda"
+                            className={`flex items-center gap-3 flex-1 min-w-0
+                              ${sidebarCollapsed ? "lg:justify-center lg:gap-0 lg:flex-none" : ""}`}
                           >
                             <ShoppingBag
                               aria-hidden="true"

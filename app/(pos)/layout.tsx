@@ -56,18 +56,10 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
           <Image
             src="/logo-pauleam.png"
             alt="Logo PAuleam"
-            width={28}
-            height={28}
-            style={{ width: 28, height: 28 }}
+            width={34}
+            height={34}
+            style={{ width: 34, height: 34 }}
             className="object-contain dark:invert"
-          />
-          <Image
-            src="/PANCHITOS_logo_page-0001.png"
-            alt="Logo Panchitos"
-            width={38}
-            height={38}
-            style={{ width: 38, height: 38 }}
-            className="object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
           />
           <div className="flex flex-col leading-tight">
             <span className="text-[11px] font-black uppercase tracking-[0.2em] text-neutral-900 dark:text-white">
@@ -77,6 +69,14 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
               Punto de Venta
             </span>
           </div>
+          <Image
+            src="/PANCHITOS_logo_page-0001.png"
+            alt="Logo Panchitos"
+            width={97}
+            height={32}
+            style={{ width: 97, height: 32 }}
+            className="object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
+          />
         </Link>
 
         {/* Estado kiosko */}
