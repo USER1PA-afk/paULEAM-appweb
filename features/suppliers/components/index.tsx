@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSuppliers, useSupplierActions } from "@features/suppliers/hooks";
 import type { Supplier, CreateSupplier } from "@entities/supplier";
-import { Plus, X, Handshake } from "lucide-react";
+import { Plus, X, Handshake, Search } from "lucide-react";
 import { usePagination } from "@shared/hooks/use-pagination";
 import { TablePagination } from "@shared/components/ui/table-pagination";
 
@@ -154,6 +154,9 @@ export function SupplierSelect({ selectedIds, primaryId, onChange }: SupplierSel
   const { suppliers, loading } = useSuppliers();
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [localSuppliers, setLocalSuppliers] = useState<Supplier[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const RECENT_LIMIT = 4;
 
   // Merge fetched suppliers con los recién creados en sesión
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -192,6 +195,22 @@ export function SupplierSelect({ selectedIds, primaryId, onChange }: SupplierSel
 
   const needsPrimarySelection = selectedIds.length > 1 && !primaryId;
 
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+  const visibleSuppliers = (() => {
+    if (trimmedQuery) {
+      return localSuppliers.filter((s) =>
+        (s.company ?? "").toLowerCase().includes(trimmedQuery) ||
+        s.name.toLowerCase().includes(trimmedQuery) ||
+        (s.ruc ?? "").toLowerCase().includes(trimmedQuery)
+      );
+    }
+    const recent = localSuppliers.slice(0, RECENT_LIMIT);
+    const selectedNotInRecent = localSuppliers.filter(
+      (s) => selectedIds.includes(s.id) && !recent.some((r) => r.id === s.id)
+    );
+    return [...recent, ...selectedNotInRecent];
+  })();
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -221,6 +240,35 @@ export function SupplierSelect({ selectedIds, primaryId, onChange }: SupplierSel
         />
       )}
 
+      {!loading && localSuppliers.length > 0 && (
+        <div className="relative">
+          <Search aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar proveedor por nombre, empresa o RUC…"
+            className="w-full rounded-md border border-border bg-background pl-8 pr-8 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X aria-hidden="true" className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {!trimmedQuery && localSuppliers.length > RECENT_LIMIT && (
+        <p className="text-[10px] text-muted-foreground/80">
+          Mostrando los {Math.min(RECENT_LIMIT, localSuppliers.length)} más recientes. Usa la búsqueda para ver más.
+        </p>
+      )}
+
       {loading ? (
         <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
@@ -230,15 +278,19 @@ export function SupplierSelect({ selectedIds, primaryId, onChange }: SupplierSel
         <p className="text-xs text-muted-foreground italic">
           No hay proveedores activos. Crea uno con el botón de arriba.
         </p>
+      ) : visibleSuppliers.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic">
+          Sin resultados para &ldquo;{searchQuery}&rdquo;. Prueba con otro término o crea un nuevo proveedor.
+        </p>
       ) : (
-        <div className="grid gap-2 sm:grid-cols-2">
-          {localSuppliers.map((s) => {
+        <div className="grid gap-2 sm:grid-cols-2 [grid-template-columns:minmax(0,1fr)]">
+          {visibleSuppliers.map((s) => {
             const selected = selectedIds.includes(s.id);
             const isPrimary = primaryId === s.id;
             return (
               <label
                 key={s.id}
-                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-all ${
+                className={`flex min-w-0 cursor-pointer items-start gap-3 rounded-lg border p-3 transition-all overflow-hidden ${
                   selected
                     ? "border-brand-400 bg-brand-50/60 dark:bg-brand-900/20 dark:border-brand-700"
                     : "border-border hover:bg-muted/40"
@@ -248,17 +300,19 @@ export function SupplierSelect({ selectedIds, primaryId, onChange }: SupplierSel
                   type="checkbox"
                   checked={selected}
                   onChange={() => toggleSupplier(s.id)}
-                  className="mt-0.5 accent-brand-600"
+                  className="mt-0.5 accent-brand-600 shrink-0"
                 />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <p className="text-sm font-medium truncate" title={s.company ?? s.name}>
                     {s.company ?? s.name}
                   </p>
                   {s.company && (
-                    <p className="text-xs text-muted-foreground truncate">{s.name}</p>
+                    <p className="text-xs text-muted-foreground truncate" title={s.name}>
+                      {s.name}
+                    </p>
                   )}
                   {s.ruc && (
-                    <p className="text-[10px] text-muted-foreground/70">
+                    <p className="text-[10px] text-muted-foreground/70 truncate" title={s.ruc}>
                       RUC: {s.ruc}
                     </p>
                   )}

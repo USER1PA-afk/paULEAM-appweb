@@ -139,6 +139,67 @@ body {
   to   { width: 100%; }
 }
 
+@keyframes segmented-fade-in {
+  from { opacity: 0; transform: translateY(2px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+.animate-segmented-fade {
+  animation: segmented-fade-in 220ms ease-out;
+}
+
+/* Modal open/close animations */
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modal-slide-down {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+.animate-modal-backdrop {
+  animation: modal-fade-in 150ms ease-out;
+}
+
+.animate-modal-panel {
+  animation: modal-slide-down 200ms ease-out;
+  transform-origin: center;
+}
+
+/* ============================
+   SegmentedControl responsive
+   ============================ */
+/* Mobile (<768px): only the active option is shown inside the strip.            */
+@media (max-width: 767.98px) {
+  .segmented-strip button[role="tab"] {
+    display: none !important;
+  }
+  .segmented-strip button[role="tab"][aria-selected="true"] {
+    display: inline-flex !important;
+  }
+}
+
+/* Tablet (768-1279.98px): the strip shows the first 5 options.                 */
+/* The 6th option (Material Secundario) is hidden by default and replaces the   */
+/* entire strip when it becomes the active segment (the previous 5 collapse).   */
+@media (min-width: 768px) and (max-width: 1279.98px) {
+  .segmented-strip button[role="tab"][data-index="5"] {
+    display: none !important;
+  }
+  .segmented-strip[data-active="MATERIAL_SECUNDARIO"] button[role="tab"][data-index="0"],
+  .segmented-strip[data-active="MATERIAL_SECUNDARIO"] button[role="tab"][data-index="1"],
+  .segmented-strip[data-active="MATERIAL_SECUNDARIO"] button[role="tab"][data-index="2"],
+  .segmented-strip[data-active="MATERIAL_SECUNDARIO"] button[role="tab"][data-index="3"],
+  .segmented-strip[data-active="MATERIAL_SECUNDARIO"] button[role="tab"][data-index="4"] {
+    display: none !important;
+  }
+  .segmented-strip[data-active="MATERIAL_SECUNDARIO"] button[role="tab"][data-index="5"] {
+    display: inline-flex !important;
+  }
+}
+
 /* ============================
    Sistema de Botones
    ============================ */

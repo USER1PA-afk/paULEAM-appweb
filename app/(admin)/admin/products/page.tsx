@@ -2,12 +2,25 @@
 
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { SupplierSelect } from "@features/suppliers/components";
 import { useSupplierActions } from "@features/suppliers/hooks";
 import { useRole } from "@features/auth/hooks";
-import { Tag, AlertTriangle, Pencil, Trash2, Star, ImagePlus, X as XIcon, Search } from "lucide-react";
+import { Tag, AlertTriangle, Pencil, Trash2, Star, ImagePlus, X as XIcon, Search, Wheat, FlaskConical, Box, Layers, Archive, ChevronDown } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { TablePagination } from "@shared/components/ui/table-pagination";
+import { SegmentedControl, type SegmentedColor } from "@shared/components/ui/segmented-control";
+import { cn } from "@shared/lib/utils";
 import Image from "next/image";
+
+const PRODUCT_TYPE_META: Record<ProductType, { label: string; color: string; colorKey: SegmentedColor; Icon: LucideIcon; desc: string }> = {
+  MATERIA_PRIMA:       { label: "Materia Prima",              color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",     colorKey: "blue",   Icon: Wheat,       desc: "Ingredientes crudos que entran al proceso de producción. Ej: leche, harina, ajonjolí." },
+  INSUMO:              { label: "Insumo / Auxiliar",          color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400", colorKey: "purple", Icon: FlaskConical, desc: "Materiales auxiliares del proceso. Ej: cuajo, sal, cloruro de calcio." },
+  ENVASE_EMPAQUE:      { label: "Empaque",                    color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",   colorKey: "amber",  Icon: Box,         desc: "Contenedores con capacidad definida. Ej: tarros, fundas de vacío, botellas." },
+  PRODUCTO_A_GRANEL:   { label: "Producto a Granel",          color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",        colorKey: "teal",   Icon: Layers,      desc: "Resultado intermedio de producción. Ej: queso fresco sin envasar." },
+  PRODUCTO_TERMINADO:  { label: "Producto Terminado",         color: "bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400",  colorKey: "brand",  Icon: Tag,         desc: "Listo para la venta. Entra al inventario mediante empaque o ajuste." },
+  MATERIAL_SECUNDARIO: { label: "Material Secundario / Otro", color: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",         colorKey: "zinc",   Icon: Archive,     desc: "Etiquetas, cajas, materiales de apoyo. Se controlan por unidades o piezas." },
+};
 
 type ProductType = "MATERIA_PRIMA" | "INSUMO" | "ENVASE_EMPAQUE" | "PRODUCTO_A_GRANEL" | "PRODUCTO_TERMINADO" | "MATERIAL_SECUNDARIO";
 
@@ -44,14 +57,17 @@ interface ProductWithSuppliers extends Product {
 
 type FormMode = "create" | "edit";
 
-const PRODUCT_TYPE_OPTIONS: { value: ProductType; label: string; color: string }[] = [
-  { value: "MATERIA_PRIMA",        label: "Materia Prima",              color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-  { value: "INSUMO",               label: "Insumo / Auxiliar",          color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
-  { value: "ENVASE_EMPAQUE",       label: "Envase / Empaque",           color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
-  { value: "PRODUCTO_A_GRANEL",    label: "Producto a Granel",          color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400" },
-  { value: "PRODUCTO_TERMINADO",   label: "Producto Terminado",         color: "bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400" },
-  { value: "MATERIAL_SECUNDARIO",  label: "Material Secundario / Otro", color: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" },
+const PRODUCT_TYPE_ORDER: ProductType[] = [
+  "MATERIA_PRIMA",
+  "INSUMO",
+  "ENVASE_EMPAQUE",
+  "PRODUCTO_A_GRANEL",
+  "PRODUCTO_TERMINADO",
+  "MATERIAL_SECUNDARIO",
 ];
+
+const PRODUCT_TYPE_OPTIONS: { value: ProductType; label: string; color: string }[] =
+  PRODUCT_TYPE_ORDER.map((v) => ({ value: v, label: PRODUCT_TYPE_META[v].label, color: PRODUCT_TYPE_META[v].color }));
 
 // Tipos que requieren proveedor y pueden comprarse externamente
 const PURCHASABLE_TYPES: ProductType[] = ["MATERIA_PRIMA", "INSUMO", "ENVASE_EMPAQUE", "MATERIAL_SECUNDARIO"];
@@ -129,6 +145,46 @@ export default function AdminProductsPage() {
 
   const [productPages, setProductPages] = useState<Partial<Record<ProductType, number>>>({});
   const [searchQueries, setSearchQueries] = useState<Partial<Record<ProductType, string>>>({});
+
+  // Segmented control — active product type (single-table view)
+  const [activeSegment, setActiveSegment] = useState<ProductType>("PRODUCTO_TERMINADO");
+
+  // Legend — which type's description is expanded; null = none
+  const [expandedType, setExpandedType] = useState<ProductType | null>(null);
+  const legendRef = useRef<HTMLDivElement | null>(null);
+
+  function closeForm() {
+    setShowForm(false);
+    resetForm();
+  }
+
+  // Click outside the legend closes the expanded description
+  useEffect(() => {
+    function handlePointerDown(e: MouseEvent) {
+      if (legendRef.current && !legendRef.current.contains(e.target as Node)) {
+        setExpandedType(null);
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  // Escape key closes the new-product modal
+  useEffect(() => {
+    if (!showForm) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") closeForm();
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showForm]);
+
+  // Switching segments collapses any open legend item
+  useEffect(() => {
+    setExpandedType(null);
+  }, [activeSegment]);
+
   const insforge = getInsforge();
   const { linkSuppliersToProduct } = useSupplierActions();
   const { role } = useRole();
@@ -499,8 +555,7 @@ export default function AdminProductsPage() {
       }
     }
 
-    resetForm();
-    setShowForm(false);
+    closeForm();
     setSaving(false);
     fetchProducts();
   }
@@ -631,47 +686,87 @@ export default function AdminProductsPage() {
     <div className="space-y-6">
       {/* ─── Header ─── */}
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 min-w-0">
-          <div>
-            <h1 className="text-2xl font-black tracking-tight">Productos</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {products.length} activos
-              {archivedCount > 0 && ` · ${archivedCount} archivados`}
-            </p>
-          </div>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-black tracking-tight">Productos</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {products.length} activos
+            {archivedCount > 0 && ` · ${archivedCount} archivados`}
+          </p>
         </div>
         <button
-          onClick={() => {
-            if (showForm) { setShowForm(false); resetForm(); }
-            else openCreate();
-          }}
-          className={showForm ? "btn-outline" : "btn-primary"}
+          onClick={() => (showForm ? closeForm() : openCreate())}
+          className={`${showForm ? "btn-outline" : "btn-primary"} shrink-0`}
         >
           {showForm ? "Cancelar" : "+ Nuevo Producto"}
         </button>
       </div>
 
-      {/* ─── Tipos de productos ─── */}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {[
-          { value: "MATERIA_PRIMA",       color: "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800/40 dark:text-blue-400",      title: "Materia Prima",              desc: "Ingredientes crudos que entran al proceso de producción. Ej: leche, harina, ajonjolí." },
-          { value: "INSUMO",              color: "bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800/40 dark:text-purple-400", title: "Insumo / Auxiliar",          desc: "Materiales auxiliares del proceso. Ej: cuajo, sal, cloruro de calcio." },
-          { value: "ENVASE_EMPAQUE",      color: "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800/40 dark:text-amber-400",   title: "Envase / Empaque",           desc: "Contenedores con capacidad definida. Ej: tarros, fundas de vacío, botellas." },
-          { value: "PRODUCTO_A_GRANEL",   color: "bg-teal-50 border-teal-200 text-teal-700 dark:bg-teal-900/20 dark:border-teal-800/40 dark:text-teal-400",        title: "Producto a Granel",          desc: "Resultado intermedio de producción. Ej: queso fresco sin envasar." },
-          { value: "PRODUCTO_TERMINADO",  color: "bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/20 dark:border-brand-800/40 dark:text-brand-400",  title: "Producto Terminado",         desc: "Listo para la venta. Entra al inventario mediante empaque o ajuste." },
-          { value: "MATERIAL_SECUNDARIO", color: "bg-zinc-50 border-zinc-200 text-zinc-600 dark:bg-zinc-900/20 dark:border-zinc-700/40 dark:text-zinc-400",        title: "Material Secundario / Otro", desc: "Etiquetas, cajas, materiales de apoyo. Se controlan por unidades o piezas." },
-        ].map(({ value, color, title, desc }) => {
+      {/* ─── Leyenda compacta de tipos ─── */}
+      <div
+        ref={legendRef}
+        className="rounded-lg border border-border bg-card overflow-hidden"
+      >
+        {PRODUCT_TYPE_ORDER.map((value, idx) => {
+          const meta = PRODUCT_TYPE_META[value];
+          const Icon = meta.Icon;
           const count = products.filter((p) => p.type === value).length;
+          const isExpanded = expandedType === value;
           return (
-            <div key={value} className={`rounded-lg border px-3 py-2.5 ${color}`}>
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <p className="text-xs font-black">{title}</p>
-                <span className="text-xs font-black tabular-nums">{count}</span>
+            <div key={value} className={cn(idx > 0 && "border-t border-border")}>
+              <button
+                type="button"
+                onClick={() => setExpandedType(isExpanded ? null : value)}
+                aria-expanded={isExpanded}
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:bg-muted/50"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-md", meta.color)}>
+                    <Icon className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-xs font-semibold text-foreground truncate">{meta.label}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="min-w-[1.5rem] text-center text-xs font-bold tabular-nums text-muted-foreground">
+                    {count}
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+                      isExpanded && "rotate-180"
+                    )}
+                  />
+                </div>
+              </button>
+              <div
+                className={cn(
+                  "grid transition-all duration-200 ease-out",
+                  isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                )}
+              >
+                <div className="overflow-hidden">
+                  <p className="px-3 pb-3 text-[11px] leading-snug text-muted-foreground">
+                    {meta.desc}
+                  </p>
+                </div>
               </div>
-              <p className="text-[11px] leading-snug opacity-80">{desc}</p>
             </div>
           );
         })}
+      </div>
+
+      {/* ─── Segmented control — centered, below the legend, above the table ─── */}
+      <div className="flex justify-center">
+        <SegmentedControl<ProductType>
+          options={PRODUCT_TYPE_ORDER.map((v) => ({
+            value: v,
+            label: PRODUCT_TYPE_META[v].label,
+            icon: PRODUCT_TYPE_META[v].Icon,
+            color: PRODUCT_TYPE_META[v].colorKey,
+          }))}
+          value={activeSegment}
+          onChange={setActiveSegment}
+          ariaLabel="Filtro por tipo de producto"
+        />
       </div>
 
       {error && !showForm && (
@@ -858,22 +953,46 @@ export default function AdminProductsPage() {
         </div>
       )}
 
-      {/* ─── Create / Edit Form ─── */}
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5"
+      {/* ─── Create / Edit Form Modal — centered on the viewport ─── */}
+      {showForm && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4 animate-modal-backdrop"
+          onClick={closeForm}
         >
-          <div className="flex items-center gap-3">
-            <h3 className="text-lg font-semibold">
-              {formMode === "edit" ? "Editar Producto" : "Registrar Producto"}
-            </h3>
-            {formData.type === "ENVASE_EMPAQUE" && (
-              <span className="inline-flex rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2.5 py-0.5 text-xs font-semibold">
-                Envase / Empaque
-              </span>
-            )}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={formMode === "edit" ? "Editar Producto" : "Registrar Producto"}
+            onClick={(e) => e.stopPropagation()}
+            className="flex w-full max-w-2xl max-h-[calc(100vh-1.5rem)] flex-col rounded-xl border border-border bg-card shadow-2xl animate-modal-panel"
+          >
+          <form
+            onSubmit={handleSubmit}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+          <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-border shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <h3 className="text-lg font-semibold truncate">
+                {formMode === "edit" ? "Editar Producto" : "Registrar Producto"}
+              </h3>
+              {formData.type === "ENVASE_EMPAQUE" && (
+                <span className="inline-flex rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2.5 py-0.5 text-xs font-semibold shrink-0">
+                  Empaque
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={closeForm}
+              aria-label="Cerrar formulario"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              <XIcon className="h-4 w-4" />
+            </button>
           </div>
+
+          {/* ─── Scrollable form body ─── */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
 
           {/* ─── Tipo selector (siempre visible) ─── */}
           <div className="grid gap-4">
@@ -1367,7 +1486,10 @@ export default function AdminProductsPage() {
             </div>
           )}
 
-          <div className="flex gap-3 flex-wrap">
+          </div>{/* /scrollable body */}
+
+          {/* ─── Sticky footer with submit/cancel ─── */}
+          <div className="flex gap-3 flex-wrap px-6 py-4 border-t border-border shrink-0 bg-card">
             <button
               type="submit"
               disabled={saving}
@@ -1377,13 +1499,16 @@ export default function AdminProductsPage() {
             </button>
             <button
               type="button"
-              onClick={() => { setShowForm(false); resetForm(); }}
+              onClick={closeForm}
               className="btn-outline px-6"
             >
               Cancelar
             </button>
           </div>
-        </form>
+          </form>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* ─── Archived toggle ─── */}
@@ -1434,7 +1559,9 @@ export default function AdminProductsPage() {
         </div>
       ) : (
         <div className="space-y-8">
-          {PRODUCT_TYPE_OPTIONS.map(({ value: typeValue, label: typeLabel, color: typeColor }) => {
+          {PRODUCT_TYPE_OPTIONS
+            .filter(({ value }) => value === activeSegment)
+            .map(({ value: typeValue, label: typeLabel, color: typeColor }) => {
             const typeProducts = products.filter((p) => p.type === typeValue);
             const typeArchived = archivedProducts.filter((p) => p.type === typeValue);
             const isPurchasable = PURCHASABLE_TYPES.includes(typeValue);
@@ -1448,7 +1575,10 @@ export default function AdminProductsPage() {
             const typeFrom = filteredTypeProducts.length === 0 ? 0 : (typePage - 1) * PROD_PAGE_SIZE + 1;
             const typeTo = Math.min(typePage * PROD_PAGE_SIZE, filteredTypeProducts.length);
             return (
-              <div key={typeValue} className="space-y-3">
+              <div
+                key={typeValue}
+                className="space-y-3 animate-segmented-fade"
+              >
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${typeColor}`}>
@@ -1518,9 +1648,13 @@ export default function AdminProductsPage() {
                                     <span className="text-[10px] text-muted-foreground">Cap: {p.capacity} {p.capacity_unit ?? p.unit}</span>
                                   )}
                                   {isPurchasable && p.suppliers.length > 0 && p.suppliers.map((s, i) => (
-                                    <span key={i} className={`inline-flex items-center rounded-full px-2 py-0 text-[10px] font-medium ${s.is_primary ? 'bg-brand-100 text-brand-700' : 'bg-muted text-muted-foreground'}`}>
-                                      {s.is_primary && <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />}
-                                      {s.company ?? s.name}
+                                    <span
+                                      key={i}
+                                      title={s.company ?? s.name}
+                                      className={`inline-flex max-w-[200px] min-w-0 items-center rounded-full px-2 py-0 text-[10px] font-medium ${s.is_primary ? 'bg-brand-100 text-brand-700' : 'bg-muted text-muted-foreground'}`}
+                                    >
+                                      {s.is_primary && <Star className="h-2.5 w-2.5 mr-0.5 fill-current shrink-0" />}
+                                      <span className="truncate min-w-0">{s.company ?? s.name}</span>
                                     </span>
                                   ))}
                                 </div>

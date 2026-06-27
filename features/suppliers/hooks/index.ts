@@ -21,7 +21,7 @@ export function useSuppliers() {
         .from("suppliers")
         .select("*")
         .eq("is_active", true)
-        .order("name");
+        .order("created_at", { ascending: false });
       if (qErr) throw qErr;
       setSuppliers((data as Supplier[]) ?? []);
     } catch (err: unknown) {

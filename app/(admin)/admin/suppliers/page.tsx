@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { SuppliersTable, SupplierForm } from "@features/suppliers/components";
 import { useAllSuppliers, useSupplierActions } from "@features/suppliers/hooks";
 import type { Supplier } from "@entities/supplier";
-import { CircleCheck } from "lucide-react";
+import { CircleCheck, Search, X as XIcon } from "lucide-react";
 
 export default function AdminSuppliersPage() {
   const { suppliers, loading, error, refetch } = useAllSuppliers();
@@ -12,6 +12,18 @@ export default function AdminSuppliersPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredSuppliers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return suppliers;
+    return suppliers.filter(
+      (s) =>
+        (s.company ?? "").toLowerCase().includes(q) ||
+        s.name.toLowerCase().includes(q) ||
+        (s.ruc ?? "").toLowerCase().includes(q)
+    );
+  }, [suppliers, searchQuery]);
 
   function flash(msg: string) {
     setSuccessMsg(msg);
@@ -90,14 +102,48 @@ export default function AdminSuppliersPage() {
         </div>
       )}
 
+      {/* Search */}
+      {!loading && suppliers.length > 0 && (
+        <div className="relative max-w-md">
+          <Search aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar proveedor por nombre, empresa o RUC…"
+            className="w-full rounded-md border border-border bg-background pl-9 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <XIcon aria-hidden="true" className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {searchQuery && (
+        <p className="text-xs text-muted-foreground -mt-3">
+          {filteredSuppliers.length} resultado{filteredSuppliers.length !== 1 ? "s" : ""} para &ldquo;{searchQuery}&rdquo;
+        </p>
+      )}
+
       {/* Table */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
         </div>
+      ) : filteredSuppliers.length === 0 && searchQuery ? (
+        <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+          Sin resultados para &ldquo;{searchQuery}&rdquo;.
+        </div>
       ) : (
         <SuppliersTable
-          suppliers={suppliers}
+          suppliers={filteredSuppliers}
           onToggle={handleToggle}
           onEdit={handleEdit}
         />
