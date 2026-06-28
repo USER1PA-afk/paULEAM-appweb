@@ -438,20 +438,104 @@ function OtpInput({
           40%, 80% { transform: translateX(6px); }
         }
         @keyframes otp-pop {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.08); }
+          0%   { transform: scale(1); }
+          45%  { transform: scale(1.12); }
           100% { transform: scale(1); }
         }
-        .otp-shake { animation: otp-shake 0.45s ease-in-out; }
-        .otp-pop { animation: otp-pop 0.18s ease-out; }
+        @keyframes otp-success-glow {
+          0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.45); }
+          70%  { box-shadow: 0 0 0 10px rgba(16,185,129,0); }
+          100% { box-shadow: 0 0 0 0  rgba(16,185,129,0); }
+        }
+        .otp-shake   { animation: otp-shake 0.45s ease-in-out; }
+        .otp-pop     { animation: otp-pop 0.2s cubic-bezier(.34,1.56,.64,1); }
+        .otp-success { animation: otp-success-glow 0.55s ease-out; }
+
+        /* OTP digit — premium base */
+        .otp-cell {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          /* Responsive sizing: 40/48px → 46/56px → 52/64px */
+          width: clamp(2.5rem, 12vw, 3.25rem);
+          height: clamp(3rem, 15vw, 4rem);
+          font-size: clamp(1.35rem, 6vw, 1.875rem);
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          text-align: center;
+          border-radius: 0.875rem;
+          border-width: 2px;
+          border-style: solid;
+          outline: none;
+          transition: border-color 0.18s, box-shadow 0.18s, background 0.18s, transform 0.18s;
+          /* subtle inner light */
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 1px 3px rgba(0,0,0,0.06);
+          /* remove browser caret flicker on iOS */
+          caret-color: transparent;
+          -webkit-appearance: none;
+          cursor: text;
+        }
+        .otp-cell:focus {
+          transform: translateY(-2px) scale(1.05);
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.15),
+            0 0 0 3px rgba(var(--color-brand-500, 59 130 246)/.28),
+            0 4px 14px rgba(var(--color-brand-500, 59 130 246)/.18);
+        }
+        .otp-cell:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .otp-cell--empty {
+          border-color: rgba(var(--color-border,203 213 225)/1);
+          background: rgba(var(--color-background,255 255 255)/1);
+          color: rgba(var(--color-foreground,15 23 42)/1);
+        }
+        .otp-cell--filled {
+          border-color: #f59e0b;
+          background: linear-gradient(145deg, #fffbeb 0%, #fef3c7 100%);
+          color: #92400e;
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.55),
+            0 4px 12px rgba(245,158,11,0.25),
+            0 1px 3px rgba(0,0,0,0.05);
+        }
+        .dark .otp-cell--filled {
+          background: linear-gradient(145deg, rgba(120,53,15,0.45) 0%, rgba(92,40,7,0.55) 100%);
+          color: #fde68a;
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.08),
+            0 4px 12px rgba(245,158,11,0.18);
+        }
+        .otp-cell--error {
+          border-color: rgb(239,68,68);
+          background: rgba(239,68,68,0.05);
+          color: rgb(239,68,68);
+          box-shadow: 0 0 0 3px rgba(239,68,68,0.15);
+        }
+        .otp-cell--success {
+          border-color: rgb(16,185,129);
+          background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 100%);
+          color: #065f46;
+        }
+        .dark .otp-cell--success {
+          background: linear-gradient(145deg, rgba(6,78,59,0.45) 0%, rgba(4,55,42,0.55) 100%);
+          color: #6ee7b7;
+        }
       `}</style>
       <div
-        className={`flex gap-2 justify-center ${error ? "otp-shake" : ""}`}
+        className={`flex gap-1.5 sm:gap-2 justify-center ${error ? "otp-shake" : ""}`}
         role="group"
         aria-label="Código de verificación de 6 dígitos"
       >
         {Array.from({ length: 6 }).map((_, i) => {
           const filled = !!value[i];
+          const stateClass = success
+            ? "otp-cell--success otp-success"
+            : error
+            ? "otp-cell--error"
+            : filled
+            ? "otp-cell--filled otp-pop"
+            : "otp-cell--empty";
           return (
             <input
               key={i}
@@ -467,18 +551,7 @@ function OtpInput({
               onKeyDown={(e) => handleKeyDown(i, e)}
               onPaste={handlePaste}
               onFocus={(e) => e.target.select()}
-              className={[
-                "w-11 h-14 text-center text-xl font-bold rounded-xl border-2 outline-none transition-all duration-200 select-none",
-                "focus:ring-0",
-                disabled ? "opacity-50 cursor-not-allowed" : "cursor-text",
-                success
-                  ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300"
-                  : error
-                  ? "border-destructive bg-destructive/5 text-destructive"
-                  : filled
-                  ? "border-amber-400 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-200 shadow-md shadow-amber-200/60 dark:shadow-amber-900/30 otp-pop"
-                  : "border-border bg-background text-foreground focus:border-brand-500 focus:shadow-md focus:shadow-brand-500/15",
-              ].join(" ")}
+              className={`otp-cell ${stateClass}`}
             />
           );
         })}
@@ -632,7 +705,7 @@ export function VerifyEmailForm({ email, mode = "verify", signature: initialSig 
       <button
         type="submit"
         disabled={!isComplete || loading}
-        className="w-full rounded-md bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+        className="w-full rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 px-4 py-3 text-sm font-bold text-white shadow-md shadow-brand-600/30 hover:from-brand-400 hover:to-brand-600 hover:shadow-lg hover:shadow-brand-600/35 hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none transition-all duration-200"
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
@@ -972,7 +1045,7 @@ export function ResetPasswordForm({ email, signature }: { email: string; signatu
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-md bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 px-4 py-3 text-sm font-bold text-white shadow-md shadow-brand-600/30 hover:from-brand-400 hover:to-brand-600 hover:shadow-lg hover:shadow-brand-600/35 hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none transition-all duration-200"
       >
         {loading ? "Actualizando…" : "Restablecer contraseña"}
       </button>
