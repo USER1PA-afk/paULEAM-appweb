@@ -2,13 +2,18 @@
 /**
  * scripts/setup-email-templates.mjs
  *
- * Pushes the custom PAuleam email templates to Insforge and verifies the
- * update landed by GETting each template before and after the PUT.
+ * Pushes the custom `reset-password-code` template to Insforge and verifies
+ * the update landed by GETting it before and after the PUT.
+ *
+ * Note: the `email-verification-code` template is NOT pushed here — the app
+ * handles registration OTPs via its own pre-verify flow
+ * (app/api/auth/send-pre-verify/route.ts) using insforge.emails.send(), so
+ * the platform-managed verification template is irrelevant.
  *
  * The Insforge email renderer substitutes `{{key}}` placeholders (NOT Go
  * `{{.Key}}` syntax) with the values passed to sendWithTemplate(). The
- * backend passes `{ token: code }` for both verification and reset, so the
- * placeholder is `{{token}}`.
+ * backend passes `{ token: code }` for the reset flow, so the placeholder
+ * is `{{token}}`.
  *
  * Run: node scripts/setup-email-templates.mjs
  *
@@ -47,17 +52,6 @@ const TEMPLATES = [
       bodyTitle: "Recuperación de contraseña",
       bodyDescription: "Usa el siguiente código para restablecer tu contraseña. Si no solicitaste este cambio, ignora este mensaje.",
       footerNote: "Si no solicitaste este código, puedes ignorar este mensaje con seguridad. Nadie puede cambiar tu contraseña sin este código.",
-    },
-  },
-  {
-    type: "email-verification-code",
-    subject: "Verifica tu correo — PAuleam",
-    vars: {
-      headerIcon: "&#9993;&#65039;",
-      headerSubtitle: "Planta de Alimentos · ULEAM",
-      bodyTitle: "Verifica tu correo electrónico",
-      bodyDescription: "Gracias por registrarte en PAuleam. Usa el siguiente código para confirmar tu dirección de correo y activar tu cuenta.",
-      footerNote: "Si no creaste esta cuenta, puedes ignorar este mensaje con seguridad.",
     },
   },
 ];
