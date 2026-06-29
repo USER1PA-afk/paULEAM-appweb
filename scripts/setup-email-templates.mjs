@@ -2,7 +2,8 @@
 /**
  * scripts/setup-email-templates.mjs
  *
- * One-time setup: pushes the custom PAuleam email templates to Insforge.
+ * Pushes the custom PAuleam email templates to Insforge and verifies the
+ * update landed by GETting each template before and after the PUT.
  *
  * The Insforge email renderer substitutes `{{key}}` placeholders (NOT Go
  * `{{.Key}}` syntax) with the values passed to sendWithTemplate(). The
@@ -36,6 +37,31 @@ if (!BASE_URL || !API_KEY) {
   process.exit(1);
 }
 
+const TEMPLATES = [
+  {
+    type: "reset-password-code",
+    subject: "Código de recuperación — PAuleam",
+    vars: {
+      headerIcon: "&#128273;",
+      headerSubtitle: "Planta de Alimentos · ULEAM",
+      bodyTitle: "Recuperación de contraseña",
+      bodyDescription: "Usa el siguiente código para restablecer tu contraseña. Si no solicitaste este cambio, ignora este mensaje.",
+      footerNote: "Si no solicitaste este código, puedes ignorar este mensaje con seguridad. Nadie puede cambiar tu contraseña sin este código.",
+    },
+  },
+  {
+    type: "email-verification-code",
+    subject: "Verifica tu correo — PAuleam",
+    vars: {
+      headerIcon: "&#9993;&#65039;",
+      headerSubtitle: "Planta de Alimentos · ULEAM",
+      bodyTitle: "Verifica tu correo electrónico",
+      bodyDescription: "Gracias por registrarte en PAuleam. Usa el siguiente código para confirmar tu dirección de correo y activar tu cuenta.",
+      footerNote: "Si no creaste esta cuenta, puedes ignorar este mensaje con seguridad.",
+    },
+  },
+];
+
 function buildTemplate({ headerIcon, headerSubtitle, bodyTitle, bodyDescription, footerNote }) {
   return `<!DOCTYPE html>
 <html lang="es">
@@ -64,7 +90,7 @@ function buildTemplate({ headerIcon, headerSubtitle, bodyTitle, bodyDescription,
                       box-shadow:0 4px 24px rgba(0,0,0,0.10);">
 
           <tr>
-            <td class="pau-header"
+            <td class="pau-header" bgcolor="#1d4ed8"
                 style="background-color:#1d4ed8;
                        background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 60%,#3b82f6 100%);
                        padding:30px 26px 26px;
@@ -96,7 +122,8 @@ function buildTemplate({ headerIcon, headerSubtitle, bodyTitle, bodyDescription,
 
               <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 24px;" align="center">
                 <tr>
-                  <td class="pau-otp" style="background-color:#fffbeb;
+                  <td class="pau-otp" bgcolor="#fffbeb"
+                      style="background-color:#fffbeb;
                                             background:linear-gradient(160deg,#fffbeb 0%,#fef3c7 100%);
                                             border:2px solid #f59e0b;
                                             border-radius:12px;
@@ -154,55 +181,75 @@ function buildTemplate({ headerIcon, headerSubtitle, bodyTitle, bodyDescription,
 </html>`;
 }
 
-async function pushTemplate(type, subject, bodyHtml) {
-  const url = `${BASE_URL}/api/auth/email-templates/${type}`;
-  const res = await fetch(url, {
-    method: "PUT",
+async function api(method, path, body) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method,
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${API_KEY}`,
     },
-    body: JSON.stringify({ subject, bodyHtml }),
+    body: body ? JSON.stringify(body) : undefined,
   });
+  const text = await res.text();
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
+  return { ok: res.ok, status: res.status, json };
+}
 
+async function pushTemplate(type, subject, bodyHtml) {
+  const res = await api("PUT", `/api/auth/email-templates/${type}`, { subject, bodyHtml });
   if (!res.ok) {
-    const text = await res.text();
-    console.error(`Failed to update template "${type}": ${res.status} ${text}`);
+    console.error(`  PUT  ${type}: ${res.status} ${JSON.stringify(res.json)}`);
     return false;
   }
-
-  console.log(`Template "${type}" updated successfully.`);
   return true;
 }
 
+async function getTemplate(type) {
+  const res = await api("GET", `/api/auth/email-templates`);
+  if (!res.ok) return null;
+  const list = res.json?.data ?? res.json?.templates ?? [];
+  return list.find((t) => t.templateType === type || t.type === type) ?? null;
+}
+
+function summarize(tpl) {
+  if (!tpl) return "(not found)";
+  const html = tpl.bodyHtml ?? "";
+  const has = (sub) => html.includes(sub);
+  return [
+    `subject="${tpl.subject ?? ""}"`,
+    `bytes=${html.length}`,
+    has("{{token}}") ? "{{token}}=yes" : "{{token}}=NO",
+    has("background-color:#1d4ed8") ? "fallback=ok" : "fallback=MISSING",
+    has('bgcolor="#1d4ed8"') ? "bgcolor=ok" : "bgcolor=MISSING",
+    has("linear-gradient") ? "gradient=ok" : "gradient=NO",
+  ].join("  ");
+}
+
 async function main() {
+  console.log(new Date().toISOString())
   console.log(`\nPushing email templates to ${BASE_URL}\n`);
 
-  await pushTemplate(
-    "reset-password-code",
-    "Código de recuperación — PAuleam",
-    buildTemplate({
-      headerIcon: "&#128273;",
-      headerSubtitle: "Planta de Alimentos · ULEAM",
-      bodyTitle: "Recuperación de contraseña",
-      bodyDescription: "Usa el siguiente código para restablecer tu contraseña. Si no solicitaste este cambio, ignora este mensaje.",
-      footerNote: "Si no solicitaste este código, puedes ignorar este mensaje con seguridad. Nadie puede cambiar tu contraseña sin este código.",
-    }),
-  );
+  console.log("Before:");
+  for (const t of TEMPLATES) {
+    const before = await getTemplate(t.type);
+    console.log(`  ${t.type.padEnd(28)} ${summarize(before)}`);
+  }
 
-  await pushTemplate(
-    "email-verification-code",
-    "Verifica tu correo — PAuleam",
-    buildTemplate({
-      headerIcon: "&#9993;&#65039;",
-      headerSubtitle: "Planta de Alimentos · ULEAM",
-      bodyTitle: "Verifica tu correo electrónico",
-      bodyDescription: "Gracias por registrarte en PAuleam. Usa el siguiente código para confirmar tu dirección de correo y activar tu cuenta.",
-      footerNote: "Si no creaste esta cuenta, puedes ignorar este mensaje con seguridad.",
-    }),
-  );
+  console.log("\nPushing:");
+  for (const t of TEMPLATES) {
+    const html = buildTemplate(t.vars);
+    const ok = await pushTemplate(t.type, t.subject, html);
+    console.log(`  ${ok ? "OK  " : "FAIL"}  ${t.type}`);
+  }
 
-  console.log("\nDone. If any template failed, check that INSFORGE_API_KEY has admin-level access.");
+  console.log("\nAfter:");
+  for (const t of TEMPLATES) {
+    const after = await getTemplate(t.type);
+    console.log(`  ${t.type.padEnd(28)} ${summarize(after)}`);
+  }
+
+  console.log("\nIf any template shows fallback=MISSING, the PUT did not persist. Check that INSFORGE_API_KEY has admin scope.\n");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

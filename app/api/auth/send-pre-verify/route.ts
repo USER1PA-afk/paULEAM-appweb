@@ -29,7 +29,8 @@ function buildOtpEmail(otp: string): string {
     .split("")
     .map(
       (d) =>
-        `<td style="width:48px;height:60px;text-align:center;vertical-align:middle;` +
+        `<td class="pau-otp-cell" bgcolor="#fffbeb" style="width:48px;height:60px;text-align:center;vertical-align:middle;` +
+        `background-color:#fffbeb;` +
         `background:linear-gradient(160deg,#fffbeb 0%,#fef3c7 100%);` +
         `border:2px solid #f59e0b;border-radius:10px;` +
         `font-size:32px;font-weight:800;color:#92400e;` +
@@ -44,9 +45,18 @@ function buildOtpEmail(otp: string): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Código de verificación — PAuleam</title>
+  <style>
+    @media only screen and (max-width: 480px) {
+      .pau-outer  { padding: 24px 12px !important; }
+      .pau-header { padding: 26px 22px 22px !important; }
+      .pau-body   { padding: 28px 22px 26px !important; }
+      .pau-footer { padding: 18px 22px !important; }
+      .pau-otp-cell { width:40px !important; height:52px !important; font-size:26px !important; }
+    }
+  </style>
 </head>
 <body style="margin:0;padding:0;background:#f0f4f8;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0f4f8;padding:40px 16px;">
+  <table class="pau-outer" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0f4f8;padding:36px 16px;">
     <tr>
       <td align="center">
         <!--[if mso]><table width="520" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
@@ -56,20 +66,22 @@ function buildOtpEmail(otp: string): string {
 
           <!-- ── Header gradient ── -->
           <tr>
-            <td style="background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 60%,#3b82f6 100%);
-                        padding:32px 40px 28px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
+            <td class="pau-header" bgcolor="#1d4ed8"
+                style="background-color:#1d4ed8;
+                       background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 60%,#3b82f6 100%);
+                       padding:30px 26px 26px;
+                       mso-padding-alt:0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="mso-table-lspace:0pt;mso-table-rspace:0pt;">
                 <tr>
                   <td>
-                    <p style="margin:0;color:#fff;font-size:22px;font-weight:800;
-                               letter-spacing:-0.5px;">PAuleam</p>
-                    <p style="margin:4px 0 0;color:rgba(255,255,255,0.60);font-size:12px;">
+                    <p style="margin:0;color:#ffffff;font-size:22px;font-weight:800;letter-spacing:-0.5px;">PAuleam</p>
+                    <p style="margin:4px 0 0;color:rgba(255,255,255,0.85);font-size:12px;">
                       Planta de Alimentos · ULEAM
                     </p>
                   </td>
                   <td align="right" style="vertical-align:top;">
                     <!-- shield icon -->
-                    <div style="width:40px;height:40px;background:rgba(255,255,255,0.12);
+                    <div style="width:40px;height:40px;background-color:rgba(255,255,255,0.18);
                                 border-radius:50%;text-align:center;line-height:40px;
                                 font-size:20px;">🔐</div>
                   </td>
@@ -80,7 +92,7 @@ function buildOtpEmail(otp: string): string {
 
           <!-- ── Body ── -->
           <tr>
-            <td style="background:#ffffff;padding:36px 40px 32px;">
+            <td class="pau-body" style="background-color:#ffffff;padding:32px 26px 28px;">
 
               <p style="margin:0 0 6px;color:#111827;font-size:18px;font-weight:700;">
                 Tu código de verificación
@@ -124,7 +136,7 @@ function buildOtpEmail(otp: string): string {
 
           <!-- ── Footer ── -->
           <tr>
-            <td style="background:#f9fafb;padding:20px 40px;border-top:1px solid #f3f4f6;">
+            <td class="pau-footer" style="background-color:#f9fafb;padding:20px 26px;border-top:1px solid #f3f4f6;">
               <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;line-height:1.6;">
                 ¿No encuentras el correo? Revisa tu carpeta de
                 <strong style="color:#6b7280;">spam</strong> o
