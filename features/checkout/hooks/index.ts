@@ -301,6 +301,68 @@ export function useCart(userId: string | null = null) {
     [insforge]
   );
 
+  /**
+   * Fija la cantidad ABSOLUTA de un item del carrito (no suma un delta).
+   *
+   * Reservas: `reserve_stock` valida `get_available_stock` que ya descuenta
+   * las reservas activas del propio usuario. Por eso primero se borran TODAS
+   * las reservas del usuario para ese producto y luego se reserva el total
+   * nuevo — así la validación se hace contra el balance completo y queda una
+   * sola fila de reserva limpia. Cantidad < 1 elimina el item.
+   */
+  const updateQuantity = useCallback(
+    async (productId: string, newQuantity: number) => {
+      const item = globalCartItems.find((i) => i.product_id === productId);
+      if (!item) return { error: "El producto no está en el carrito" };
+      if (newQuantity < 1) {
+        await removeItem(productId);
+        return { error: null };
+      }
+      if (newQuantity === item.quantity) return { error: null };
+
+      setLoading(true);
+      try {
+        const { data: userData } = await insforge.auth.getCurrentUser();
+        if (!userData?.user?.id) throw new Error("No autenticado");
+        const uid = userData.user.id;
+
+        const conversionFactor = item.conversion_factor ?? 1.0;
+        const physicalQuantity = Number((newQuantity / conversionFactor).toFixed(4));
+
+        // Liberar reservas previas de este producto para validar contra el
+        // balance completo (evita el doble conteo de la reserva propia).
+        await insforge.database
+          .from("stock_reservations")
+          .delete()
+          .eq("user_id", uid)
+          .eq("product_id", productId);
+
+        const { data, error } = await insforge.database.rpc("reserve_stock", {
+          p_user_id: uid,
+          p_product_id: productId,
+          p_quantity: physicalQuantity,
+        });
+
+        if (error) throw error;
+
+        globalCartItems = globalCartItems.map((i) =>
+          i.product_id === productId
+            ? { ...i, quantity: newQuantity, reservation_id: data as string }
+            : i
+        );
+        notifyCart();
+        return { error: null };
+      } catch (err: unknown) {
+        return {
+          error: err instanceof Error ? err.message : "Error al actualizar la cantidad",
+        };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [insforge, removeItem]
+  );
+
   const clearCart = useCallback(async () => {
     const { data: userData } = await insforge.auth.getCurrentUser();
     if (userData?.user?.id) {
@@ -324,6 +386,7 @@ export function useCart(userId: string | null = null) {
     itemCount,
     addItem,
     removeItem,
+    updateQuantity,
     clearCart,
     isEmpty: items.length === 0,
   };

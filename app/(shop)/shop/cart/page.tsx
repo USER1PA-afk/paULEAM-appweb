@@ -3,6 +3,9 @@
 import { useCart } from "@features/checkout/hooks";
 import { useAuth } from "@features/auth/hooks";
 import { DeliveryInfoBanner } from "@features/checkout/components/DeliveryInfoBanner";
+import { QuantityStepper } from "@features/checkout/components/QuantityStepper";
+import { getInsforge } from "@shared/lib/insforge/client";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, Package, X } from "lucide-react";
@@ -10,7 +13,49 @@ import { formatCurrency } from "@shared/lib/utils";
 
 export default function CartPage() {
   const { user } = useAuth();
-  const { items, total, itemCount, removeItem, clearCart, isEmpty } = useCart(user?.id ?? null);
+  const { items, total, itemCount, removeItem, updateQuantity, clearCart, isEmpty, loading } = useCart(user?.id ?? null);
+  const insforge = getInsforge();
+
+  // Stock disponible (físico) por producto, para topar el stepper. El valor
+  // ya descuenta las reservas activas del usuario (que cubren la cantidad
+  // actual en el carrito), así que el máximo total = cantidad + disponible.
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const productIds = items.map((i) => i.product_id).join(",");
+
+  useEffect(() => {
+    // Cart empty → nothing to query; the empty-state UI renders so a stale
+    // map is never read. Avoids a synchronous setState in the effect body.
+    if (!productIds) return;
+    const ids = productIds.split(",");
+    insforge.database
+      .from("stock_summary")
+      .select("product_id, stock_available")
+      .in("product_id", ids)
+      .then(
+        ({ data }) => {
+          const map: Record<string, number> = {};
+          ((data as { product_id: string; stock_available: number | string }[]) ?? []).forEach((s) => {
+            map[s.product_id] = Number(s.stock_available);
+          });
+          setStockMap(map);
+        },
+        () => {}
+      );
+  }, [productIds, insforge]);
+
+  const handleQuantityChange = useCallback(
+    async (productId: string, newQuantity: number) => {
+      setFeedback(null);
+      const result = await updateQuantity(productId, newQuantity);
+      if (result.error) {
+        setFeedback(result.error);
+        setTimeout(() => setFeedback(null), 4000);
+      }
+    },
+    [updateQuantity]
+  );
 
   if (isEmpty) {
     return (
@@ -38,6 +83,15 @@ export default function CartPage() {
       <p className="mt-1 text-sm text-muted-foreground">
         {itemCount} artículo{itemCount !== 1 ? "s" : ""} en tu carrito
       </p>
+
+      {feedback && (
+        <div
+          role="alert"
+          className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm font-medium text-destructive"
+        >
+          {feedback}
+        </div>
+      )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         {/* Items */}
@@ -81,17 +135,26 @@ export default function CartPage() {
                     <X aria-hidden="true" className="h-4 w-4" />
                   </button>
                 </div>
-                {/* Bottom row: unit price + qty + subtotal */}
+                {/* Bottom row: unit price + qty stepper + subtotal */}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <p className="text-xs text-muted-foreground">
                     {formatCurrency(item.price)} / {item.sales_unit_name || item.capacity_unit || item.unit}
                   </p>
                   <div className="flex items-center gap-3 ml-auto">
-                    <div className="text-center">
-                      <p className="text-sm font-bold tabular-nums">{item.quantity}</p>
-                      <p className="text-[10px] text-muted-foreground">{item.sales_unit_name || item.capacity_unit || item.unit}</p>
+                    <div className="flex flex-col items-center gap-1">
+                      <QuantityStepper
+                        value={item.quantity}
+                        max={item.quantity + Math.floor((stockMap[item.product_id] ?? 0) / (item.conversion_factor ?? 1))}
+                        onChange={(n) => handleQuantityChange(item.product_id, n)}
+                        disabled={loading}
+                      />
+                      {stockMap[item.product_id] !== undefined && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {Math.floor((stockMap[item.product_id] ?? 0) / (item.conversion_factor ?? 1))} disponible{Math.floor((stockMap[item.product_id] ?? 0) / (item.conversion_factor ?? 1)) !== 1 ? "s" : ""}
+                        </span>
+                      )}
                     </div>
-                    <p className="font-semibold tabular-nums text-sm">
+                    <p className="font-semibold tabular-nums text-sm w-16 text-right">
                       {formatCurrency(item.price * item.quantity)}
                     </p>
                   </div>
