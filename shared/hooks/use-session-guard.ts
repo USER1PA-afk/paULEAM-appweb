@@ -17,7 +17,11 @@ import { getInsforge } from "@shared/lib/insforge/client";
  */
 
 const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
-const ACTIVITY_THROTTLE_MS = 60 * 1000; // Refresh at most once per minute
+// Refresh at most once every 10 minutes. The session JWT lives far longer
+// than that, so refreshing every minute (previous value) only generated
+// needless /auth/refresh + /api/auth/set-cookie traffic on every mouse move.
+// The inactivity timer below is purely local and still resets on every event.
+const ACTIVITY_THROTTLE_MS = 10 * 60 * 1000;
 
 export function useSessionGuard(onExpired: () => Promise<void>) {
   const router = useRouter();

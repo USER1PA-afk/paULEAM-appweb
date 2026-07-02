@@ -146,6 +146,8 @@ paULEAM-appweb/
 19. **Supplier scope:** All PURCHASABLE_TYPES (MATERIA_PRIMA, INSUMO, ENVASE_EMPAQUE, OTRO) can have suppliers. Not just MATERIA_PRIMA.
 20. **Audit module append-only:** `audit_log` never uses UPDATE or DELETE. The only write path is `log_audit_event()` RPC (SECURITY DEFINER). Audit failures must be silenced with `console.warn` — they must never block the primary operation.
 21. **Audit events from frontend:** Login/logout/login-failed events are logged in `features/auth/hooks/index.ts` via `useAuditActions().logEvent()`. Data-change events (products, status changes, role changes) are logged automatically by PostgreSQL triggers.
+22. **Query cache + invalidation:** List hooks (`useStockSummary`, `useInventoryLedger`, `useProductionOrders`, `useOrderManagement`) use `useCachedQuery` (`shared/hooks/use-cached-query.ts`) — in-memory stale-while-revalidate cache (60s TTL, deduped in-flight). Any mutation that writes to a cached table MUST call `invalidateCache(...)` with the affected keys (`"stock_summary"`, `"inventory_ledger"`, `"production_orders"`, `"orders_admin"`) or the UI shows stale stock. `refetch()` forces network and syncs all mounted subscribers.
+23. **No re-navigation on active nav items:** Admin sidebar/header links call `e.preventDefault()` when the target equals the current `pathname` — re-navigating to the same route refetches the RSC payload, re-requests the manifest, and remounts the page (repeating every Insforge query). Follow the same pattern in new nav components.
 
 ## Auth System Architecture — Two-Track Design
 

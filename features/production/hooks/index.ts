@@ -1,7 +1,8 @@
 "use client";
 
 import { getInsforge } from "@shared/lib/insforge/client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useCachedQuery, invalidateCache } from "@shared/hooks/use-cached-query";
 import { ProductionOrder, ProductionStatus } from "@entities/production";
 import { Recipe, RecipeIngredient } from "@entities/recipe";
 import { calculateScaleFactor, scaleIngredientsWithStock, calculateTotalProductionCost } from "../lib";
@@ -11,33 +12,21 @@ import { ScaledIngredient } from "@entities/production";
  * Hook para gestionar órdenes de producción.
  */
 export function useProductionOrders() {
-  const [orders, setOrders] = useState<ProductionOrder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const insforge = getInsforge();
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error: queryError } = await insforge.database
-        .from("production_orders")
-        .select("*")
-        .order("created_at", { ascending: false });
+  const queryOrders = useCallback(async () => {
+    const { data, error: queryError } = await insforge.database
+      .from("production_orders")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      if (queryError) throw queryError;
-      setOrders((data as ProductionOrder[]) ?? []);
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Error al cargar órdenes"
-      );
-    } finally {
-      setLoading(false);
-    }
+    if (queryError) throw queryError;
+    return (data as ProductionOrder[]) ?? [];
   }, [insforge]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { fetchOrders(); }, [fetchOrders]);
+  const { data, loading, error, refetch: fetchOrders } =
+    useCachedQuery<ProductionOrder[]>("production_orders", queryOrders);
+  const orders = useMemo(() => data ?? [], [data]);
 
   const createOrder = useCallback(
     async (order: {
@@ -82,6 +71,8 @@ export function useProductionOrders() {
           .eq("id", orderId);
 
         if (updateError) throw updateError;
+        // El trigger movió stock (EGRESO ingredientes + INGRESO terminado).
+        invalidateCache("stock_summary", "inventory_ledger");
         await fetchOrders();
         return { data: null, error: null };
       } catch (err: unknown) {
@@ -104,6 +95,8 @@ export function useProductionOrders() {
           .eq("id", orderId);
 
         if (updateError) throw updateError;
+        // COMPLETADA dispara el trigger que mueve stock.
+        if (status === "COMPLETADA") invalidateCache("stock_summary", "inventory_ledger");
         await fetchOrders();
         return { data: null, error: null };
       } catch (err: unknown) {
@@ -156,6 +149,8 @@ export function useProductionOrders() {
         });
 
         if (rpcErr) throw rpcErr;
+        // El RPC insertó contrapartidas AJUSTE — el stock cambió.
+        invalidateCache("stock_summary", "inventory_ledger");
         await fetchOrders();
         return { error: null };
       } catch (err: unknown) {
@@ -181,6 +176,8 @@ export function useProductionOrders() {
         });
 
         if (rpcErr) throw rpcErr;
+        // El RPC insertó un EGRESO MERMA — el stock cambió.
+        invalidateCache("stock_summary", "inventory_ledger");
         await fetchOrders();
         return { error: null };
       } catch (err: unknown) {

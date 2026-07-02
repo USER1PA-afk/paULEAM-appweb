@@ -180,7 +180,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           href={item.href}
           aria-current={isActive ? "page" : undefined}
           title={item.label}
-          onClick={() => setSidebarOpen(false)}
+          onClick={(e) => {
+            // Ya estamos en esta ruta — re-navegar dispara un refetch RSC
+            // (y el navegador re-pide el manifest), remonta la página y
+            // repite todas las consultas a Insforge. No hay nada que cargar.
+            if (pathname === item.href) e.preventDefault();
+            setSidebarOpen(false);
+          }}
           className={`flex items-center gap-3 rounded-lg py-2 px-3 text-sm font-medium min-h-9
             transition-all duration-200 ease-out
             ${sidebarCollapsed ? "lg:justify-center lg:px-0 lg:gap-0" : ""}
@@ -230,7 +236,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="h-5 w-px bg-border shrink-0" />
 
         {/* ── Brand: logo + nombre ── */}
-        <Link href="/admin/dashboard" className="flex items-center gap-2 min-w-0">
+        <Link
+          href="/admin/dashboard"
+          onClick={(e) => {
+            if (pathname === "/admin/dashboard") e.preventDefault();
+          }}
+          className="flex items-center gap-2 min-w-0"
+        >
           <Image
             src="/logo-pauleam.png"
             alt="Logo PAuleam"
@@ -443,7 +455,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         >
                           <Link
                             href="/admin/store/products"
-                            onClick={() => setSidebarOpen(false)}
+                            onClick={(e) => {
+                              if (pathname === "/admin/store/products") e.preventDefault();
+                              setSidebarOpen(false);
+                            }}
                             title="Gestionar Tienda"
                             className={`flex items-center gap-3 flex-1 min-w-0
                               ${sidebarCollapsed ? "lg:justify-center lg:gap-0 lg:flex-none" : ""}`}

@@ -2,6 +2,7 @@
 
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback } from "react";
+import { useCachedQuery, invalidateCache } from "@shared/hooks/use-cached-query";
 
 interface LedgerEntry {
   id: string;
@@ -37,70 +38,52 @@ interface StockSummary {
  * Hook para consultar el ledger de inventario con filtros.
  */
 export function useInventoryLedger(productId?: string) {
-  const [entries, setEntries] = useState<LedgerEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const insforge = getInsforge();
 
   const fetchLedger = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      let query = insforge.database
-        .from("inventory_ledger_view")
-        .select("*")
-        .order("created_at", { ascending: false });
+    let query = insforge.database
+      .from("inventory_ledger_view")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      if (productId) {
-        query = query.eq("product_id", productId);
-      }
-
-      const { data, error: queryError } = await query;
-      if (queryError) throw queryError;
-      setEntries((data as LedgerEntry[]) ?? []);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al cargar ledger");
-    } finally {
-      setLoading(false);
+    if (productId) {
+      query = query.eq("product_id", productId);
     }
+
+    const { data, error: queryError } = await query;
+    if (queryError) throw queryError;
+    return (data as LedgerEntry[]) ?? [];
   }, [productId, insforge]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { fetchLedger(); }, [fetchLedger]);
+  const { data, loading, error, refetch } = useCachedQuery<LedgerEntry[]>(
+    `inventory_ledger:${productId ?? "all"}`,
+    fetchLedger
+  );
 
-  return { entries, loading, error, refetch: fetchLedger };
+  return { entries: data ?? [], loading, error, refetch };
 }
 
 /**
  * Hook para consultar el resumen de stock (vista stock_summary).
  */
 export function useStockSummary() {
-  const [summary, setSummary] = useState<StockSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const insforge = getInsforge();
 
   const fetchSummary = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error: queryError } = await insforge.database
-        .from("stock_summary")
-        .select("*");
+    const { data, error: queryError } = await insforge.database
+      .from("stock_summary")
+      .select("*");
 
-      if (queryError) throw queryError;
-      setSummary((data as StockSummary[]) ?? []);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al cargar stock");
-    } finally {
-      setLoading(false);
-    }
+    if (queryError) throw queryError;
+    return (data as StockSummary[]) ?? [];
   }, [insforge]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { fetchSummary(); }, [fetchSummary]);
+  const { data, loading, error, refetch } = useCachedQuery<StockSummary[]>(
+    "stock_summary",
+    fetchSummary
+  );
 
-  return { summary, loading, error, refetch: fetchSummary };
+  return { summary: data ?? [], loading, error, refetch };
 }
 
 /**
@@ -132,6 +115,8 @@ export function useInventoryActions() {
           .select();
 
         if (insertError) throw insertError;
+        // El movimiento cambia el balance — descartar caché de stock y ledger.
+        invalidateCache("stock_summary", "inventory_ledger");
         return { data, error: null };
       } catch (err: unknown) {
         const message =

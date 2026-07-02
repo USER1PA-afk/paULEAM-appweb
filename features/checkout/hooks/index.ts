@@ -3,6 +3,7 @@
 import { getInsforge } from "@shared/lib/insforge/client";
 import { getNextDeliveryWindow } from "@shared/lib/utils";
 import { useState, useEffect, useCallback } from "react";
+import { useCachedQuery, invalidateCache } from "@shared/hooks/use-cached-query";
 
 export interface CartItem {
   product_id: string;
@@ -511,28 +512,20 @@ export function useCheckout() {
  * Incluye items de cada orden con detalles del producto.
  */
 export function useOrderManagement() {
-  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
-  const [loading, setLoading] = useState(true);
   const insforge = getInsforge();
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await insforge.database
-        .from("orders")
-        .select(`*, order_items(${ORDER_ITEMS_SELECT})`)
-        .order("created_at", { ascending: false });
+  const queryOrders = useCallback(async () => {
+    const { data } = await insforge.database
+      .from("orders")
+      .select(`*, order_items(${ORDER_ITEMS_SELECT})`)
+      .order("created_at", { ascending: false });
 
-      setOrders((data as OrderWithDetails[]) ?? []);
-    } catch {
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
+    return (data as OrderWithDetails[]) ?? [];
   }, [insforge]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { fetchOrders(); }, [fetchOrders]);
+  const { data, loading, refetch: fetchOrders } =
+    useCachedQuery<OrderWithDetails[]>("orders_admin", queryOrders);
+  const orders = data ?? [];
 
   const approveOrder = useCallback(
     async (orderId: string) => {
@@ -589,6 +582,8 @@ export function useOrderManagement() {
           .eq("id", orderId);
 
         if (error) throw error;
+        // Si fue ENVIO se insertaron EGRESOs de inventario arriba.
+        invalidateCache("stock_summary", "inventory_ledger");
         await fetchOrders();
         return { error: null };
       } catch (err: unknown) {
@@ -635,6 +630,8 @@ export function useOrderManagement() {
           .eq("id", orderId);
 
         if (error) throw error;
+        // El retiro insertó EGRESOs de inventario.
+        invalidateCache("stock_summary", "inventory_ledger");
         await fetchOrders();
         return { error: null };
       } catch (err: unknown) {
