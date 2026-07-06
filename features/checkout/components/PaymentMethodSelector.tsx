@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState, useCallback } from "react";
 import { usePaymentConfig, paymentQrUrl } from "@features/checkout/hooks";
 import type { PaymentConfig } from "@features/checkout/hooks";
 
@@ -37,6 +38,79 @@ function AccountDetail({ label, value }: { label: string; value: string | null }
   );
 }
 
+/** Account number row with an inline copy-to-clipboard button sitting right next to the value. */
+function CopyableAccountDetail({ label, value }: { label: string; value: string | null }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers / non-secure contexts
+      const el = document.createElement("textarea");
+      el.value = value;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [value]);
+
+  if (!value) return null;
+
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <span className="text-sm">
+        <span className="text-muted-foreground">{label}: </span>
+        <strong className="text-foreground font-semibold">{value}</strong>
+      </span>
+      <button
+        type="button"
+        onClick={handleCopy}
+        aria-label={copied ? "Copiado" : "Copiar número de cuenta"}
+        title={copied ? "¡Copiado!" : "Copiar número de cuenta"}
+        className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium
+          transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
+          ${copied
+            ? "border-green-400 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 dark:border-green-700"
+            : "border-border bg-muted/60 text-muted-foreground hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-950/20 dark:hover:text-brand-300"
+          }`}
+      >
+        {copied ? (
+          <>
+            {/* Checkmark icon */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Copiado
+          </>
+        ) : (
+          <>
+            {/* Copy icon */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            Copiar
+          </>
+        )}
+      </button>
+    </span>
+  );
+}
+
 function PichinchaBlock({ config }: { config: PaymentConfig }) {
   const qrSrc = paymentQrUrl(config.pichincha_qr_key);
   const hasAccount = Boolean(
@@ -63,6 +137,8 @@ function PichinchaBlock({ config }: { config: PaymentConfig }) {
             height={176}
             className="rounded-lg border border-border bg-white p-1"
             unoptimized
+            priority
+            fetchPriority="high"
           />
           <p className="text-[11px] text-muted-foreground text-center max-w-[220px]">
             Escanea con la app DeUna o realiza una transferencia con los datos
@@ -77,7 +153,7 @@ function PichinchaBlock({ config }: { config: PaymentConfig }) {
             Datos para transferencia
           </p>
           <AccountDetail label="Titular"    value={config.pichincha_holder} />
-          <AccountDetail label="Cuenta"     value={config.pichincha_account} />
+          <CopyableAccountDetail label="Cuenta"     value={config.pichincha_account} />
           <AccountDetail label="Tipo"       value={config.pichincha_account_type} />
           <AccountDetail label="Cédula/RUC" value={config.pichincha_cedula} />
         </div>
@@ -102,7 +178,7 @@ function MethodDetails({ method, config }: { method: string; config: PaymentConf
     return (
       <>
         <AccountDetail label="Titular"    value={config.guayaquil_holder} />
-        <AccountDetail label="Cuenta"     value={config.guayaquil_account} />
+        <CopyableAccountDetail label="Cuenta"     value={config.guayaquil_account} />
         <AccountDetail label="Tipo"       value={config.guayaquil_account_type} />
         <AccountDetail label="Cédula/RUC" value={config.guayaquil_cedula} />
       </>
