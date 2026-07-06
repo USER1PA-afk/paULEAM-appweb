@@ -24,13 +24,12 @@ export interface PaymentConfig {
   pichincha_holder:       string | null;
   pichincha_account:      string | null;
   pichincha_account_type: string | null;
-  pichincha_cedula:       string | null;
   pichincha_qr_path:      string | null;
   pichincha_qr_key:       string | null;
   guayaquil_holder:       string | null;
   guayaquil_account:      string | null;
   guayaquil_account_type: string | null;
-  guayaquil_cedula:       string | null;
+  guayaquil_qr_key:       string | null;
   paypal_email:           string | null;
   paypal_me:              string | null;
   updated_at:             string | null;

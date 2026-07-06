@@ -114,7 +114,7 @@ function CopyableAccountDetail({ label, value }: { label: string; value: string 
 function PichinchaBlock({ config }: { config: PaymentConfig }) {
   const qrSrc = paymentQrUrl(config.pichincha_qr_key);
   const hasAccount = Boolean(
-    config.pichincha_account || config.pichincha_holder || config.pichincha_cedula
+    config.pichincha_account || config.pichincha_holder
   );
   const hasQr = Boolean(qrSrc);
 
@@ -155,7 +155,6 @@ function PichinchaBlock({ config }: { config: PaymentConfig }) {
           <AccountDetail label="Titular"    value={config.pichincha_holder} />
           <CopyableAccountDetail label="Cuenta"     value={config.pichincha_account} />
           <AccountDetail label="Tipo"       value={config.pichincha_account_type} />
-          <AccountDetail label="Cédula/RUC" value={config.pichincha_cedula} />
         </div>
       )}
     </div>
@@ -168,20 +167,49 @@ function MethodDetails({ method, config }: { method: string; config: PaymentConf
   }
 
   if (method === "TRANSFERENCIA_GUAYAQUIL") {
-    if (!config.guayaquil_account) {
+    const qrSrc = paymentQrUrl(config.guayaquil_qr_key);
+    const hasAccount = Boolean(config.guayaquil_account || config.guayaquil_holder);
+    const hasQr = Boolean(qrSrc);
+
+    if (!hasAccount && !hasQr) {
       return (
         <p className="text-xs text-muted-foreground">
           Datos de pago pendientes de configuración. Contacta al administrador.
         </p>
       );
     }
+
     return (
-      <>
-        <AccountDetail label="Titular"    value={config.guayaquil_holder} />
-        <CopyableAccountDetail label="Cuenta"     value={config.guayaquil_account} />
-        <AccountDetail label="Tipo"       value={config.guayaquil_account_type} />
-        <AccountDetail label="Cédula/RUC" value={config.guayaquil_cedula} />
-      </>
+      <div className="space-y-3">
+        {hasQr && qrSrc && (
+          <div className="flex flex-col items-center gap-1.5 py-1">
+            <Image
+              src={qrSrc}
+              alt="Código QR Banco Guayaquil"
+              width={176}
+              height={176}
+              className="rounded-lg border border-border bg-white p-1"
+              unoptimized
+              priority
+              fetchPriority="high"
+            />
+            <p className="text-[11px] text-muted-foreground text-center max-w-[220px]">
+              Escanea con tu app bancaria o realiza una transferencia con los
+              datos de abajo.
+            </p>
+          </div>
+        )}
+        {hasAccount && (
+          <div className="space-y-1 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Datos para transferencia
+            </p>
+            <AccountDetail label="Titular"    value={config.guayaquil_holder} />
+            <CopyableAccountDetail label="Cuenta"     value={config.guayaquil_account} />
+            <AccountDetail label="Tipo"       value={config.guayaquil_account_type} />
+          </div>
+        )}
+      </div>
     );
   }
 

@@ -3,9 +3,10 @@
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback } from "react";
 import { formatDate } from "@shared/lib/utils";
-import { Shield, Wrench, Monitor, ShoppingBag, ChevronDown } from "lucide-react";
+import { Shield, Wrench, Monitor, ShoppingBag, ChevronDown, Trash2, AlertTriangle, X } from "lucide-react";
 import { usePagination } from "@shared/hooks/use-pagination";
 import { TablePagination } from "@shared/components/ui/table-pagination";
+import { useRole } from "@features/auth/hooks";
 
 interface UserProfile {
   id: string;
@@ -80,6 +81,107 @@ const ROLES: Record<string, {
 
 const STAFF_ROLES = ["admin", "operario", "sales_kiosk"];
 
+// ── Delete Confirmation Modal ─────────────────────────────────────────────────
+
+interface DeleteModalProps {
+  user: UserProfile | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+  deleting: boolean;
+  deleteError: string | null;
+}
+
+function DeleteConfirmModal({ user, onConfirm, onCancel, deleting, deleteError }: DeleteModalProps) {
+  if (!user) return null;
+
+  const roleLabel = ROLES[user.role]?.label ?? user.role;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-modal-title"
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onCancel}
+        aria-hidden="true"
+      />
+
+      {/* Modal panel */}
+      <div className="relative w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl">
+        {/* Header */}
+        <div className="flex items-start gap-4 p-6 pb-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/50">
+            <AlertTriangle aria-hidden="true" className="h-5 w-5 text-red-600 dark:text-red-400" />
+          </div>
+          <div className="flex-1">
+            <h2 id="delete-modal-title" className="text-base font-semibold text-foreground">
+              Eliminar personal del sistema
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Estás a punto de eliminar a{" "}
+              <span className="font-semibold text-foreground">{user.full_name}</span>{" "}
+              ({roleLabel}).
+            </p>
+          </div>
+          <button
+            onClick={onCancel}
+            disabled={deleting}
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50"
+            aria-label="Cerrar"
+          >
+            <X aria-hidden="true" className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Warning box */}
+        <div className="mx-6 mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 dark:border-red-800/50 dark:bg-red-950/30">
+          <p className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wide mb-1">
+            ⚠ Acción irreversible
+          </p>
+          <p className="text-sm text-red-700 dark:text-red-300">
+            Una vez eliminado, el usuario perderá acceso inmediatamente y{" "}
+            <strong>no será posible recuperar su cuenta ni su historial de acceso</strong>.
+            Esta acción no se puede deshacer.
+          </p>
+        </div>
+
+        {deleteError && (
+          <div className="mx-6 mb-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3">
+            <p className="text-sm text-destructive">{deleteError}</p>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-3 px-6 pb-6">
+          <button
+            id="delete-modal-cancel"
+            onClick={onCancel}
+            disabled={deleting}
+            className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            id="delete-modal-confirm"
+            onClick={onConfirm}
+            disabled={deleting}
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 active:bg-red-800 transition-colors disabled:opacity-60"
+          >
+            <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+            {deleting ? "Eliminando…" : "Sí, eliminar usuario"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Role Badge ────────────────────────────────────────────────────────────────
+
 function RoleBadge({ role }: { role: string }) {
   const def = ROLES[role] ?? { label: role, dot: "bg-gray-400", badgeBg: "bg-gray-100", badgeText: "text-gray-700" };
   return (
@@ -90,24 +192,30 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
+// ── User Row ──────────────────────────────────────────────────────────────────
+
 function UserRow({
   u,
   isEditing,
   editRole,
   saving,
+  showDelete,
   onEdit,
   onCancel,
   onSave,
   onRoleChange,
+  onDeleteRequest,
 }: {
   u: UserProfile;
   isEditing: boolean;
   editRole: string;
   saving: boolean;
+  showDelete: boolean;
   onEdit: () => void;
   onCancel: () => void;
   onSave: () => void;
   onRoleChange: (r: string) => void;
+  onDeleteRequest: () => void;
 }) {
   const initials = u.full_name
     .split(" ")
@@ -175,37 +283,56 @@ function UserRow({
             </button>
           </div>
         ) : (
-          <button
-            onClick={onEdit}
-            className="rounded-md bg-zinc-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
-          >
-            Editar rol
-          </button>
+          <div className="flex items-center justify-center gap-2">
+            <button
+              onClick={onEdit}
+              className="rounded-md bg-zinc-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
+            >
+              Editar rol
+            </button>
+            {showDelete && (
+              <button
+                id={`delete-staff-${u.id}`}
+                onClick={onDeleteRequest}
+                title="Eliminar usuario del sistema"
+                className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100 hover:border-red-300 dark:border-red-800/50 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50 transition-colors"
+              >
+                <Trash2 aria-hidden="true" className="h-3 w-3" />
+                Eliminar
+              </button>
+            )}
+          </div>
         )}
       </td>
     </tr>
   );
 }
 
+// ── Users Table ───────────────────────────────────────────────────────────────
+
 function UsersTable({
   users,
   editingId,
   editRole,
   saving,
+  showDeleteButtons,
   onEdit,
   onCancel,
   onSave,
   onRoleChange,
+  onDeleteRequest,
   emptyMessage,
 }: {
   users: UserProfile[];
   editingId: string | null;
   editRole: string;
   saving: boolean;
+  showDeleteButtons: boolean;
   onEdit: (u: UserProfile) => void;
   onCancel: () => void;
   onSave: (id: string) => void;
   onRoleChange: (r: string) => void;
+  onDeleteRequest: (u: UserProfile) => void;
   emptyMessage: string;
 }) {
   return (
@@ -235,10 +362,12 @@ function UsersTable({
                 isEditing={editingId === u.id}
                 editRole={editRole}
                 saving={saving}
+                showDelete={showDeleteButtons}
                 onEdit={() => onEdit(u)}
                 onCancel={onCancel}
                 onSave={() => onSave(u.id)}
                 onRoleChange={onRoleChange}
+                onDeleteRequest={() => onDeleteRequest(u)}
               />
             ))
           )}
@@ -248,13 +377,22 @@ function UsersTable({
   );
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<UserProfile | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const insforge = getInsforge();
+  const { isAdmin } = useRole();
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -287,126 +425,188 @@ export default function AdminUsersPage() {
     setEditRole(u.role);
   }
 
+  function openDeleteModal(u: UserProfile) {
+    setDeleteTarget(u);
+    setDeleteError(null);
+  }
+
+  function closeDeleteModal() {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteError(null);
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const res = await fetch("/api/admin/delete-staff-user", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: deleteTarget.id }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        setDeleteError(json?.error ?? "Error al eliminar el usuario. Inténtalo de nuevo.");
+        return;
+      }
+
+      // Success — close modal and refresh list
+      setDeleteTarget(null);
+      setDeleteError(null);
+      fetchUsers();
+    } catch {
+      setDeleteError("Error de red. Por favor, inténtalo de nuevo.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const staffUsers = users.filter((u) => STAFF_ROLES.includes(u.role));
   const clientUsers = users.filter((u) => u.role === "cliente");
   const staffPag = usePagination(staffUsers);
   const clientPag = usePagination(clientUsers);
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Gestión de Usuarios</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Administra roles y permisos de los usuarios del sistema.
-        </p>
-      </div>
+    <>
+      {/* Delete confirmation modal */}
+      <DeleteConfirmModal
+        user={deleteTarget}
+        onConfirm={handleConfirmDelete}
+        onCancel={closeDeleteModal}
+        deleting={deleting}
+        deleteError={deleteError}
+      />
 
-      {/* Role legend */}
-      <div className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Roles del Sistema
-        </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {Object.entries(ROLES).map(([key, def]) => {
-            const Icon = def.Icon;
-            return (
-              <div
-                key={key}
-                className={`rounded-lg border p-3.5 ${def.cardBg} ${def.cardBorder}`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon aria-hidden="true" className={`h-4 w-4 ${def.cardText}`} />
-                  <span className={`text-xs font-semibold ${def.cardText}`}>{def.label}</span>
-                </div>
-                <p className="text-xs text-muted-foreground mb-2.5">{def.description}</p>
-                <div className="flex flex-wrap gap-1">
-                  {def.permissions.map((p) => (
-                    <span
-                      key={p}
-                      className="rounded-sm bg-background/70 border border-border/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
-                    >
-                      {p}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+      <div className="space-y-8">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Gestión de Usuarios</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Administra roles y permisos de los usuarios del sistema.
+          </p>
         </div>
-      </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div role="status" className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
-            <span className="sr-only">Cargando usuarios…</span>
+        {/* Role legend */}
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Roles del Sistema
+          </h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {Object.entries(ROLES).map(([key, def]) => {
+              const Icon = def.Icon;
+              return (
+                <div
+                  key={key}
+                  className={`rounded-lg border p-3.5 ${def.cardBg} ${def.cardBorder}`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon aria-hidden="true" className={`h-4 w-4 ${def.cardText}`} />
+                    <span className={`text-xs font-semibold ${def.cardText}`}>{def.label}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2.5">{def.description}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {def.permissions.map((p) => (
+                      <span
+                        key={p}
+                        className="rounded-sm bg-background/70 border border-border/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                      >
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      ) : (
-        <div className="space-y-6">
-          {/* Staff table */}
-          <section>
-            <div className="mb-3 flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-foreground">Personal del Sistema</h2>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums">
-                {staffUsers.length}
-              </span>
-            </div>
-            <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-              <UsersTable
-                users={staffPag.paged}
-                editingId={editingId}
-                editRole={editRole}
-                saving={saving}
-                onEdit={startEdit}
-                onCancel={() => setEditingId(null)}
-                onSave={handleRoleUpdate}
-                onRoleChange={setEditRole}
-                emptyMessage="No hay administradores, operarios ni kioscos registrados."
-              />
-              <TablePagination
-                page={staffPag.page}
-                totalPages={staffPag.totalPages}
-                from={staffPag.from}
-                to={staffPag.to}
-                total={staffPag.total}
-                onPageChange={staffPag.setPage}
-              />
-            </div>
-          </section>
 
-          {/* Client table */}
-          <section>
-            <div className="mb-3 flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-foreground">Clientes Registrados</h2>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums">
-                {clientUsers.length}
-              </span>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div role="status" className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600">
+              <span className="sr-only">Cargando usuarios…</span>
             </div>
-            <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-              <UsersTable
-                users={clientPag.paged}
-                editingId={editingId}
-                editRole={editRole}
-                saving={saving}
-                onEdit={startEdit}
-                onCancel={() => setEditingId(null)}
-                onSave={handleRoleUpdate}
-                onRoleChange={setEditRole}
-                emptyMessage="No hay clientes registrados aún."
-              />
-              <TablePagination
-                page={clientPag.page}
-                totalPages={clientPag.totalPages}
-                from={clientPag.from}
-                to={clientPag.to}
-                total={clientPag.total}
-                onPageChange={clientPag.setPage}
-              />
-            </div>
-          </section>
-        </div>
-      )}
-    </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Staff table */}
+            <section>
+              <div className="mb-3 flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-foreground">Personal del Sistema</h2>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums">
+                  {staffUsers.length}
+                </span>
+                {isAdmin && (
+                  <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[10px] font-medium text-red-600 dark:border-red-800/40 dark:bg-red-950/30 dark:text-red-400">
+                    <Shield aria-hidden="true" className="h-3 w-3" />
+                    Solo tú puedes eliminar personal
+                  </span>
+                )}
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+                <UsersTable
+                  users={staffPag.paged}
+                  editingId={editingId}
+                  editRole={editRole}
+                  saving={saving}
+                  showDeleteButtons={isAdmin}
+                  onEdit={startEdit}
+                  onCancel={() => setEditingId(null)}
+                  onSave={handleRoleUpdate}
+                  onRoleChange={setEditRole}
+                  onDeleteRequest={openDeleteModal}
+                  emptyMessage="No hay administradores, operarios ni kioscos registrados."
+                />
+                <TablePagination
+                  page={staffPag.page}
+                  totalPages={staffPag.totalPages}
+                  from={staffPag.from}
+                  to={staffPag.to}
+                  total={staffPag.total}
+                  onPageChange={staffPag.setPage}
+                />
+              </div>
+            </section>
+
+            {/* Client table */}
+            <section>
+              <div className="mb-3 flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-foreground">Clientes Registrados</h2>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums">
+                  {clientUsers.length}
+                </span>
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+                <UsersTable
+                  users={clientPag.paged}
+                  editingId={editingId}
+                  editRole={editRole}
+                  saving={saving}
+                  showDeleteButtons={false}
+                  onEdit={startEdit}
+                  onCancel={() => setEditingId(null)}
+                  onSave={handleRoleUpdate}
+                  onRoleChange={setEditRole}
+                  onDeleteRequest={() => {}}
+                  emptyMessage="No hay clientes registrados aún."
+                />
+                <TablePagination
+                  page={clientPag.page}
+                  totalPages={clientPag.totalPages}
+                  from={clientPag.from}
+                  to={clientPag.to}
+                  total={clientPag.total}
+                  onPageChange={clientPag.setPage}
+                />
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
