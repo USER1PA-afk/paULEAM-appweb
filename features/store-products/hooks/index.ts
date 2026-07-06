@@ -334,9 +334,10 @@ export function useStoreProductMutations() {
 // ─── useProductImages ─────────────────────────────────────────────────────────
 
 export function useProductImages(productId: string | null) {
-  const [images,    setImages]    = useState<ProductImage[]>([]);
-  const [loading,   setLoading]   = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [images,      setImages]      = useState<ProductImage[]>([]);
+  const [loading,     setLoading]     = useState(false);
+  const [uploading,   setUploading]   = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const fetchImages = useCallback(async () => {
     if (!productId) { setImages([]); return; }
@@ -361,34 +362,69 @@ export function useProductImages(productId: string | null) {
 
   async function uploadImage(file: File, forceFirst = false): Promise<boolean> {
     if (!productId) return false;
-    setUploading(true);
-    const db = getInsforge();
-    const ext  = file.name.split(".").pop() ?? "jpg";
-    const path = `products/${productId}/${Date.now()}.${ext}`;
+    setUploadError(null);
 
-    const { error: upErr } = await db.storage.from("product-images").upload(path, file);
-    if (upErr) { setUploading(false); return false; }
-
-    const publicUrl  = db.storage.from("product-images").getPublicUrl(path);
-    const isFirst    = images.length === 0 || forceFirst;
-    const maxPos     = images.length > 0 ? Math.max(...images.map((i) => i.position)) + 1 : 0;
-
-    if (isFirst) {
-      await db.database.from("product_images").update({ is_primary: false }).eq("product_id", productId);
-      await db.database.from("products").update({ image_url: publicUrl }).eq("id", productId);
+    // Validación de tipo/tamaño en cliente antes de tocar el bucket
+    const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
+    const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+    if (file.type && !ALLOWED_MIME.includes(file.type)) {
+      setUploadError("Formato no permitido. Usa JPG, PNG, WEBP, GIF o AVIF.");
+      return false;
+    }
+    if (file.size > MAX_BYTES) {
+      setUploadError("La imagen supera el límite de 10 MB.");
+      return false;
     }
 
-    await db.database.from("product_images").insert({
-      product_id:   productId,
-      storage_path: path,
-      position:     maxPos,
-      is_primary:   isFirst,
-      alt_text:     file.name.split(".")[0] ?? null,
-    });
+    setUploading(true);
+    try {
+      const db = getInsforge();
+      const ext  = (file.name.split(".").pop() ?? "jpg").toLowerCase();
+      const path = `products/${productId}/${Date.now()}.${ext}`;
 
-    await fetchImages();
-    setUploading(false);
-    return true;
+      const { error: upErr } = await db.storage.from("product-images").upload(path, file);
+      if (upErr) {
+        const msg = (upErr as { message?: string })?.message ?? String(upErr);
+        console.warn("[useProductImages] upload failed:", upErr);
+        setUploadError(`No se pudo subir la imagen: ${msg}`);
+        return false;
+      }
+
+      const publicUrl  = db.storage.from("product-images").getPublicUrl(path);
+      const isFirst    = images.length === 0 || forceFirst;
+      const maxPos     = images.length > 0 ? Math.max(...images.map((i) => i.position)) + 1 : 0;
+
+      if (isFirst) {
+        await db.database.from("product_images").update({ is_primary: false }).eq("product_id", productId);
+        await db.database.from("products").update({ image_url: publicUrl }).eq("id", productId);
+      }
+
+      const { error: insErr } = await db.database.from("product_images").insert({
+        product_id:   productId,
+        storage_path: path,
+        position:     maxPos,
+        is_primary:   isFirst,
+        alt_text:     file.name.split(".")[0] ?? null,
+      });
+      if (insErr) {
+        const msg = (insErr as { message?: string })?.message ?? String(insErr);
+        console.warn("[useProductImages] insert row failed:", insErr);
+        // Revertir el archivo huérfano en storage
+        await db.storage.from("product-images").remove(path).then(() => {}, () => {});
+        setUploadError(`No se pudo registrar la imagen: ${msg}`);
+        return false;
+      }
+
+      await fetchImages();
+      return true;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn("[useProductImages] upload exception:", err);
+      setUploadError(`Error al subir la imagen: ${msg}`);
+      return false;
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function deleteImage(img: ProductImage): Promise<void> {
@@ -427,5 +463,5 @@ export function useProductImages(productId: string | null) {
     );
   }
 
-  return { images, loading, uploading, uploadImage, deleteImage, setPrimary, reorderImages, refetch: fetchImages };
+  return { images, loading, uploading, uploadError, clearUploadError: () => setUploadError(null), uploadImage, deleteImage, setPrimary, reorderImages, refetch: fetchImages };
 }

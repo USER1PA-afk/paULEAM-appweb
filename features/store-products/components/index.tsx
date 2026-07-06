@@ -229,7 +229,7 @@ interface ImageManagerProps {
 }
 
 export function ImageManager({ productId, onPrimaryChange }: ImageManagerProps) {
-  const { images, uploading, uploadImage, deleteImage, setPrimary, reorderImages } =
+  const { images, uploading, uploadError, clearUploadError, uploadImage, deleteImage, setPrimary, reorderImages } =
     useProductImages(productId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -254,9 +254,11 @@ export function ImageManager({ productId, onPrimaryChange }: ImageManagerProps) 
   }
 
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    clearUploadError();
     const files = Array.from(e.target.files ?? []);
     for (const file of files) {
       const ok = await uploadImage(file);
+      if (!ok) break; // detener el lote al primer fallo y mostrar el error
       if (ok && images.length === 0 && onPrimaryChange) {
         // first image becomes primary — parent needs the new url
         // we refresh after upload so onPrimaryChange gets called by effect
@@ -364,6 +366,12 @@ export function ImageManager({ productId, onPrimaryChange }: ImageManagerProps) 
           )}
         </label>
       </div>
+
+      {uploadError && (
+        <p className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-[12px] text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400">
+          {uploadError}
+        </p>
+      )}
 
       {images.length > 0 && (
         <p className="text-[11px] text-muted-foreground/60">
