@@ -434,19 +434,21 @@ export default function AdminProductsPage() {
       let uploadedImageUrl: string | undefined;
       let uploadedStoragePath: string | undefined;
       if (isAdmin && imageFile) {
-        const ext = imageFile.name.split(".").pop() ?? "jpg";
-        uploadedStoragePath = `products/${editingId}/${Date.now()}.${ext}`;
-        const { error: upErr } = await insforge.storage
-          .from("product-images")
-          .upload(uploadedStoragePath, imageFile);
-        if (upErr) {
-          setError("Error al subir imagen: " + (upErr as Error).message);
+        const fd = new FormData();
+        fd.append("file", imageFile);
+        fd.append("productId", editingId);
+        const upRes = await fetch("/api/storage/upload-image", {
+          method: "POST", body: fd, credentials: "include",
+        });
+        if (!upRes.ok) {
+          const body = await upRes.json().catch(() => ({ error: upRes.statusText }));
+          setError("Error al subir imagen: " + (body?.error ?? `Error ${upRes.status}`));
           setSaving(false);
           return;
         }
-        uploadedImageUrl = insforge.storage
-          .from("product-images")
-          .getPublicUrl(uploadedStoragePath);
+        const upJson = await upRes.json();
+        uploadedStoragePath = upJson.path;
+        uploadedImageUrl = upJson.publicUrl;
       }
 
       const updatePayload: Record<string, unknown> = {
@@ -517,19 +519,19 @@ export default function AdminProductsPage() {
       const newId = (newProduct as Product).id;
 
       if (isAdmin && imageFile) {
-        const ext = imageFile.name.split(".").pop() ?? "jpg";
-        const storagePath = `products/${newId}/${Date.now()}.${ext}`;
-        const { error: upErr } = await insforge.storage
-          .from("product-images")
-          .upload(storagePath, imageFile);
-        if (upErr) {
-          setError("Error al subir imagen: " + (upErr as Error).message);
+        const fd = new FormData();
+        fd.append("file", imageFile);
+        fd.append("productId", newId);
+        const upRes = await fetch("/api/storage/upload-image", {
+          method: "POST", body: fd, credentials: "include",
+        });
+        if (!upRes.ok) {
+          const body = await upRes.json().catch(() => ({ error: upRes.statusText }));
+          setError("Error al subir imagen: " + (body?.error ?? `Error ${upRes.status}`));
           setSaving(false);
           return;
         }
-        const publicUrl = insforge.storage
-          .from("product-images")
-          .getPublicUrl(storagePath);
+        const { path: storagePath, publicUrl } = await upRes.json();
         await insforge.database
           .from("products")
           .update({ image_url: publicUrl })

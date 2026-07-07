@@ -455,7 +455,7 @@ export function RecipeForm({ recipeId }: RecipeFormProps) {
                   className="rounded-lg border border-border/50 bg-muted/30 p-3 hover:border-border hover:bg-muted/50 transition-all duration-150"
                 >
                   {/* Desktop: 12-col grid / Mobile: stacked */}
-                  <div className="flex flex-col gap-2 sm:grid sm:grid-cols-12 sm:gap-3 sm:items-center overflow-hidden">
+                  <div className="flex flex-col gap-2 sm:grid sm:grid-cols-12 sm:gap-3 sm:items-center">
 
                     {/* # + Product — full width on mobile */}
                     <div className="sm:col-span-5 flex items-center gap-2 min-w-0">

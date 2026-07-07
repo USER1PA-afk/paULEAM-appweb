@@ -364,7 +364,7 @@ export function useProductImages(productId: string | null) {
     if (!productId) return false;
     setUploadError(null);
 
-    // Validación de tipo/tamaño en cliente antes de tocar el bucket
+    // Validación de tipo/tamaño en cliente antes de tocar el servidor
     const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
     const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
     if (file.type && !ALLOWED_MIME.includes(file.type)) {
@@ -379,18 +379,28 @@ export function useProductImages(productId: string | null) {
     setUploading(true);
     try {
       const db = getInsforge();
-      const ext  = (file.name.split(".").pop() ?? "jpg").toLowerCase();
-      const path = `products/${productId}/${Date.now()}.${ext}`;
 
-      const { error: upErr } = await db.storage.from("product-images").upload(path, file);
-      if (upErr) {
-        const msg = (upErr as { message?: string })?.message ?? String(upErr);
-        console.warn("[useProductImages] upload failed:", upErr);
+      // Upload via server proxy to avoid presigned URL CORS/auth issues
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("productId", productId);
+
+      const uploadRes = await fetch("/api/storage/upload-image", {
+        method: "POST",
+        body: formData,
+        credentials: "include", // send httpOnly cookies
+      });
+
+      if (!uploadRes.ok) {
+        const body = await uploadRes.json().catch(() => ({ error: uploadRes.statusText }));
+        const msg = body?.error ?? `Error ${uploadRes.status}`;
+        console.warn("[useProductImages] server upload failed:", msg);
         setUploadError(`No se pudo subir la imagen: ${msg}`);
         return false;
       }
 
-      const publicUrl  = db.storage.from("product-images").getPublicUrl(path);
+      const { path, publicUrl } = await uploadRes.json();
+
       const isFirst    = images.length === 0 || forceFirst;
       const maxPos     = images.length > 0 ? Math.max(...images.map((i) => i.position)) + 1 : 0;
 
@@ -409,7 +419,7 @@ export function useProductImages(productId: string | null) {
       if (insErr) {
         const msg = (insErr as { message?: string })?.message ?? String(insErr);
         console.warn("[useProductImages] insert row failed:", insErr);
-        // Revertir el archivo huérfano en storage
+        // Orphaned file in storage — try to clean up
         await db.storage.from("product-images").remove(path).then(() => {}, () => {});
         setUploadError(`No se pudo registrar la imagen: ${msg}`);
         return false;
