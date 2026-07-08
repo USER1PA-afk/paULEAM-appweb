@@ -25,6 +25,32 @@ interface Product {
   productSuppliers: ProductSupplierLink[];
 }
 
+type StockFilterType =
+  | "MATERIA_PRIMA"
+  | "INSUMO"
+  | "ENVASE_EMPAQUE"
+  | "PRODUCTO_A_GRANEL"
+  | "PRODUCTO_TERMINADO"
+  | "MATERIAL_SECUNDARIO";
+
+interface StockGroup {
+  key: StockFilterType | "OTRO";
+  label: string;
+  accentColor: string;
+}
+
+const STOCK_GROUPS: StockGroup[] = [
+  { key: "MATERIA_PRIMA",      label: "Materias Primas",     accentColor: "bg-blue-500" },
+  { key: "INSUMO",             label: "Insumos / Auxiliares", accentColor: "bg-purple-500" },
+  { key: "ENVASE_EMPAQUE",     label: "Envases y Empaques",  accentColor: "bg-amber-500" },
+  { key: "PRODUCTO_A_GRANEL",  label: "Productos a Granel",  accentColor: "bg-teal-500" },
+  { key: "PRODUCTO_TERMINADO", label: "Productos Terminados", accentColor: "bg-brand-500" },
+  { key: "MATERIAL_SECUNDARIO", label: "Materiales Secundarios", accentColor: "bg-zinc-500" },
+  { key: "OTRO",               label: "Otros",               accentColor: "bg-zinc-400" },
+];
+
+const ALL_STOCK_KEYS = new Set<string>(STOCK_GROUPS.map((g) => g.key));
+
 /**
  * Tabla de resumen de stock actual por producto con Realtime.
  */
@@ -123,9 +149,11 @@ function StockSubTable({
 export function StockSummaryTable({
   refreshTrigger,
   onRefreshAction,
+  filterType,
 }: {
   refreshTrigger?: number;
   onRefreshAction?: () => void;
+  filterType?: StockFilterType;
 }) {
   const { summary, loading, error, refetch } = useStockSummary();
   const [pulse, setPulse] = useState<string | null>(null);
@@ -204,12 +232,17 @@ export function StockSummaryTable({
     );
   }
 
-  const rawMaterials = summary.filter((i) => i.type === "MATERIA_PRIMA");
-  const supplies     = summary.filter((i) => i.type === "INSUMO");
-  const packaging    = summary.filter((i) => i.type === "ENVASE_EMPAQUE");
-  const bulkGoods    = summary.filter((i) => i.type === "PRODUCTO_A_GRANEL");
-  const finished     = summary.filter((i) => i.type === "PRODUCTO_TERMINADO");
-  const other        = summary.filter((i) => !["MATERIA_PRIMA","INSUMO","ENVASE_EMPAQUE","PRODUCTO_A_GRANEL","PRODUCTO_TERMINADO"].includes(i.type ?? ""));
+  const groupedItems = STOCK_GROUPS.map((g) => ({
+    ...g,
+    items: summary.filter((i) =>
+      g.key === "OTRO"
+        ? !ALL_STOCK_KEYS.has(i.type ?? "")
+        : i.type === g.key
+    ),
+  }));
+  const visibleGroups = filterType
+    ? groupedItems.filter((g) => g.key === filterType)
+    : groupedItems;
 
   return (
     <div className="space-y-4">
@@ -240,18 +273,26 @@ export function StockSummaryTable({
         </div>
       )}
 
-      {rawMaterials.length > 0 && <StockSubTable items={rawMaterials} label="Materias Primas" accentColor="bg-blue-500" />}
-      {supplies.length > 0     && <StockSubTable items={supplies}     label="Insumos / Auxiliares" accentColor="bg-purple-500" />}
-      {packaging.length > 0    && <StockSubTable items={packaging}    label="Envases y Empaques" accentColor="bg-amber-500" />}
-      {bulkGoods.length > 0    && <StockSubTable items={bulkGoods}    label="Productos a Granel" accentColor="bg-teal-500" />}
-      {finished.length > 0     && <StockSubTable items={finished}     label="Productos Terminados" accentColor="bg-brand-500" />}
-      {other.length > 0        && <StockSubTable items={other}        label="Otros" accentColor="bg-zinc-400" />}
+      {visibleGroups.map((g) => (
+        g.items.length > 0 && (
+          <StockSubTable key={g.key} items={g.items} label={g.label} accentColor={g.accentColor} />
+        )
+      ))}
       {summary.length === 0 && (
         <div className="flex flex-col items-center justify-center py-14 gap-3 text-center">
           <Package className="h-10 w-10 text-muted-foreground/25" />
           <p className="text-sm font-medium text-muted-foreground">Sin movimientos de stock registrados</p>
           <p className="text-xs text-muted-foreground/60 max-w-xs">
             Registra el primer ingreso de materia prima usando el formulario de arriba.
+          </p>
+        </div>
+      )}
+      {summary.length > 0 && visibleGroups.every((g) => g.items.length === 0) && (
+        <div className="flex flex-col items-center justify-center py-14 gap-2 text-center">
+          <Package className="h-9 w-9 text-muted-foreground/25" />
+          <p className="text-sm font-medium text-muted-foreground">Sin stock para este tipo de producto</p>
+          <p className="text-xs text-muted-foreground/60 max-w-xs">
+            Cambia el filtro superior o registra un nuevo ingreso.
           </p>
         </div>
       )}
@@ -384,16 +425,18 @@ export function StockEntryForm({ onSuccessAction }: { onSuccessAction?: () => vo
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-lg font-semibold">Ingreso de Stock</h3>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <h3 className="text-lg font-semibold tracking-tight">Ingreso de Stock</h3>
         <button
+          type="button"
           onClick={() => {
             setShowForm((v) => !v);
             setSuccess(null);
           }}
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors w-full sm:w-auto"
+          className="inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 transition-colors w-full sm:w-auto"
         >
-          {showForm ? "Cancelar" : <span className="inline-flex items-center gap-1.5 justify-center"><PackagePlus aria-hidden="true" className="h-4 w-4" /> Nuevo Ingreso</span>}
+          <PackagePlus aria-hidden="true" className="h-4 w-4" />
+          {showForm ? "Cancelar" : "Nuevo Ingreso"}
         </button>
       </div>
 
@@ -1150,12 +1193,14 @@ export function InventoryLedgerTable({
 export function InventoryReportButton() {
   return (
     <button
+      type="button"
       onClick={() => {
         window.print();
       }}
-      className="rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors print:hidden flex items-center gap-2"
+      className="inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground shadow-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors print:hidden"
     >
-      <FileDown aria-hidden="true" className="h-4 w-4" /> Exportar PDF
+      <FileDown aria-hidden="true" className="h-4 w-4" />
+      Exportar PDF
     </button>
   );
 }

@@ -529,9 +529,6 @@ export function useOrderManagement() {
   const approveOrder = useCallback(
     async (orderId: string) => {
       try {
-        const { data: userData } = await insforge.auth.getCurrentUser();
-
-        // 1. Fetch order to determine fulfillment type
         const { data: orderData, error: orderFetchError } = await insforge.database
           .from("orders")
           .select("fulfillment_type")
@@ -541,47 +538,25 @@ export function useOrderManagement() {
         if (orderFetchError) throw orderFetchError;
         const fulfillmentType = (orderData as { fulfillment_type: string }).fulfillment_type;
 
-        // 2. For ENVIO: deduct inventory now. For RETIRO_EN_PLANTA: defer to confirmPickup.
         if (fulfillmentType === "ENVIO") {
-          const { data: itemsData, error: itemsError } = await insforge.database
-            .from("order_items")
-            .select(ORDER_ITEMS_SELECT)
-            .eq("order_id", orderId);
-
-          if (itemsError) throw itemsError;
-
-          const items = (itemsData as unknown as OrderItemDetail[]) ?? [];
-          for (const item of items) {
-            const conversionFactor = item.products?.conversion_factor ?? 1.0;
-            const physicalQuantity = Number((item.quantity / conversionFactor).toFixed(4));
-
-            const { error: ledgerError } = await insforge.database
-              .from("inventory_ledger")
-              .insert({
-                product_id: item.product_id,
-                movement_type: "EGRESO",
-                quantity: physicalQuantity,
-                reference_type: "VENTA",
-                reference_id: orderId,
-                notes: `Venta #${orderId.substring(0, 8)}`,
-              });
-
-            if (ledgerError) throw ledgerError;
-          }
+          const { error: rpcError } = await insforge.database.rpc("fn_finalize_online_order", {
+            p_order_id: orderId,
+            p_target_status: "APROBADO",
+          });
+          if (rpcError) throw rpcError;
+        } else {
+          const { data: userData } = await insforge.auth.getCurrentUser();
+          const { error } = await insforge.database
+            .from("orders")
+            .update({
+              status: "APROBADO",
+              approved_by: userData?.user?.id,
+              approved_at: new Date().toISOString(),
+            })
+            .eq("id", orderId);
+          if (error) throw error;
         }
 
-        // 3. Mark as APROBADO (payment verified)
-        const { error } = await insforge.database
-          .from("orders")
-          .update({
-            status: "APROBADO",
-            approved_by: userData?.user?.id,
-            approved_at: new Date().toISOString(),
-          })
-          .eq("id", orderId);
-
-        if (error) throw error;
-        // Si fue ENVIO se insertaron EGRESOs de inventario arriba.
         invalidateCache("stock_summary", "inventory_ledger");
         await fetchOrders();
         return { error: null };
@@ -597,39 +572,12 @@ export function useOrderManagement() {
   const confirmPickup = useCallback(
     async (orderId: string) => {
       try {
-        const { data: itemsData, error: itemsError } = await insforge.database
-          .from("order_items")
-          .select(ORDER_ITEMS_SELECT)
-          .eq("order_id", orderId);
+        const { error: rpcError } = await insforge.database.rpc("fn_finalize_online_order", {
+          p_order_id: orderId,
+          p_target_status: "COMPLETADO",
+        });
+        if (rpcError) throw rpcError;
 
-        if (itemsError) throw itemsError;
-
-        const items = (itemsData as unknown as OrderItemDetail[]) ?? [];
-        for (const item of items) {
-          const conversionFactor = item.products?.conversion_factor ?? 1.0;
-          const physicalQuantity = Number((item.quantity / conversionFactor).toFixed(4));
-
-          const { error: ledgerError } = await insforge.database
-            .from("inventory_ledger")
-            .insert({
-              product_id: item.product_id,
-              movement_type: "EGRESO",
-              quantity: physicalQuantity,
-              reference_type: "VENTA",
-              reference_id: orderId,
-              notes: `Retiro en planta #${orderId.substring(0, 8)}`,
-            });
-
-          if (ledgerError) throw ledgerError;
-        }
-
-        const { error } = await insforge.database
-          .from("orders")
-          .update({ status: "COMPLETADO" })
-          .eq("id", orderId);
-
-        if (error) throw error;
-        // El retiro insertó EGRESOs de inventario.
         invalidateCache("stock_summary", "inventory_ledger");
         await fetchOrders();
         return { error: null };
