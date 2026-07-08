@@ -3,6 +3,9 @@
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useCart } from "@features/checkout/hooks";
 import { useAuth } from "@features/auth/hooks";
+import { useActivePromotions } from "@features/promotions/hooks";
+import { getCatalogPromoInfo } from "@features/promotions/lib/apply-promotions";
+import { PromoBadge } from "@features/promotions/components";
 import { useState, useEffect, useCallback } from "react";
 import { Leaf, ImageOff, ShoppingCart as CartIcon, LogIn, X as XIcon } from "lucide-react";
 import Image from "next/image";
@@ -58,6 +61,7 @@ export default function CatalogPage() {
   const [loading, setLoading] = useState(true);
   const { isAuthenticated, user } = useAuth();
   const { addItem, loading: cartLoading } = useCart(user?.id ?? null);
+  const { data: activePromotions } = useActivePromotions();
   const [addingId, setAddingId] = useState<string | null>(null);
   // Store raw string so the user can clear the field and type freely.
   // Empty string is valid; handleAddToCart defaults it to 1.
@@ -334,7 +338,9 @@ export default function CatalogPage() {
         </div>
       ) : (
         <div className="grid gap-3 grid-cols-2 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {products.map((product, idx) => (
+          {products.map((product, idx) => {
+            const promoInfo = getCatalogPromoInfo(product.id, Number(product.price), activePromotions ?? []);
+            return (
             <div
               key={product.id}
               className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:border-brand-200 hover:-translate-y-0.5"
@@ -367,6 +373,11 @@ export default function CatalogPage() {
                       </span>
                     </div>
                   )}
+                  {promoInfo && (
+                    <div className="absolute top-3 right-3">
+                      <PromoBadge text={promoInfo.badgeText} type={promoInfo.type} />
+                    </div>
+                  )}
                 </div>
 
                 {/* Info */}
@@ -380,8 +391,17 @@ export default function CatalogPage() {
                     </p>
                   )}
                   <div className="mt-auto pt-3 sm:pt-4">
+                    {promoInfo?.discountedPrice != null && (
+                      <p className="text-xs text-muted-foreground line-through tabular-nums">
+                        {Number(product.price).toLocaleString("es-EC", {
+                          style: "currency",
+                          currency: "USD",
+                          minimumFractionDigits: 2,
+                        })}
+                      </p>
+                    )}
                     <p className="text-lg font-bold tabular-nums text-foreground sm:text-xl">
-                      {Number(product.price).toLocaleString("es-EC", {
+                      {Number(promoInfo?.discountedPrice ?? product.price).toLocaleString("es-EC", {
                         style: "currency",
                         currency: "USD",
                         minimumFractionDigits: 2,
@@ -451,7 +471,8 @@ export default function CatalogPage() {
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -565,10 +586,27 @@ export default function CatalogPage() {
 
               {/* Price & Cart Actions */}
               <div className="rounded-xl bg-muted/30 p-4 border border-border space-y-4">
+                {(() => {
+                  const modalPromo = getCatalogPromoInfo(selectedProduct.id, Number(selectedProduct.price), activePromotions ?? []);
+                  return (
                 <div className="flex items-baseline justify-between gap-2 flex-wrap">
                   <div>
+                    {modalPromo && (
+                      <div className="mb-1 flex items-center gap-2">
+                        <PromoBadge text={modalPromo.badgeText} type={modalPromo.type} />
+                        {modalPromo.discountedPrice != null && (
+                          <span className="text-sm text-muted-foreground line-through tabular-nums">
+                            {Number(selectedProduct.price).toLocaleString("es-EC", {
+                              style: "currency",
+                              currency: "USD",
+                              minimumFractionDigits: 2,
+                            })}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <p className="text-3xl font-extrabold text-foreground tabular-nums">
-                      {Number(selectedProduct.price).toLocaleString("es-EC", {
+                      {Number(modalPromo?.discountedPrice ?? selectedProduct.price).toLocaleString("es-EC", {
                         style: "currency",
                         currency: "USD",
                         minimumFractionDigits: 2,
@@ -599,6 +637,8 @@ export default function CatalogPage() {
                     )}
                   </div>
                 </div>
+                  );
+                })()}
 
                 {isAuthenticated ? (
                   <div className="flex flex-col gap-3">

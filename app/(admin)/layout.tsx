@@ -26,6 +26,7 @@ import {
   Shield,
   Settings,
   ChevronDown,
+  BadgePercent,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -487,6 +488,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           )}
                         </div>
                       </li>
+                      {storeOpen && !sidebarCollapsed && (
+                        <li>
+                          <Link
+                            href="/admin/store/promotions"
+                            onClick={(e) => {
+                              if (pathname === "/admin/store/promotions") e.preventDefault();
+                              setSidebarOpen(false);
+                            }}
+                            aria-current={pathname.startsWith("/admin/store/promotions") ? "page" : undefined}
+                            className={`flex items-center gap-3 rounded-lg py-2 pl-8 pr-3 text-sm font-medium min-h-9
+                              transition-all duration-200 ease-out
+                              ${pathname.startsWith("/admin/store/promotions")
+                                ? "bg-brand-600 text-white shadow-sm"
+                                : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                              }`}
+                          >
+                            <BadgePercent
+                              aria-hidden="true"
+                              className={`shrink-0 h-4 w-4 ${pathname.startsWith("/admin/store/promotions") ? "text-white" : "text-muted-foreground"}`}
+                            />
+                            Promociones
+                          </Link>
+                        </li>
+                      )}
                       {storeOpen && !sidebarCollapsed && (
                         <li>
                           <Link

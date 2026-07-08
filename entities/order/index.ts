@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AppliedPromotionSchema } from "@entities/promotion";
 
 /**
  * Entity: Order
@@ -57,6 +58,8 @@ export const OrderItemSchema = z.object({
   quantity: z.number().positive(),
   unit_price: z.number().nonnegative(),
   subtotal: z.number().nonnegative(),
+  /** Descuento informativo por línea; unit_price y subtotal quedan BRUTOS. */
+  discount_amount: z.number().nonnegative().default(0).optional(),
 });
 
 export type OrderItem = z.infer<typeof OrderItemSchema>;
@@ -66,7 +69,10 @@ export const OrderSchema = z.object({
   user_id: z.string().uuid(),
   status: OrderStatusEnum,
   fulfillment_type: FulfillmentTypeEnum.default("ENVIO"),
+  /** Total NETO (bruto − discount_total). */
   total: z.number().nonnegative(),
+  discount_total: z.number().nonnegative().default(0).optional(),
+  applied_promotions: z.array(AppliedPromotionSchema).nullable().optional(),
   payment_receipt_url: z.string().url().optional(),
   payment_method: PaymentMethodEnum.nullable().optional(),
   delivery_date: z.string().nullable().optional(),

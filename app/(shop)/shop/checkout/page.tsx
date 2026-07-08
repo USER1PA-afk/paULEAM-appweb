@@ -3,7 +3,9 @@
 import { useCart, useCheckout, pickupCode, type CartItem } from "@features/checkout/hooks";
 import { PaymentMethodSelector } from "@features/checkout/components/PaymentMethodSelector";
 import { useAuth } from "@features/auth/hooks";
-import { useState } from "react";
+import { useActivePromotions } from "@features/promotions/hooks";
+import { applyPromotions, round2 } from "@features/promotions/lib/apply-promotions";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   LockKeyhole,
@@ -24,6 +26,7 @@ interface ReceiptSnapshot {
   orderId: string;
   date: string;
   total: number;
+  discountTotal: number;
   items: CartItem[];
   receiptUrl?: string | null;
   fulfillmentType: "ENVIO" | "RETIRO_EN_PLANTA";
@@ -33,6 +36,12 @@ export default function CheckoutPage() {
   const { isAuthenticated, user } = useAuth();
   const { items, total, isEmpty, clearCart } = useCart(user?.id ?? null);
   const { submitOrder, loading, error } = useCheckout();
+  const { data: activePromotions } = useActivePromotions();
+  const promoResult = useMemo(
+    () => applyPromotions(items, activePromotions ?? []),
+    [items, activePromotions]
+  );
+  const netTotal = round2(total - promoResult.discountTotal);
 
   const [fulfillmentType, setFulfillmentType] = useState<"ENVIO" | "RETIRO_EN_PLANTA">("RETIRO_EN_PLANTA");
   const [address, setAddress] = useState("");
@@ -154,7 +163,15 @@ export default function CheckoutPage() {
             </div>
 
             {/* Total */}
-            <div className="flex justify-between items-center pt-4 border-t border-border">
+            {receiptData.discountTotal > 0 && (
+              <div className="flex justify-between items-center pt-4 border-t border-border text-sm text-emerald-600 dark:text-emerald-400">
+                <span className="font-medium">Descuentos aplicados</span>
+                <span className="font-medium tabular-nums">
+                  −{formatCurrency(receiptData.discountTotal)}
+                </span>
+              </div>
+            )}
+            <div className={`flex justify-between items-center ${receiptData.discountTotal > 0 ? "pt-2" : "pt-4 border-t border-border"}`}>
               <span className="text-base font-bold text-foreground">Total a Pagar</span>
               <span className="text-xl font-bold tabular-nums text-foreground">
                 {formatCurrency(receiptData.total)}
@@ -211,14 +228,21 @@ export default function CheckoutPage() {
 
     const snapshot = [...items];
 
+    const lineDiscounts = Object.fromEntries(
+      Object.entries(promoResult.lineDiscounts).map(([pid, l]) => [pid, l.discount])
+    );
+
     const result = await submitOrder({
       items,
-      total,
+      total: netTotal,
       shippingAddress: address,
       paymentReceipt: receipt,
       paymentMethod,
       fulfillmentType,
       notes,
+      discountTotal: promoResult.discountTotal,
+      appliedPromotions: promoResult.appliedPromos,
+      lineDiscounts,
     });
 
     if (!result.error && result.data) {
@@ -226,6 +250,7 @@ export default function CheckoutPage() {
         orderId: result.data.id,
         date: result.data.created_at ?? new Date().toISOString(),
         total: result.data.total,
+        discountTotal: promoResult.discountTotal,
         items: snapshot,
         receiptUrl: result.data.payment_receipt_url,
         fulfillmentType,
@@ -248,19 +273,33 @@ export default function CheckoutPage() {
           <h3 className="font-semibold text-foreground mb-3">Resumen de Orden</h3>
           <div className="space-y-2">
             {items.map((item) => (
-              <div key={item.product_id} className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {item.name} × {item.quantity} {item.unit}
-                </span>
-                <span className="font-medium tabular-nums">
-                  {formatCurrency(item.price * item.quantity)}
-                </span>
+              <div key={item.product_id}>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {item.name} × {item.quantity} {item.unit}
+                  </span>
+                  <span className="font-medium tabular-nums">
+                    {formatCurrency(item.price * item.quantity)}
+                  </span>
+                </div>
+                {promoResult.lineDiscounts[item.product_id] && (
+                  <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 text-right">
+                    −{formatCurrency(promoResult.lineDiscounts[item.product_id].discount)}{" "}
+                    ({promoResult.lineDiscounts[item.product_id].promoNames.join(", ")})
+                  </p>
+                )}
               </div>
             ))}
           </div>
+          {promoResult.discountTotal > 0 && (
+            <div className="mt-3 flex justify-between border-t border-border pt-3 text-sm text-emerald-600 dark:text-emerald-400">
+              <span>Descuentos</span>
+              <span className="font-medium tabular-nums">−{formatCurrency(promoResult.discountTotal)}</span>
+            </div>
+          )}
           <div className="mt-3 flex justify-between border-t border-border pt-3 font-bold">
             <span>Total</span>
-            <span className="tabular-nums">{formatCurrency(total)}</span>
+            <span className="tabular-nums">{formatCurrency(netTotal)}</span>
           </div>
         </div>
 

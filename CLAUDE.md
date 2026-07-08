@@ -36,10 +36,14 @@ paULEAM-appweb/
 │   │       │       └── edit/page.tsx
 │   │       ├── products/page.tsx     # All 5 product types (ERP)
 │   │       ├── store/
-│   │       │   └── products/
-│   │       │       ├── page.tsx      # E-commerce product list
+│   │       │   ├── products/
+│   │       │   │   ├── page.tsx      # E-commerce product list
+│   │       │   │   ├── new/page.tsx
+│   │       │   │   └── [id]/page.tsx # Edit product + image gallery
+│   │       │   └── promotions/
+│   │       │       ├── page.tsx      # Promotions list (toggle/edit/delete)
 │   │       │       ├── new/page.tsx
-│   │       │       └── [id]/page.tsx # Edit product + image gallery
+│   │       │       └── [id]/page.tsx # Edit promotion
 │   │       ├── suppliers/page.tsx
 │   │       ├── orders/page.tsx       # Customer order approval workflow
 │   │       ├── users/page.tsx
@@ -86,6 +90,10 @@ paULEAM-appweb/
 │   ├── store-products/               # E-commerce product management
 │   │   ├── components/               # ProductCarousel, StoreProductCard, ProductImageGallery
 │   │   └── hooks/                    # useStoreProducts(), useStoreProductDetail(), useStoreProductMutations(), useProductImages()
+│   ├── promotions/                   # Promociones tienda online (NO aplican al POS)
+│   │   ├── components/               # PromoBadge, PromotionForm
+│   │   ├── hooks/                    # useActivePromotions(), usePromotions(), usePromotion(), usePromotionMutations(), useProductOptions()
+│   │   └── lib/                      # applyPromotions(), getCatalogPromoInfo(), promotionConfigSummary(), round2()
 │   ├── suppliers/                    # External supplier management (not users)
 │   │   ├── components/               # SupplierSelect, SupplierQuickAddForm, SuppliersTable
 │   │   └── hooks/                    # useSuppliers(), useAllSuppliers(), useSupplierActions()
@@ -98,7 +106,8 @@ paULEAM-appweb/
 │   ├── recipe/                       # RecipeSchema, RecipeIngredientSchema (with ingredient_role), InstructionStepSchema, IngredientRoleEnum
 │   ├── production/                   # ProductionStatusEnum, ProductionOrderSchema (with batch_number, cost), ScaledIngredient (with cost)
 │   ├── packaging/                    # PackagingStatusEnum, PackagingTemplateSchema, PackagingOrderSchema, PackagingOrderPreview
-│   ├── order/                        # OrderStatusEnum, OrderSchema, OrderItemSchema
+│   ├── order/                        # OrderStatusEnum, OrderSchema (discount_total, applied_promotions), OrderItemSchema (discount_amount)
+│   ├── promotion/                    # PromotionTypeEnum (4 tipos), PromotionSchema, CreatePromotionSchema, AppliedPromotionSchema, PROMOTION_TYPE_LABELS/COLORS
 │   ├── supplier/                     # SupplierSchema, ProductSupplierSchema
 │   └── audit/                        # AuditActionEnum, AuditEntityTypeEnum, AuditLogSchema, AUDIT_ACTION_LABELS/COLORS
 ├── shared/
@@ -146,8 +155,9 @@ paULEAM-appweb/
 19. **Supplier scope:** All PURCHASABLE_TYPES (MATERIA_PRIMA, INSUMO, ENVASE_EMPAQUE, OTRO) can have suppliers. Not just MATERIA_PRIMA.
 20. **Audit module append-only:** `audit_log` never uses UPDATE or DELETE. The only write path is `log_audit_event()` RPC (SECURITY DEFINER). Audit failures must be silenced with `console.warn` — they must never block the primary operation.
 21. **Audit events from frontend:** Login/logout/login-failed events are logged in `features/auth/hooks/index.ts` via `useAuditActions().logEvent()`. Data-change events (products, status changes, role changes) are logged automatically by PostgreSQL triggers.
-22. **Query cache + invalidation:** List hooks (`useStockSummary`, `useInventoryLedger`, `useProductionOrders`, `useOrderManagement`) use `useCachedQuery` (`shared/hooks/use-cached-query.ts`) — in-memory stale-while-revalidate cache (60s TTL, deduped in-flight). Any mutation that writes to a cached table MUST call `invalidateCache(...)` with the affected keys (`"stock_summary"`, `"inventory_ledger"`, `"production_orders"`, `"orders_admin"`) or the UI shows stale stock. `refetch()` forces network and syncs all mounted subscribers.
+22. **Query cache + invalidation:** List hooks (`useStockSummary`, `useInventoryLedger`, `useProductionOrders`, `useOrderManagement`, `usePromotions`, `useActivePromotions`) use `useCachedQuery` (`shared/hooks/use-cached-query.ts`) — in-memory stale-while-revalidate cache (60s TTL, deduped in-flight). Any mutation that writes to a cached table MUST call `invalidateCache(...)` with the affected keys (`"stock_summary"`, `"inventory_ledger"`, `"production_orders"`, `"orders_admin"`, `"promotions_admin"`, `"active_promotions"`) or the UI shows stale stock. `refetch()` forces network and syncs all mounted subscribers.
 23. **No re-navigation on active nav items:** Admin sidebar/header links call `e.preventDefault()` when the target equals the current `pathname` — re-navigating to the same route refetches the RSC payload, re-requests the manifest, and remounts the page (repeating every Insforge query). Follow the same pattern in new nav components.
+24. **Promotions are shop-only and price-only:** Promociones (`promotions` + `promotion_products`) aplican SOLO en `/shop` (catálogo, carrito, checkout) — el POS y `process_kiosk_sale` cobran precio completo. Afectan PRECIO, nunca cantidad: reservas, aprobación y egreso de stock no cambian. `order_items.unit_price`/`subtotal` quedan BRUTOS; `orders.total` es NETO con el descuento en `orders.discount_total` + snapshot `orders.applied_promotions` (JSONB). El motor de descuentos es `features/promotions/lib/apply-promotions.ts` (combos primero y excluyentes; luego el mejor descuento por línea, sin stacking; redondeo a 2 decimales por línea).
 
 ## Auth System Architecture — Two-Track Design
 
@@ -260,7 +270,7 @@ storage.from(bucket).remove(path)                  // async → { data, error }
 - **SDK:** `@insforge/sdk@^1.2.5`
 - **Docs:** https://insforge.dev/skill.md
 
-## Database — 17 Tables
+## Database — 19 Tables
 
 | Table | Purpose |
 |-------|---------|
@@ -276,12 +286,14 @@ storage.from(bucket).remove(path)                  // async → { data, error }
 | `packaging_templates` | Bulk→presentation conversion definitions; links finished_product_id → output_product_id |
 | `packaging_template_materials` | ENVASE_EMPAQUE materials per template with qty_per_unit |
 | `packaging_orders` | Packaging runs; trigger on COMPLETADA atomically adjusts stock |
-| `orders` | E-commerce and kiosk sales; has `sale_origin` (ECOMMERCE/KIOSK), `payment_method` |
-| `order_items` | Line items per order (qty in sales/commercial units) |
+| `orders` | E-commerce and kiosk sales; has `sale_origin` (ECOMMERCE/KIOSK), `payment_method`, `discount_total`, `applied_promotions` (JSONB snapshot) |
+| `order_items` | Line items per order (qty in sales/commercial units); `unit_price`/`subtotal` BRUTOS + `discount_amount` informativo |
 | `stock_reservations` | 15-min cart holds with `expires_at` |
 | `suppliers` | External suppliers (not users); N:M via product_suppliers |
 | `product_suppliers` | Maps products to suppliers; one `is_primary` per product |
 | `audit_log` | Append-only audit trail; action, entity_type, entity_id, old_values, new_values, user_id, created_at |
+| `promotions` | Promociones tienda online: type (DESCUENTO_SIMPLE/POR_CANTIDAD/NXM/COMBO), config por tipo con CHECK excluyente, is_active, start/end_date |
+| `promotion_products` | Productos por promoción (qty requerida para COMBO; 1 fila qty=1 para el resto); CASCADE on delete |
 
 **Views:** `stock_summary` (balance per product), `inventory_ledger_view` (enriched with supplier + packaging info, `reference_type_label`), `audit_log_view` (audit_log joined to profiles for `user_name`)
 
@@ -297,6 +309,7 @@ storage.from(bucket).remove(path)                  // async → { data, error }
 - `declare_production_waste(p_order_id, p_waste_qty, p_waste_notes)` → inserts EGRESO MERMA, updates waste_quantity on order
 - `next_batch_number(prefix)` → auto-generates `PROD-YYYY-NNNN` or `EMP-YYYY-NNNN`
 - `log_audit_event(p_user_id, p_action, p_entity_type, p_entity_id, p_old_values, p_new_values, p_details)` → UUID (SECURITY DEFINER, used by triggers and frontend)
+- `get_active_promotions()` → JSONB (promos activas/en ventana + sus productos; granted a anon — alimenta catálogo/carrito/checkout)
 
 **Triggers:**
 - `trg_production_completion` — fires on production_orders status → COMPLETADA; scales ingredients, validates stock, inserts EGRESO+INGRESO, calculates production_cost
@@ -384,6 +397,7 @@ export function pickupCode(orderId: string): string {
 | `20260525000002_production-enrichment.sql` | ⏳ Pending | batch_number, production_cost, declare_production_waste RPC |
 | `20260525000003_packaging-module.sql` | ⏳ Pending | packaging_templates, packaging_template_materials, packaging_orders |
 | `20260601000000_audit-module.sql` | ⏳ Pending | audit_log table, audit_log_view, log_audit_event RPC, triggers on products/production_orders/packaging_orders/profiles |
+| `20260708000005_promotions-module.sql` | ⏳ Pending | promotions + promotion_products, RLS, get_active_promotions RPC, orders.discount_total/applied_promotions, order_items.discount_amount |
 
 ## tsconfig Path Aliases
 

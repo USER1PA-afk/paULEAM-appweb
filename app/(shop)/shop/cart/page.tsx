@@ -2,10 +2,12 @@
 
 import { useCart } from "@features/checkout/hooks";
 import { useAuth } from "@features/auth/hooks";
+import { useActivePromotions } from "@features/promotions/hooks";
+import { applyPromotions, round2 } from "@features/promotions/lib/apply-promotions";
 import { DeliveryInfoBanner } from "@features/checkout/components/DeliveryInfoBanner";
 import { QuantityStepper } from "@features/checkout/components/QuantityStepper";
 import { getInsforge } from "@shared/lib/insforge/client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, Package, X } from "lucide-react";
@@ -14,6 +16,11 @@ import { formatCurrency } from "@shared/lib/utils";
 export default function CartPage() {
   const { user } = useAuth();
   const { items, total, itemCount, removeItem, updateQuantity, clearCart, isEmpty, loading } = useCart(user?.id ?? null);
+  const { data: activePromotions } = useActivePromotions();
+  const promoResult = useMemo(
+    () => applyPromotions(items, activePromotions ?? []),
+    [items, activePromotions]
+  );
   const insforge = getInsforge();
 
   // Stock disponible (físico) por producto, para topar el stepper. El valor
@@ -159,6 +166,12 @@ export default function CartPage() {
                     </p>
                   </div>
                 </div>
+                {promoResult.lineDiscounts[item.product_id] && (
+                  <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 text-right">
+                    −{formatCurrency(promoResult.lineDiscounts[item.product_id].discount)}{" "}
+                    ({promoResult.lineDiscounts[item.product_id].promoNames.join(", ")})
+                  </p>
+                )}
               </div>
             </div>
           ))}
@@ -182,6 +195,12 @@ export default function CartPage() {
                 <span className="text-muted-foreground">Subtotal</span>
                 <span className="font-medium tabular-nums">{formatCurrency(total)}</span>
               </div>
+              {promoResult.discountTotal > 0 && (
+                <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400">
+                  <span>Descuentos</span>
+                  <span className="font-medium tabular-nums">−{formatCurrency(promoResult.discountTotal)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Envío</span>
                 <span className="text-xs text-muted-foreground">A calcular</span>
@@ -189,7 +208,7 @@ export default function CartPage() {
             </div>
             <div className="mt-4 flex justify-between border-t border-border pt-4 text-base font-bold">
               <span>Total</span>
-              <span className="tabular-nums">{formatCurrency(total)}</span>
+              <span className="tabular-nums">{formatCurrency(round2(total - promoResult.discountTotal))}</span>
             </div>
 
             <Link

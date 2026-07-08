@@ -4,6 +4,7 @@ import { getInsforge } from "@shared/lib/insforge/client";
 import { getNextDeliveryWindow } from "@shared/lib/utils";
 import { useState, useEffect, useCallback } from "react";
 import { useCachedQuery, invalidateCache } from "@shared/hooks/use-cached-query";
+import type { AppliedPromotion } from "@entities/promotion";
 
 export interface CartItem {
   product_id: string;
@@ -53,6 +54,10 @@ interface Order {
   invoice_generated_at: string | null;
   /** 'ECOMMERCE' (default) or 'KIOSK' for POS sales. */
   sale_origin: string | null;
+  /** Descuento total por promociones; total ya lo tiene restado (NETO). */
+  discount_total?: number;
+  /** Snapshot JSONB de promos aplicadas al momento del checkout. */
+  applied_promotions?: AppliedPromotion[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -63,6 +68,7 @@ interface OrderItemDetail {
   quantity: number;
   unit_price: number;
   subtotal: number;
+  discount_amount?: number;
   products: {
     name: string;
     sku: string;
@@ -403,12 +409,19 @@ export function useCheckout() {
   const submitOrder = useCallback(
     async (params: {
       items: CartItem[];
+      /** Total NETO (bruto − descuentos). */
       total: number;
       shippingAddress: string;
       paymentReceipt: File;
       paymentMethod: string;
       fulfillmentType: "ENVIO" | "RETIRO_EN_PLANTA";
       notes?: string;
+      /** Descuento total por promociones (0 si no hay). */
+      discountTotal?: number;
+      /** Snapshot de promos aplicadas → orders.applied_promotions. */
+      appliedPromotions?: AppliedPromotion[];
+      /** Descuento informativo por línea (product_id → $). */
+      lineDiscounts?: Record<string, number>;
     }) => {
       setLoading(true);
       setError(null);
@@ -457,6 +470,15 @@ export function useCheckout() {
             status: "PAGADO",
             fulfillment_type: params.fulfillmentType,
             total: params.total,
+            // Columnas de la migración 20260708000005 — solo se envían cuando
+            // hay descuento real. Sin la migración no pueden existir promos
+            // (la tabla no existe), así que el checkout sigue funcionando.
+            ...(params.discountTotal && params.discountTotal > 0
+              ? {
+                  discount_total: params.discountTotal,
+                  applied_promotions: params.appliedPromotions ?? null,
+                }
+              : {}),
             payment_receipt_url: publicUrl,
             payment_method: params.paymentMethod,
             delivery_date: deliveryDateStr,
@@ -471,12 +493,19 @@ export function useCheckout() {
         const orderId = (order as Order).id;
 
         // 5. Crear los items
+        // unit_price y subtotal quedan BRUTOS (precio original); el descuento
+        // vive a nivel de orden + discount_amount informativo por línea.
+        // discount_amount solo se envía cuando hay descuentos (ver nota arriba).
+        const hasDiscounts = !!params.discountTotal && params.discountTotal > 0;
         const orderItems = params.items.map((item) => ({
           order_id: orderId,
           product_id: item.product_id,
           quantity: item.quantity,
           unit_price: item.price,
           subtotal: item.price * item.quantity,
+          ...(hasDiscounts
+            ? { discount_amount: params.lineDiscounts?.[item.product_id] ?? 0 }
+            : {}),
         }));
 
         const { error: itemsError } = await insforge.database
