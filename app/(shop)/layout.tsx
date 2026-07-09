@@ -7,7 +7,7 @@ import { useAuth, useRole } from "@features/auth/hooks";
 import { useCart } from "@features/checkout/hooks";
 import { ThemeToggle } from "@shared/components/theme-toggle";
 import { useState } from "react";
-import { ShoppingCart, Menu, X, User, LayoutDashboard } from "lucide-react";
+import { ShoppingCart, Menu, X, User, LayoutDashboard, PackageCheck } from "lucide-react";
 import { Footer } from "@shared/components/footer";
 
 export default function ShopLayout({
@@ -77,6 +77,20 @@ export default function ShopLayout({
                 }`}
               >
                 Mis Pedidos
+              </Link>
+            )}
+
+            {isAuthenticated && (
+              <Link
+                href="/shop/reservations"
+                aria-current={pathname === "/shop/reservations" ? "page" : undefined}
+                className={`text-sm font-medium transition-colors ${
+                  pathname === "/shop/reservations"
+                    ? "text-brand-600"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Mis Reservas
               </Link>
             )}
 
@@ -202,6 +216,21 @@ export default function ShopLayout({
                 }`}
               >
                 Mis Pedidos
+              </Link>
+            )}
+
+            {isAuthenticated && (
+              <Link
+                href="/shop/reservations"
+                onClick={close}
+                className={`flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  pathname === "/shop/reservations"
+                    ? "bg-brand-50 dark:bg-brand-900/20 text-brand-600"
+                    : "text-foreground hover:bg-muted"
+                }`}
+              >
+                <PackageCheck aria-hidden="true" className="h-4 w-4 mr-2" />
+                Mis Reservas
               </Link>
             )}
 

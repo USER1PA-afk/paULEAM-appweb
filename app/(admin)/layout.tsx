@@ -3,8 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth, useRole } from "@features/auth/hooks";
 import { useState, useEffect } from "react";
+import { useAuth, useRole } from "@features/auth/hooks";
+import { useCart } from "@features/checkout/hooks";
+import { useNotifications } from "@features/notifications/hooks";
 import { ThemeToggle } from "@shared/components/theme-toggle";
 import { useSessionGuard } from "@shared/hooks/use-session-guard";
 
@@ -36,6 +38,7 @@ const NAV_ITEMS = [
   { label: "Recetas",     href: "/admin/recipes",     icon: ClipboardList,   roles: ["admin"] },
   { label: "Inventario",  href: "/admin/inventory",   icon: Boxes,           roles: ["admin", "operario"] },
   { label: "Producción",  href: "/admin/production",  icon: Factory,         roles: ["admin", "operario"] },
+  { label: "Producción bajo demanda", href: "/admin/production-requests", icon: Factory, roles: ["admin", "operario"] },
   { label: "Empaque",     href: "/admin/packaging",   icon: PackageOpen,     roles: ["admin", "operario"] },
   { label: "Usuarios",    href: "/admin/users",       icon: Users,           roles: ["admin"] },
   { label: "Auditoría",  href: "/admin/audit",       icon: Shield,          roles: ["admin"] },
@@ -115,13 +118,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [storeOpen,        setStoreOpen]        = useState(() =>
     pathname.startsWith("/admin/store") || pathname === "/shop/catalog"
   );
-  const [notifications] = useState([
-    { id: 1, text: "Nueva orden de venta recibida",        time: "Hace 2 min",  read: false, href: "/admin/orders"     },
-    { id: 2, text: "Stock bajo: Harina de trigo",          time: "Hace 15 min", read: false, href: "/admin/inventory"  },
-    { id: 3, text: "Orden de producción #042 completada",  time: "Hace 1 hora", read: true,  href: "/admin/production" },
-    { id: 4, text: "Nuevo usuario registrado",             time: "Hace 3 horas",read: true,  href: "/admin/users"      },
-  ]);
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
 
   const handleHamburgerClick = () => {
     if (window.innerWidth >= 1024) {
@@ -305,32 +302,45 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                     <span className="text-sm font-semibold text-foreground">Notificaciones</span>
                     {unreadCount > 0 && (
-                      <span className="rounded-full bg-brand-100 dark:bg-brand-900/40
-                        px-2 py-0.5 text-[10px] font-bold text-brand-600 dark:text-brand-300">
-                        {unreadCount} nuevas
-                      </span>
+                      <button
+                        onClick={() => markAllRead()}
+                        className="rounded-full bg-brand-100 dark:bg-brand-900/40
+                          px-2 py-0.5 text-[10px] font-bold text-brand-600 dark:text-brand-300
+                          hover:bg-brand-200 dark:hover:bg-brand-900/60 transition-colors"
+                      >
+                        Marcar leídas
+                      </button>
                     )}
                   </div>
                   {/* Lista */}
                   <ul className="divide-y divide-border max-h-72 overflow-y-auto">
-                    {notifications.map((n) => (
-                      <li key={n.id}>
-                        <Link
-                          href={n.href}
-                          onClick={() => setNotifOpen(false)}
-                          className={`flex items-start gap-3 px-4 py-3 text-sm
-                            transition-colors hover:bg-muted/50 cursor-pointer
-                            ${n.read ? "opacity-60" : ""}`}
-                        >
-                          <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full
-                            ${n.read ? "bg-muted-foreground/30" : "bg-brand-600"}`} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-foreground leading-snug">{n.text}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">{n.time}</p>
-                          </div>
-                        </Link>
+                    {notifications.length === 0 ? (
+                      <li className="px-4 py-6 text-center text-sm text-muted-foreground">
+                        No hay notificaciones
                       </li>
-                    ))}
+                    ) : (
+                      notifications.map((n) => (
+                        <li key={n.id}>
+                          <Link
+                            href={n.title.includes("producción") ? "/admin/production-requests" : "/admin/notifications"}
+                            onClick={() => { markRead(n.id); setNotifOpen(false); }}
+                            className={`flex items-start gap-3 px-4 py-3 text-sm
+                              transition-colors hover:bg-muted/50 cursor-pointer
+                              ${n.is_read ? "opacity-60" : ""}`}
+                          >
+                            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full
+                              ${n.is_read ? "bg-muted-foreground/30" : "bg-brand-600"}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-foreground leading-snug font-medium">{n.title}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{n.message}</p>
+                              <p className="text-[10px] text-muted-foreground/60 mt-1">
+                                {new Date(n.created_at).toLocaleString("es-EC", { dateStyle: "short", timeStyle: "short" })}
+                              </p>
+                            </div>
+                          </Link>
+                        </li>
+                      ))
+                    )}
                   </ul>
                   {/* Footer */}
                   <div className="px-4 py-2.5 border-t border-border">
