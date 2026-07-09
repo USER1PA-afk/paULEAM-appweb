@@ -576,13 +576,6 @@ export default function CatalogPage() {
 
             {/* Right Side: Details */}
             <div className="w-full md:w-1/2 flex flex-col gap-5 justify-between">
-              {selectedProduct.weight && (
-                <div className="flex items-center gap-2">
-                  <p className="text-[10px] font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 px-2 py-0.5 rounded">
-                    Peso: {selectedProduct.weight} {selectedProduct.unit}
-                  </p>
-                </div>
-              )}
 
               {/* Price & Cart Actions */}
               <div className="rounded-xl bg-muted/30 p-4 border border-border space-y-4">
