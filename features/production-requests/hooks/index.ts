@@ -63,11 +63,35 @@ export function useProductionRequests() {
     try {
       const { data, error: qErr } = await insforge.database
         .from("production_requests")
-        .select("*, products(id, name, sku, price, conversion_factor, sales_unit_name, unit, image_url), profiles(full_name, email)")
+        .select("*, products(id, name, sku, price, conversion_factor, sales_unit_name, unit, image_url)")
         .order("created_at", { ascending: false });
 
       if (qErr) throw qErr;
-      setRequests((data as ProductionRequest[]) ?? []);
+      const baseRequests = (data as Omit<ProductionRequest, "profiles">[]) ?? [];
+
+      const customerIds = Array.from(new Set(baseRequests.map((r) => r.customer_id).filter(Boolean)));
+      const profileMap = new Map<string, { full_name: string | null; email: string | null }>();
+      if (customerIds.length > 0) {
+        const { data: profileData, error: profileErr } = await insforge.database
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", customerIds);
+
+        if (profileErr) {
+          console.error("Error al cargar perfiles de solicitudes:", profileErr);
+        } else {
+          ((profileData ?? []) as { id: string; full_name: string | null; email: string | null }[]).forEach((p) => {
+            profileMap.set(p.id, { full_name: p.full_name, email: p.email });
+          });
+        }
+      }
+
+      setRequests(
+        baseRequests.map((r) => ({
+          ...r,
+          profiles: profileMap.get(r.customer_id) ?? null,
+        })) as ProductionRequest[]
+      );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al cargar solicitudes");
     } finally {
@@ -86,15 +110,17 @@ export function useProductionRequests() {
 
         const { data, error: insertErr } = await insforge.database
           .from("production_requests")
-          .insert({
-            customer_id: userData.user.id,
-            product_id: input.product_id,
-            quantity_requested: input.quantity_requested,
-            total_amount: input.total_amount,
-            receipt_url: input.receipt_path,
-            fulfillment_type: input.fulfillment_type,
-            status: "PROPOSAL",
-          })
+          .insert([
+            {
+              customer_id: userData.user.id,
+              product_id: input.product_id,
+              quantity_requested: input.quantity_requested,
+              total_amount: input.total_amount,
+              receipt_url: input.receipt_path,
+              fulfillment_type: input.fulfillment_type,
+              status: "PROPOSAL",
+            },
+          ])
           .select()
           .single();
 
