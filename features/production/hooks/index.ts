@@ -1,76 +1,40 @@
 "use client";
 
 import { getInsforge } from "@shared/lib/insforge/client";
-import { useState, useEffect, useCallback } from "react";
-
-interface ProductionOrder {
-  id: string;
-  recipe_id: string;
-  target_yield: number;
-  status: "BORRADOR" | "EN_PROCESO" | "COMPLETADA" | "CANCELADA";
-  notes: string | null;
-  completed_at: string | null;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Recipe {
-  id: string;
-  name: string;
-  output_product_id: string;
-  yield_base: number;
-  yield_unit: string;
-  description: string | null;
-  is_active: boolean;
-}
-
-interface RecipeIngredient {
-  id: string;
-  recipe_id: string;
-  product_id: string;
-  quantity: number;
-  unit: string;
-}
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useCachedQuery, invalidateCache } from "@shared/hooks/use-cached-query";
+import { ProductionOrder, ProductionStatus } from "@entities/production";
+import { Recipe, RecipeIngredient } from "@entities/recipe";
+import { calculateScaleFactor, scaleIngredientsWithStock, calculateTotalProductionCost } from "../lib";
+import { ScaledIngredient } from "@entities/production";
 
 /**
  * Hook para gestionar órdenes de producción.
  */
 export function useProductionOrders() {
-  const [orders, setOrders] = useState<ProductionOrder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const insforge = getInsforge();
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error: queryError } = await insforge.database
-        .from("production_orders")
-        .select("*")
-        .order("created_at", { ascending: false });
+  const queryOrders = useCallback(async () => {
+    const { data, error: queryError } = await insforge.database
+      .from("production_orders")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      if (queryError) throw queryError;
-      setOrders((data as ProductionOrder[]) ?? []);
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Error al cargar órdenes"
-      );
-    } finally {
-      setLoading(false);
-    }
+    if (queryError) throw queryError;
+    return (data as ProductionOrder[]) ?? [];
   }, [insforge]);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+  const { data, loading, error, refetch: fetchOrders } =
+    useCachedQuery<ProductionOrder[]>("production_orders", queryOrders);
+  const orders = useMemo(() => data ?? [], [data]);
 
   const createOrder = useCallback(
     async (order: {
       recipe_id: string;
       target_yield: number;
-      notes?: string;
+      batch_number?: string | null;
+      scheduled_date?: string | null;
+      notes?: string | null;
     }) => {
       try {
         const { data, error: insertError } = await insforge.database
@@ -101,45 +65,124 @@ export function useProductionOrders() {
   const completeOrder = useCallback(
     async (orderId: string) => {
       try {
-        const { data, error: updateError } = await insforge.database
+        const { error: updateError } = await insforge.database
           .from("production_orders")
           .update({ status: "COMPLETADA" })
-          .eq("id", orderId)
-          .select();
+          .eq("id", orderId);
 
         if (updateError) throw updateError;
+        // El trigger movió stock (EGRESO ingredientes + INGRESO terminado).
+        invalidateCache("stock_summary", "inventory_ledger");
         await fetchOrders();
-        return { data, error: null };
+        return { data: null, error: null };
       } catch (err: unknown) {
-        return {
-          data: null,
-          error:
-            err instanceof Error ? err.message : "Error al completar orden",
-        };
+        const msg =
+          err instanceof Error
+            ? err.message
+            : (err as { message?: string })?.message ?? "Error al completar orden";
+        return { data: null, error: msg };
       }
     },
     [insforge, fetchOrders]
   );
 
   const updateStatus = useCallback(
-    async (orderId: string, status: ProductionOrder["status"]) => {
+    async (orderId: string, status: ProductionStatus) => {
       try {
-        const { data, error: updateError } = await insforge.database
+        const { error: updateError } = await insforge.database
           .from("production_orders")
           .update({ status })
-          .eq("id", orderId)
-          .select();
+          .eq("id", orderId);
+
+        if (updateError) throw updateError;
+        // COMPLETADA dispara el trigger que mueve stock.
+        if (status === "COMPLETADA") invalidateCache("stock_summary", "inventory_ledger");
+        await fetchOrders();
+        return { data: null, error: null };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? "Error al actualizar estado";
+        return { data: null, error: msg };
+      }
+    },
+    [insforge, fetchOrders]
+  );
+
+  /**
+   * Cancelar orden — solo admin. Cambia estado a CANCELADA.
+   * No activa el trigger de producción (solo aplica para COMPLETADA).
+   * Bloquea cancelación de órdenes ya completadas (usar reverseOrder en su lugar).
+   */
+  const cancelOrder = useCallback(
+    async (orderId: string) => {
+      try {
+        const existing = orders.find((o) => o.id === orderId);
+        if (existing?.status === "COMPLETADA") {
+          return { data: null, error: "No se puede cancelar una orden completada. Use Revertir primero." };
+        }
+
+        const { error: updateError } = await insforge.database
+          .from("production_orders")
+          .update({ status: "CANCELADA" })
+          .eq("id", orderId);
 
         if (updateError) throw updateError;
         await fetchOrders();
-        return { data, error: null };
+        return { data: null, error: null };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? "Error al cancelar orden";
+        return { data: null, error: msg };
+      }
+    },
+    [insforge, fetchOrders, orders]
+  );
+
+  /**
+   * Revertir orden completada — solo admin. Llama al RPC reverse_production_order
+   * que inserta contrapartidas AJUSTE por cada movimiento PRODUCCION y resetea
+   * la orden a BORRADOR.
+   */
+  const reverseOrder = useCallback(
+    async (orderId: string) => {
+      try {
+        const { error: rpcErr } = await insforge.database.rpc("reverse_production_order", {
+          p_order_id: orderId,
+        });
+
+        if (rpcErr) throw rpcErr;
+        // El RPC insertó contrapartidas AJUSTE — el stock cambió.
+        invalidateCache("stock_summary", "inventory_ledger");
+        await fetchOrders();
+        return { error: null };
       } catch (err: unknown) {
         return {
-          data: null,
-          error:
-            err instanceof Error
-              ? err.message
-              : "Error al actualizar estado",
+          error: err instanceof Error ? err.message : "Error al revertir orden",
+        };
+      }
+    },
+    [insforge, fetchOrders]
+  );
+
+  /**
+   * Declarar merma de una orden completada.
+   * Llama al RPC declare_production_waste que inserta un EGRESO MERMA.
+   */
+  const declareWaste = useCallback(
+    async (orderId: string, wasteQty: number, notes?: string) => {
+      try {
+        const { error: rpcErr } = await insforge.database.rpc("declare_production_waste", {
+          p_order_id: orderId,
+          p_waste_qty: wasteQty,
+          p_waste_notes: notes ?? null,
+        });
+
+        if (rpcErr) throw rpcErr;
+        // El RPC insertó un EGRESO MERMA — el stock cambió.
+        invalidateCache("stock_summary", "inventory_ledger");
+        await fetchOrders();
+        return { error: null };
+      } catch (err: unknown) {
+        return {
+          error: err instanceof Error ? err.message : "Error al declarar merma",
         };
       }
     },
@@ -153,6 +196,9 @@ export function useProductionOrders() {
     createOrder,
     completeOrder,
     updateStatus,
+    cancelOrder,
+    declareWaste,
+    reverseOrder,
     refetch: fetchOrders,
   };
 }
@@ -182,9 +228,8 @@ export function useRecipes() {
     }
   }, [insforge]);
 
-  useEffect(() => {
-    fetchRecipes();
-  }, [fetchRecipes]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchRecipes(); }, [fetchRecipes]);
 
   return { recipes, loading, refetch: fetchRecipes };
 }
@@ -197,40 +242,41 @@ export function useRecipeIngredients(recipeId: string | null) {
   const [loading, setLoading] = useState(false);
   const insforge = getInsforge();
 
-  useEffect(() => {
+  const fetchIngredients = useCallback(async () => {
     if (!recipeId) {
       setIngredients([]);
       return;
     }
 
     setLoading(true);
-    insforge.database
-      .from("recipe_ingredients")
-      .select("*")
-      .eq("recipe_id", recipeId)
-      .then(
-        ({ data }) => {
-          setIngredients((data as RecipeIngredient[]) ?? []);
-          setLoading(false);
-        },
-        () => {
-          setLoading(false);
-        }
-      );
+    try {
+      const { data } = await insforge.database
+        .from("recipe_ingredients")
+        .select("*")
+        .eq("recipe_id", recipeId);
+      setIngredients((data as RecipeIngredient[]) ?? []);
+    } catch {
+      setIngredients([]);
+    } finally {
+      setLoading(false);
+    }
   }, [recipeId, insforge]);
 
-  return { ingredients, loading };
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchIngredients(); }, [fetchIngredients]);
+
+  return { ingredients, loading, refetch: fetchIngredients };
 }
 
 /**
- * Calcula el factor de escala y las cantidades escaladas de ingredientes.
+ * Calcula el factor de escala y las cantidades escaladas de ingredientes (Legacy).
  */
 export function useRecipeScale(
   yieldBase: number,
   targetYield: number,
   ingredients: RecipeIngredient[]
 ) {
-  const scaleFactor = yieldBase > 0 ? targetYield / yieldBase : 0;
+  const scaleFactor = calculateScaleFactor(yieldBase, targetYield);
 
   const scaledIngredients = ingredients.map((ing) => ({
     ...ing,
@@ -238,4 +284,146 @@ export function useRecipeScale(
   }));
 
   return { scaleFactor, scaledIngredients };
+}
+
+/**
+ * Hook compuesto para el preview de escalado y validación de stock.
+ */
+export function useScalePreview(recipeId: string | null, targetYield: number) {
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
+  const [stockMap, setStockMap] = useState<Record<string, { stock_actual: number; unit: string; name: string; sku: string; cost_per_unit: number }>>({} as Record<string, { stock_actual: number; unit: string; name: string; sku: string; cost_per_unit: number }>);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const insforge = getInsforge();
+
+  useEffect(() => {
+    if (!recipeId || targetYield <= 0) {
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setRecipe(null);
+      setIngredients([]);
+      setStockMap({});
+      /* eslint-enable react-hooks/set-state-in-effect */
+      return;
+    }
+
+    let mounted = true;
+    setLoading(true);
+    setError(null);
+
+    async function loadData() {
+      try {
+        // 1. Cargar receta
+        const { data: recData, error: recErr } = await insforge.database
+          .from("recipes")
+          .select("*")
+          .eq("id", recipeId)
+          .single();
+          
+        if (recErr) throw recErr;
+        const recipeData = recData as Recipe;
+        
+        // 2. Cargar ingredientes
+        const { data: ingData, error: ingErr } = await insforge.database
+          .from("recipe_ingredients")
+          .select("*")
+          .eq("recipe_id", recipeId);
+          
+        if (ingErr) throw ingErr;
+        const ingredientsData = ingData as RecipeIngredient[];
+
+        // 3. Cargar stock solo para los ingredientes necesarios
+        const productIds = ingredientsData.map(i => i.product_id);
+        const map: Record<string, { stock_actual: number; unit: string; name: string; sku: string; cost_per_unit: number }> = {};
+
+        if (productIds.length > 0) {
+          const { data: stockData, error: stockErr } = await insforge.database
+            .from("stock_summary")
+            .select("*")
+            .in("product_id", productIds);
+
+          if (stockErr) throw stockErr;
+
+          // Enriquecer con costo unitario
+          const { data: costData } = await insforge.database
+            .from("products")
+            .select("id, cost_per_unit")
+            .in("id", productIds);
+
+          const costMap: Record<string, number> = {};
+          ((costData as { id: string; cost_per_unit: number }[]) ?? []).forEach(c => {
+            costMap[c.id] = c.cost_per_unit ?? 0;
+          });
+
+          (stockData as { product_id: string; stock_actual: number; unit: string; name: string; sku: string }[]).forEach(s => {
+            map[s.product_id] = { ...s, cost_per_unit: costMap[s.product_id] ?? 0 };
+          });
+        }
+
+        if (mounted) {
+          setRecipe(recipeData);
+          setIngredients(ingredientsData);
+          setStockMap(map);
+        }
+      } catch (err: unknown) {
+        if (mounted) setError(err instanceof Error ? err.message : "Error cargando datos para preview");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    loadData();
+
+    return () => { mounted = false; };
+  }, [recipeId, targetYield, insforge]);
+
+  const scaleFactor = recipe ? calculateScaleFactor(recipe.yield_base, targetYield) : 0;
+
+  const scaledIngredients: ScaledIngredient[] =
+    (recipe && ingredients.length > 0)
+      ? scaleIngredientsWithStock(ingredients, scaleFactor, stockMap)
+      : [];
+
+  const canProduce = scaledIngredients.every(ing => ing.stock_sufficient);
+  const estimatedCost = calculateTotalProductionCost(scaledIngredients);
+
+  return {
+    recipe,
+    scaleFactor,
+    scaledIngredients,
+    canProduce,
+    estimatedCost,
+    loading,
+    error
+  };
+}
+
+/**
+ * Hook para cargar una sola orden de producción por ID.
+ */
+export function useProductionOrder(orderId: string | null) {
+  const [order, setOrder] = useState<ProductionOrder | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const insforge = getInsforge();
+
+  const fetchOrder = useCallback(async () => {
+    if (!orderId) { setOrder(null); return; }
+    setLoading(true);
+    setError(null);
+    const { data, error: qErr } = await insforge.database
+      .from("production_orders")
+      .select("*")
+      .eq("id", orderId)
+      .single();
+    if (qErr) { setError((qErr as { message?: string })?.message ?? "Error al cargar orden"); setLoading(false); return; }
+    setOrder(data as ProductionOrder);
+    setLoading(false);
+  }, [orderId, insforge]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchOrder(); }, [fetchOrder]);
+
+  return { order, loading, error, refetch: fetchOrder };
 }

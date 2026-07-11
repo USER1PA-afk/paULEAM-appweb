@@ -1,76 +1,93 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ============================================
-   PAuleam Design System — Tailwind CSS v4
+   PAuleam Design System — ULEAM Visual Identity
    ============================================ */
 
 :root {
-  /* Brand Colors */
-  --color-brand-50: #f0fdf4;
-  --color-brand-100: #dcfce7;
-  --color-brand-200: #bbf7d0;
-  --color-brand-300: #86efac;
-  --color-brand-400: #4ade80;
-  --color-brand-500: #22c55e;
-  --color-brand-600: #16a34a;
-  --color-brand-700: #15803d;
-  --color-brand-800: #166534;
-  --color-brand-900: #14532d;
+  /* ULEAM Brand — Rojo Principal */
+  --color-brand-50:  #fff0f0;
+  --color-brand-100: #ffd6d6;
+  --color-brand-200: #ffadad;
+  --color-brand-300: #ff8080;
+  --color-brand-400: #ff4d4d;
+  --color-brand-500: #ff0000;
+  --color-brand-600: #cc0000;
+  --color-brand-700: #990000;
+  --color-brand-800: #660000;
+  --color-brand-900: #330000;
 
-  /* Neutral */
-  --background: #ffffff;
-  --foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --border: #e2e8f0;
-  --ring: #22c55e;
+  /* ULEAM Accent — Verde Institucional */
+  --color-accent-50:  #f4fae8;
+  --color-accent-100: #e4f3c0;
+  --color-accent-200: #cce88a;
+  --color-accent-300: #b4da57;
+  --color-accent-400: #a0ce32;
+  --color-accent-500: #94c11f;
+  --color-accent-600: #779b18;
+  --color-accent-700: #5a7411;
+  --color-accent-800: #3d4e0b;
+  --color-accent-900: #1e2705;
+
+  /* ULEAM Gris Institucional */
+  --color-uleam-gray: #4a4a49;
+
+  /* Neutral — Modo Claro */
+  --background:         #ffffff;
+  --foreground:         #121212;
+  --muted:              #f9f9f9;
+  --muted-foreground:   #4a4a49;
+  --border:             #e5e5e5;
+  --ring:               #ff0000;
 
   /* Surfaces */
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  --card:               #ffffff;
+  --card-foreground:    #121212;
+  --popover:            #ffffff;
+  --popover-foreground: #121212;
 
   /* States */
-  --destructive: #ef4444;
-  --destructive-foreground: #fef2f2;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --info: #3b82f6;
+  --destructive:        #cc0000;
+  --destructive-foreground: #fff0f0;
+  --success:            #94c11f;
+  --warning:            #f59e0b;
+  --info:               #3b82f6;
 
   /* Radius */
   --radius: 0.625rem;
 }
 
 .dark {
-  --background: #020617;
-  --foreground: #f8fafc;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --border: #1e293b;
-  --card: #0f172a;
-  --card-foreground: #f8fafc;
-  --popover: #0f172a;
-  --popover-foreground: #f8fafc;
+  --background:         #121212;
+  --foreground:         #f5f5f5;
+  --muted:              #1e1e1e;
+  --muted-foreground:   #a0a0a0;
+  --border:             #2a2a2a;
+  --card:               #1e1e1e;
+  --card-foreground:    #f5f5f5;
+  --popover:            #1e1e1e;
+  --popover-foreground: #f5f5f5;
+  --ring:               #ff4d4d;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
-  --color-ring: var(--ring);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
+  --color-background:        var(--background);
+  --color-foreground:        var(--foreground);
+  --color-muted:             var(--muted);
+  --color-muted-foreground:  var(--muted-foreground);
+  --color-border:            var(--border);
+  --color-ring:              var(--ring);
+  --color-card:              var(--card);
+  --color-card-foreground:   var(--card-foreground);
+  --color-popover:           var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  --color-destructive: var(--destructive);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-info: var(--info);
+  --color-destructive:       var(--destructive);
+  --color-success:           var(--success);
+  --color-warning:           var(--warning);
+  --color-info:              var(--info);
 
-  --color-brand-50: var(--color-brand-50);
+  --color-brand-50:  var(--color-brand-50);
   --color-brand-100: var(--color-brand-100);
   --color-brand-200: var(--color-brand-200);
   --color-brand-300: var(--color-brand-300);
@@ -81,11 +98,28 @@
   --color-brand-800: var(--color-brand-800);
   --color-brand-900: var(--color-brand-900);
 
+  --color-accent-50:  var(--color-accent-50);
+  --color-accent-100: var(--color-accent-100);
+  --color-accent-200: var(--color-accent-200);
+  --color-accent-300: var(--color-accent-300);
+  --color-accent-400: var(--color-accent-400);
+  --color-accent-500: var(--color-accent-500);
+  --color-accent-600: var(--color-accent-600);
+  --color-accent-700: var(--color-accent-700);
+  --color-accent-800: var(--color-accent-800);
+  --color-accent-900: var(--color-accent-900);
+
+  --color-uleam-gray: var(--color-uleam-gray);
+
   --font-sans: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
   --radius-sm: calc(var(--radius) - 0.25rem);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 0.25rem);
   --radius-xl: calc(var(--radius) + 0.5rem);
+
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
 }
 
 body {
@@ -94,73 +128,369 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Focus ring utilities */
 *:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
-/* Animations */
 @keyframes grow {
   from { width: 0; }
-  to { width: 100%; }
+  to   { width: 100%; }
+}
+
+@keyframes segmented-fade-in {
+  from { opacity: 0; transform: translateY(2px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+.animate-segmented-fade {
+  animation: segmented-fade-in 220ms ease-out;
+}
+
+/* Modal open/close animations */
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modal-slide-down {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+.animate-modal-backdrop {
+  animation: modal-fade-in 150ms ease-out;
+}
+
+.animate-modal-panel {
+  animation: modal-slide-down 200ms ease-out;
+  transform-origin: center;
+}
+
+/* ============================
+   SegmentedControl responsive
+   ============================ */
+/* Mobile (<768px): only the active option is shown inside the strip.            */
+@media (max-width: 767.98px) {
+  .segmented-strip button[role="tab"] {
+    display: none !important;
+  }
+  .segmented-strip button[role="tab"][aria-selected="true"] {
+    display: inline-flex !important;
+  }
+}
+
+/* Tablet (768-1279.98px): the strip shows the first 5 options.                 */
+/* The 6th option (Material Secundario) is hidden by default and replaces the   */
+/* entire strip when it becomes the active segment (the previous 5 collapse).   */
+@media (min-width: 768px) and (max-width: 1279.98px) {
+  .segmented-strip button[role="tab"][data-index="5"] {
+    display: none !important;
+  }
+  .segmented-strip[data-active="MATERIAL_SECUNDARIO"] button[role="tab"][data-index="0"],
+  .segmented-strip[data-active="MATERIAL_SECUNDARIO"] button[role="tab"][data-index="1"],
+  .segmented-strip[data-active="MATERIAL_SECUNDARIO"] button[role="tab"][data-index="2"],
+  .segmented-strip[data-active="MATERIAL_SECUNDARIO"] button[role="tab"][data-index="3"],
+  .segmented-strip[data-active="MATERIAL_SECUNDARIO"] button[role="tab"][data-index="4"] {
+    display: none !important;
+  }
+  .segmented-strip[data-active="MATERIAL_SECUNDARIO"] button[role="tab"][data-index="5"] {
+    display: inline-flex !important;
+  }
+}
+
+/* ============================
+   Sistema de Botones
+   ============================ */
+.btn-primary {
+  @apply inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 active:bg-brand-800
+         text-white text-sm font-medium px-4 py-2 rounded-lg shadow-sm
+         transition-colors duration-200 cursor-pointer
+         disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.btn-secondary {
+  @apply inline-flex items-center gap-2
+         bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700
+         text-foreground text-sm font-medium px-4 py-2 rounded-lg shadow-sm
+         transition-colors duration-200 cursor-pointer
+         disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.btn-danger {
+  @apply inline-flex items-center gap-2 bg-destructive hover:bg-destructive/85 active:bg-destructive/95
+         text-white text-sm font-medium px-4 py-2 rounded-lg shadow-sm
+         transition-colors duration-200 cursor-pointer
+         disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.btn-ghost {
+  @apply inline-flex items-center gap-2
+         hover:bg-muted text-muted-foreground hover:text-foreground
+         text-sm font-medium px-3 py-2 rounded-lg
+         transition-colors duration-200 cursor-pointer
+         disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.btn-outline {
+  @apply inline-flex items-center gap-2
+         border border-border hover:bg-muted text-foreground
+         text-sm font-medium px-4 py-2 rounded-lg
+         transition-colors duration-200 cursor-pointer
+         disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+/* ============================
+   Skeletons
+   ============================ */
+.skeleton {
+  @apply bg-muted animate-pulse rounded-md;
 }
 
 /* ============================
    Print / PDF Styles
-   Oculta la UI de navegación y
-   deja sólo el contenido tabular.
    ============================ */
 @media print {
-  /* Ocultar sidebar, navbar, botones de acción */
+  /* ── Geometría de página A4 ── */
+  @page {
+    size: A4 portrait;
+    margin: 15mm 20mm 20mm 20mm;
+  }
+
+  /* ── Ocultar chrome del layout web ── */
+  header,
   aside,
   nav,
-  .print\:hidden,
   button,
-  [data-print-hide] {
+  [data-print-hide],
+  .print\:hidden {
     display: none !important;
   }
 
-  /* Fondo blanco, texto negro */
-  body {
-    background: white !important;
-    color: black !important;
-    font-size: 11pt;
+  /* ── Mostrar bloques de solo-impresión ── */
+  .print\:block {
+    display: block !important;
   }
 
-  /* El contenido principal ocupa todo el ancho */
-  main {
-    padding: 0 !important;
-    margin: 0 !important;
-    max-width: 100% !important;
-  }
-
-  /* Bordes visibles en tablas */
-  table {
-    border-collapse: collapse;
-    width: 100%;
-  }
-  th,
-  td {
-    border: 1px solid #d1d5db !important;
-    padding: 6px 10px !important;
+  /* ── Reset nuclear: elimina todos los colores CSS variables ── */
+  *,
+  *::before,
+  *::after {
     background: white !important;
     color: black !important;
-  }
-  thead {
-    background-color: #f3f4f6 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
-  /* Evitar corte de filas */
+  /* ── Reset del body ── */
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+
+  /* ── Layout: desactivar h-screen y overflow-hidden en TODA la cadena flex ──
+     El admin layout tiene:
+       div.h-screen.overflow-hidden → div.min-h-0.overflow-hidden → main.overflow-y-auto
+     Corregir solo <main> no es suficiente; los padres bloquean el flujo multi-página. ── */
+  div,
+  main,
+  section,
+  article {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  main {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Links con color brand → negro en impresión */
+  a {
+    color: black !important;
+    text-decoration: none !important;
+  }
+
   tr {
     page-break-inside: avoid;
   }
 
-  /* Mostrar elementos print:block */
-  .print\:block {
-    display: block !important;
+  /* ══════════════════════════════════════
+     Clases .ficha-* — Ficha Técnica de Producción
+     Solo activas dentro de @media print
+     ══════════════════════════════════════ */
+
+  .ficha-tecnica {
+    width: 100%;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 10pt;
+    color: black;
+  }
+
+  /* Membrete principal */
+  .ficha-header {
+    border: 2px solid black;
+    margin-bottom: 0;
+  }
+  .ficha-header-inner {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .ficha-header-logo {
+    display: table-cell;
+    width: 70%;
+    padding: 6px 10px;
+    border-right: 1px solid black;
+    vertical-align: middle;
+  }
+  .ficha-header-meta {
+    display: table-cell;
+    width: 30%;
+    padding: 6px 10px;
+    vertical-align: middle;
+    text-align: center;
+  }
+  .ficha-doc-title {
+    border-top: 1px solid black;
+    text-align: center;
+    padding: 4px 10px;
+    font-size: 11pt;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+  }
+
+  /* Encabezados de sección con fondo gris */
+  .ficha-section-title {
+    font-size: 9pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: #e5e5e5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    padding: 3px 8px;
+    border: 1px solid black;
+    border-bottom: none;
+  }
+
+  /* Tablas de datos (info general e ingredientes) */
+  .ficha-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10pt;
+    page-break-inside: avoid;
+  }
+  .ficha-table th,
+  .ficha-table td {
+    border: 1px solid black !important;
+    padding: 4px 8px !important;
+    font-size: 10pt;
+    vertical-align: top;
+    background: white !important;
+    color: black !important;
+  }
+  .ficha-table thead th {
+    background: #e5e5e5 !important;
+    font-weight: bold;
+    text-align: center;
+    font-size: 9pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .ficha-table .ficha-label {
+    font-weight: bold;
+    width: 25%;
+    font-size: 9pt;
+    white-space: nowrap;
+  }
+  .ficha-table .ficha-value {
+    font-size: 10pt;
+  }
+
+  /* Filas de instrucciones de preparación */
+  .ficha-step {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+    border-top: 1px solid black; /* separador entre filas; el borde exterior lo da el wrapper */
+    page-break-inside: avoid;
+  }
+  .ficha-step-num {
+    display: table-cell;
+    width: 28pt;
+    padding: 4px 6px;
+    border-right: 1px solid black;
+    font-weight: bold;
+    text-align: center;
+    vertical-align: top;
+    font-size: 10pt;
+  }
+  .ficha-step-body {
+    display: table-cell;
+    padding: 4px 8px;
+    vertical-align: top;
+    font-size: 10pt;
+  }
+  .ficha-step-meta {
+    font-size: 8.5pt;
+    color: black !important;
+    margin-top: 2px;
+  }
+
+  /* Observaciones */
+  .ficha-obs {
+    border: 1px solid black;
+    border-top: none;
+    padding: 6px 8px;
+    font-size: 10pt;
+    white-space: pre-wrap;
+    min-height: 40pt;
+  }
+
+  /* Pie de firmas */
+  .ficha-signatures {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid black;
+    margin-top: 14pt;
+    page-break-inside: avoid;
+  }
+  .ficha-sig-cell {
+    display: table-cell;
+    width: 33.33%;
+    border-right: 1px solid black;
+    padding: 6px 8px 24px;
+    vertical-align: top;
+    text-align: center;
+    font-size: 9pt;
+  }
+  .ficha-sig-cell:last-child {
+    border-right: none;
+  }
+  .ficha-sig-line {
+    border-top: 1px solid black;
+    margin-top: 20pt;
+    padding-top: 3px;
+    font-size: 8.5pt;
+  }
+
+  /* Notas al pie */
+  .ficha-footer-note {
+    margin-top: 8px;
+    font-size: 7.5pt;
+    text-align: center;
+    color: black !important;
+    border-top: 1px solid black;
+    padding-top: 4px;
   }
 }

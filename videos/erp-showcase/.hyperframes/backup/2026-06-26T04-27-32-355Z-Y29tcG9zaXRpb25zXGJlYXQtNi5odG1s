@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+  </head>
+  <body>
+    <template id="beat-6-template">
+      <style>
+        #root {
+          position: relative;
+          width: 1920px;
+          height: 1080px;
+          overflow: hidden;
+          background: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        }
+
+        .ecuador-stripe {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 12px;
+          display: flex;
+          z-index: 50;
+        }
+        .ecuador-stripe > div {
+          flex: 1 1 0;
+          height: 100%;
+        }
+        .stripe-yellow { background: #fcd116; }
+        .stripe-blue   { background: #003893; }
+        .stripe-red    { background: #cc0000; }
+
+        .camera {
+          position: absolute;
+          inset: 0;
+          transform-origin: 50% 50%;
+          z-index: 10;
+        }
+
+        /* ---- Screenshot frame (95% width, centered) ---- */
+        .screenshot-wrap {
+          position: absolute;
+          left: 48px;
+          top: 24px;
+          width: 1824px;
+          height: 1026px;
+          overflow: hidden;
+          border-radius: 10px;
+          background: #ffffff;
+          transform-origin: 50% 50%;
+        }
+        .screenshot-wrap img {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: top left;
+        }
+
+        /* Cover the original KIOSKO ACTIVO pill in the screenshot */
+        .kiosk-original-cover {
+          position: absolute;
+          left: 770px;
+          top: 12px;
+          width: 150px;
+          height: 30px;
+          background: #ffffff;
+          z-index: 5;
+        }
+        .topbar-left-cover {
+          position: absolute;
+          left: 5px;
+          top: 5px;
+          width: 200px;
+          height: 50px;
+          background: #ffffff;
+          z-index: 5;
+        }
+        .topbar-right-cover {
+          position: absolute;
+          left: 1420px;
+          top: 5px;
+          width: 400px;
+          height: 50px;
+          background: #ffffff;
+          z-index: 5;
+        }
+
+        /* Cover the original $0,00 in the screenshot */
+        .total-cover {
+          position: absolute;
+          left: 1600px;
+          top: 650px;
+          width: 200px;
+          height: 70px;
+          background: #ffffff;
+          z-index: 5;
+        }
+
+        /* ---- Role badge (top-left) ---- */
+        .role-badge {
+          position: absolute;
+          top: 28px;
+          left: 32px;
+          z-index: 25;
+          padding: 8px 16px;
+          border-radius: 999px;
+          background: #cc0000;
+          color: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 14px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          line-height: 1;
+        }
+
+        /* ---- KIOSKO ACTIVO pill (top-right, breathing) ---- */
+        .kiosko-pill {
+          position: absolute;
+          top: 28px;
+          right: 64px;
+          z-index: 25;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 18px;
+          border-radius: 999px;
+          background: #94c11f;
+          color: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 14px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          line-height: 1;
+          will-change: opacity, transform;
+        }
+        .kiosko-pill .dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #ffffff;
+          box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+        }
+
+        /* ---- Caption (bottom) ---- */
+        .caption {
+          position: absolute;
+          bottom: 18px;
+          left: 0;
+          right: 0;
+          text-align: center;
+          z-index: 25;
+          color: #4a4a49;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 16px;
+          font-weight: 500;
+          line-height: 1.2;
+        }
+
+        /* ---- Product card overlays ---- */
+        .product-card {
+          position: absolute;
+          width: 404px;
+          height: 171px;
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.0);
+          border: 2px solid rgba(204, 0, 0, 0.0);
+          z-index: 15;
+          will-change: transform, opacity;
+          transform-origin: 50% 50%;
+        }
+        .product-card-1 { left: 60px;  top: 110px; }
+        .product-card-2 { left: 481px; top: 110px; width: 299px; }
+        .product-card-3 { left: 794px; top: 110px; width: 299px; }
+
+        /* ---- Selection ripple on first card ---- */
+        .ripple {
+          position: absolute;
+          left: 60px;
+          top: 110px;
+          width: 404px;
+          height: 171px;
+          border-radius: 10px;
+          border: 3px solid #cc0000;
+          z-index: 16;
+          pointer-events: none;
+          transform-origin: 50% 50%;
+          will-change: transform, opacity;
+        }
+
+        /* ---- Cart row overlay (next to empty cart placeholder) ---- */
+        .cart-row {
+          position: absolute;
+          left: 1168px;
+          top: 204px;
+          width: 570px;
+          height: 76px;
+          border-radius: 10px;
+          background: #ffffff;
+          border: 1px solid #e5e5e5;
+          padding: 12px 16px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          z-index: 15;
+          will-change: transform, opacity;
+          transform-origin: 50% 50%;
+        }
+        .cart-row .thumb {
+          width: 52px;
+          height: 52px;
+          border-radius: 8px;
+          background: #fcd116;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 24px;
+          flex-shrink: 0;
+        }
+        .cart-row .info {
+          flex: 1;
+          min-width: 0;
+        }
+        .cart-row .name {
+          font-size: 14px;
+          font-weight: 600;
+          color: #121212;
+          line-height: 1.2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .cart-row .sku {
+          font-size: 11px;
+          color: #4a4a49;
+          font-family: ui-monospace, "SF Mono", Consolas, monospace;
+        }
+        .cart-row .price {
+          font-size: 16px;
+          font-weight: 700;
+          color: #cc0000;
+          font-variant-numeric: tabular-nums;
+        }
+
+        /* ---- TOTAL overlay (ticks $0,00 -> $1,00) ---- */
+        .total-text {
+          position: absolute;
+          left: 1659px;
+          top: 679px;
+          width: 175px;
+          height: 50px;
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          z-index: 18;
+          color: #121212;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 36px;
+          font-weight: 800;
+          letter-spacing: -0.5px;
+          line-height: 1;
+          font-variant-numeric: tabular-nums;
+        }
+
+        /* ---- Cobrar y Despachar overlay button ---- */
+        .cobrar-btn {
+          position: absolute;
+          left: 1136px;
+          top: 974px;
+          width: 691px;
+          height: 52px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 10px;
+          background: #cc0000;
+          color: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 16px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          z-index: 20;
+          will-change: transform;
+          transform-origin: 50% 50%;
+        }
+      </style>
+
+      <div id="root" data-composition-id="beat-6" data-width="1920" data-height="1080" data-start="0" data-duration="8">
+        <div class="ecuador-stripe" aria-hidden="true">
+          <div class="stripe-yellow"></div>
+          <div class="stripe-blue"></div>
+          <div class="stripe-red"></div>
+        </div>
+
+        <div class="camera">
+          <div class="screenshot-wrap" id="pos-screenshot">
+            <img src="capture/screenshots/admin/13-pos-kiosk.png" alt="Punto de Venta">
+            <div class="topbar-left-cover"></div>
+            <div class="kiosk-original-cover"></div>
+            <div class="topbar-right-cover"></div>
+            <div class="total-cover"></div>
+          </div>
+
+          <div class="role-badge">PUNTO DE VENTA</div>
+
+          <div class="kiosko-pill" id="kiosko-pill">
+            <span class="dot"></span>
+            <span>KIOSKO ACTIVO</span>
+          </div>
+
+          <div class="product-card product-card-1" id="card-1"></div>
+          <div class="product-card product-card-2" id="card-2"></div>
+          <div class="product-card product-card-3" id="card-3"></div>
+
+          <div class="ripple" id="ripple"></div>
+
+          <div class="cart-row" id="cart-row">
+            <div class="thumb">
+              <svg viewBox="0 0 24 24" width="28" height="28" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 6 L19 6 L17 16 L7 16 Z" fill="#cc0000" />
+                <rect x="9" y="2" width="6" height="4" rx="1" fill="#cc0000" />
+              </svg>
+            </div>
+            <div class="info">
+              <div class="name">Chifle Alargado Manabita 150g</div>
+              <div class="sku">PT-002 · 1 unid.</div>
+            </div>
+            <div class="price">$1,00</div>
+          </div>
+
+          <div class="total-text" id="total-text">$0,00</div>
+
+          <div class="cobrar-btn" id="cobrar-btn">Cobrar y Despachar</div>
+
+          <div class="caption">Efectivo · QR Deuna · Sin recibo en pantalla</div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          if (typeof window === "undefined" || !window.gsap) return;
+          window.__timelines = window.__timelines || {};
+          const tl = window.gsap.timeline({ paused: true });
+
+          // ---------- Initial states (frame 0) ----------
+          tl.set("#pos-screenshot", { scale: 0.97, y: 12, opacity: 0 }, 0);
+          tl.set("#kiosk-original-cover", { opacity: 1 }, 0);
+          tl.set("#total-cover", { opacity: 1 }, 0);
+
+          tl.set("#kiosko-pill", { opacity: 1, scale: 1 }, 0);
+          tl.set("#role-badge", { opacity: 1 }, 0);
+          tl.set("#caption", { opacity: 1 }, 0);
+
+          tl.set(
+            "#card-1, #card-2, #card-3",
+            { y: 20, opacity: 0 },
+            0
+          );
+
+          tl.set(
+            "#ripple",
+            { scale: 0, opacity: 0 },
+            0
+          );
+
+          tl.set(
+            "#cart-row",
+            { y: 12, opacity: 0 },
+            0
+          );
+
+          tl.set("#cobrar-btn", { scale: 1 }, 0);
+
+          // ============================================================
+          // 0.0–0.5s — screenshot scales in
+          // ============================================================
+          tl.to(
+            "#pos-screenshot",
+            { scale: 1, y: 0, opacity: 1, duration: 0.5, ease: "power2.out" },
+            0.0
+          );
+
+          // ============================================================
+          // 0.5–2.0s — 3 product card overlays stagger in
+          // ============================================================
+          tl.to(
+            "#card-1",
+            { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            0.5
+          );
+          tl.to(
+            "#card-2",
+            { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            0.6
+          );
+          tl.to(
+            "#card-3",
+            { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            0.7
+          );
+
+          // ============================================================
+          // 2.0–2.6s — selection ripple on first card
+          // ============================================================
+          tl.fromTo(
+            "#ripple",
+            { scale: 0, opacity: 0.6 },
+            { scale: 2.5, opacity: 0, duration: 0.6, ease: "power2.out" },
+            2.0
+          );
+
+          // ============================================================
+          // 2.6–3.2s — cart row overlay appears
+          // ============================================================
+          tl.to(
+            "#cart-row",
+            { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+            2.6
+          );
+
+          // ============================================================
+          // 3.0–4.0s — TOTAL ticks $0,00 -> $1,00
+          // ============================================================
+          const totalEl = document.querySelector("#total-text");
+          const totalProxy = { v: 0 };
+          tl.set("#total-text", { textContent: "$0,00" }, 3.0);
+          tl.to(
+            totalProxy,
+            {
+              v: 1,
+              duration: 1.0,
+              ease: "power2.out",
+              onUpdate: function () {
+                totalEl.textContent =
+                  "$" + totalProxy.v.toFixed(2).replace(".", ",");
+              },
+            },
+            3.0
+          );
+          // Hide the white cover once the tick starts so our text shows on screenshot bg
+          tl.to(
+            "#total-cover",
+            { opacity: 0, duration: 0.1, ease: "none" },
+            3.0
+          );
+
+          // ============================================================
+          // 4.0–4.5s — Cobrar y Despachar press (scale 1 -> 0.95 -> 1)
+          // ============================================================
+          tl.to(
+            "#cobrar-btn",
+            { scale: 0.95, duration: 0.2, ease: "power2.inOut" },
+            4.0
+          );
+          tl.to(
+            "#cobrar-btn",
+            { scale: 1, duration: 0.2, ease: "power2.inOut" },
+            4.2
+          );
+
+          // ============================================================
+          // 4.5–8.0s — KIOSKO ACTIVO pill breathes (finite yoyo)
+          // ============================================================
+          tl.fromTo(
+            "#kiosko-pill",
+            { opacity: 0.85 },
+            {
+              opacity: 1,
+              duration: 1.4,
+              ease: "sine.inOut",
+              yoyo: true,
+              repeat: 1,
+            },
+            4.5
+          );
+
+          // ============================================================
+          // 4.5–8.0s — subtle camera dolly (scale 1.0 -> 1.02 over 3.5s)
+          // ============================================================
+          tl.fromTo(
+            ".camera",
+            { scale: 1.0 },
+            { scale: 1.02, duration: 3.5, ease: "none" },
+            4.5
+          );
+
+          tl.set("#total-text", { textContent: "$0,00", immediateRender: true }, 0);
+
+          tl.set("#total-text", { x: 29, immediateRender: true }, 0);
+
+          window.__timelines["beat-6"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

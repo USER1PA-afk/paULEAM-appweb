@@ -1,4 +1,4 @@
-import { LoginForm } from "@features/auth/components";
+import { LoginForm, GoogleSignInButton } from "@features/auth/components";
 
 export default function LoginPage() {
   return (
@@ -12,6 +12,7 @@ export default function LoginPage() {
         </p>
       </div>
       <LoginForm />
+      <GoogleSignInButton mode="login" />
     </div>
   );
 }

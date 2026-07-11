@@ -10,4 +10,5 @@
  * 3. Exportar desde este barrel
  */
 
-export {};
+export { SearchableSelect } from "./searchable-select";
+export type { SearchableOption } from "./searchable-select";

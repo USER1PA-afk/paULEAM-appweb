@@ -1,11 +1,13 @@
 import { z } from "zod";
+import { AppliedPromotionSchema } from "@entities/promotion";
 
 /**
  * Entity: Order
  *
  * Orden de venta del E-Commerce.
- * Estado: PENDIENTE → PAGADO → APROBADO → ENVIADO → COMPLETADO
- * El admin valida el comprobante manualmente.
+ * Estado: PENDIENTE → PAGADO → APROBADO → COMPLETADO / CANCELADO
+ * ENVIO: inventario se deduce al APROBADO.
+ * RETIRO_EN_PLANTA: inventario se deduce al confirmar entrega física (→ COMPLETADO).
  */
 
 export const OrderStatusEnum = z.enum([
@@ -18,6 +20,37 @@ export const OrderStatusEnum = z.enum([
 ]);
 export type OrderStatus = z.infer<typeof OrderStatusEnum>;
 
+export const FulfillmentTypeEnum = z.enum(["ENVIO", "RETIRO_EN_PLANTA"]);
+export type FulfillmentType = z.infer<typeof FulfillmentTypeEnum>;
+
+export const FULFILLMENT_TYPE_LABELS: Record<FulfillmentType, string> = {
+  ENVIO:            "Envío a domicilio",
+  RETIRO_EN_PLANTA: "Retiro en planta",
+};
+
+export const PaymentMethodEnum = z.enum([
+  "EFECTIVO",
+  "QR_DEUNA",
+  "TRANSFERENCIA",
+  "PICHINCHA",
+  "TRANSFERENCIA_PICHINCHA",
+  "QR_PICHINCHA",
+  "TRANSFERENCIA_GUAYAQUIL",
+  "PAYPAL",
+]);
+export type PaymentMethod = z.infer<typeof PaymentMethodEnum>;
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  EFECTIVO:                "Efectivo",
+  QR_DEUNA:               "QR DeUna",
+  TRANSFERENCIA:           "Transferencia",
+  PICHINCHA:               "Banco Pichincha",
+  TRANSFERENCIA_PICHINCHA: "Pichincha — Transferencia",
+  QR_PICHINCHA:            "Pichincha — QR",
+  TRANSFERENCIA_GUAYAQUIL: "Guayaquil — Transferencia",
+  PAYPAL:                  "PayPal",
+};
+
 export const OrderItemSchema = z.object({
   id: z.string().uuid(),
   order_id: z.string().uuid(),
@@ -25,6 +58,8 @@ export const OrderItemSchema = z.object({
   quantity: z.number().positive(),
   unit_price: z.number().nonnegative(),
   subtotal: z.number().nonnegative(),
+  /** Descuento informativo por línea; unit_price y subtotal quedan BRUTOS. */
+  discount_amount: z.number().nonnegative().default(0).optional(),
 });
 
 export type OrderItem = z.infer<typeof OrderItemSchema>;
@@ -33,8 +68,14 @@ export const OrderSchema = z.object({
   id: z.string().uuid(),
   user_id: z.string().uuid(),
   status: OrderStatusEnum,
+  fulfillment_type: FulfillmentTypeEnum.default("ENVIO"),
+  /** Total NETO (bruto − discount_total). */
   total: z.number().nonnegative(),
-  payment_receipt_url: z.string().url().optional(), // URL del comprobante en Insforge Storage
+  discount_total: z.number().nonnegative().default(0).optional(),
+  applied_promotions: z.array(AppliedPromotionSchema).nullable().optional(),
+  payment_receipt_url: z.string().url().optional(),
+  payment_method: PaymentMethodEnum.nullable().optional(),
+  delivery_date: z.string().nullable().optional(),
   items: z.array(OrderItemSchema).optional(),
   notes: z.string().optional(),
   created_at: z.string().datetime().optional(),

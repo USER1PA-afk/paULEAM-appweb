@@ -2,6 +2,7 @@
 
 import { getInsforge } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback } from "react";
+import { useCachedQuery, invalidateCache } from "@shared/hooks/use-cached-query";
 
 interface LedgerEntry {
   id: string;
@@ -12,6 +13,13 @@ interface LedgerEntry {
   unit_cost: number;
   reference_type: string | null;
   reference_id: string | null;
+  supplier_id: string | null;
+  supplier_company: string | null;
+  supplier_name: string | null;
+  product_name: string | null;
+  product_sku: string | null;
+  product_unit: string | null;
+  production_recipe_name: string | null;
   notes: string | null;
   created_at: string;
 }
@@ -23,78 +31,59 @@ interface StockSummary {
   type: string;
   unit: string;
   stock_actual: number;
+  min_stock_alert: number | null;
 }
 
 /**
  * Hook para consultar el ledger de inventario con filtros.
  */
 export function useInventoryLedger(productId?: string) {
-  const [entries, setEntries] = useState<LedgerEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const insforge = getInsforge();
 
   const fetchLedger = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      let query = insforge.database
-        .from("inventory_ledger")
-        .select("*")
-        .order("created_at", { ascending: false });
+    let query = insforge.database
+      .from("inventory_ledger_view")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      if (productId) {
-        query = query.eq("product_id", productId);
-      }
-
-      const { data, error: queryError } = await query;
-      if (queryError) throw queryError;
-      setEntries((data as LedgerEntry[]) ?? []);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al cargar ledger");
-    } finally {
-      setLoading(false);
+    if (productId) {
+      query = query.eq("product_id", productId);
     }
+
+    const { data, error: queryError } = await query;
+    if (queryError) throw queryError;
+    return (data as LedgerEntry[]) ?? [];
   }, [productId, insforge]);
 
-  useEffect(() => {
-    fetchLedger();
-  }, [fetchLedger]);
+  const { data, loading, error, refetch } = useCachedQuery<LedgerEntry[]>(
+    `inventory_ledger:${productId ?? "all"}`,
+    fetchLedger
+  );
 
-  return { entries, loading, error, refetch: fetchLedger };
+  return { entries: data ?? [], loading, error, refetch };
 }
 
 /**
  * Hook para consultar el resumen de stock (vista stock_summary).
  */
 export function useStockSummary() {
-  const [summary, setSummary] = useState<StockSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const insforge = getInsforge();
 
   const fetchSummary = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error: queryError } = await insforge.database
-        .from("stock_summary")
-        .select("*");
+    const { data, error: queryError } = await insforge.database
+      .from("stock_summary")
+      .select("*");
 
-      if (queryError) throw queryError;
-      setSummary((data as StockSummary[]) ?? []);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al cargar stock");
-    } finally {
-      setLoading(false);
-    }
+    if (queryError) throw queryError;
+    return (data as StockSummary[]) ?? [];
   }, [insforge]);
 
-  useEffect(() => {
-    fetchSummary();
-  }, [fetchSummary]);
+  const { data, loading, error, refetch } = useCachedQuery<StockSummary[]>(
+    "stock_summary",
+    fetchSummary
+  );
 
-  return { summary, loading, error, refetch: fetchSummary };
+  return { summary: data ?? [], loading, error, refetch };
 }
 
 /**
@@ -114,6 +103,7 @@ export function useInventoryActions() {
       unit_cost?: number;
       reference_type?: string;
       reference_id?: string;
+      supplier_id?: string;
       notes?: string;
     }) => {
       setLoading(true);
@@ -125,6 +115,8 @@ export function useInventoryActions() {
           .select();
 
         if (insertError) throw insertError;
+        // El movimiento cambia el balance — descartar caché de stock y ledger.
+        invalidateCache("stock_summary", "inventory_ledger");
         return { data, error: null };
       } catch (err: unknown) {
         const message =
@@ -143,11 +135,12 @@ export function useInventoryActions() {
 
 /**
  * Hook para suscripción Realtime al canal de inventario.
- * Se conecta al canal "inventory" y actualiza el stock en vivo
- * cada vez que el backend emite un evento "stock_updated".
+ * Degrada silenciosamente si el plan no soporta WebSockets.
  *
- * El backend publica en este canal cuando el trigger de producción
- * o cualquier INSERT en inventory_ledger ocurre.
+ * Previene el warning "WebSocket is closed before the connection is
+ * established" mediante un flag `cancelled` que impide llamar a
+ * `disconnect()` si el handshake aún no completó, y mediante
+ * `didConnect` que asegura que solo se desconecta lo que ya conectó.
  *
  * @param onUpdate - Callback que se llama con la entrada actualizada
  */
@@ -156,53 +149,72 @@ export function useRealtimeStock(onUpdate: (entry: LedgerEntry) => void) {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
+    // Si el SDK no expone realtime, salir silenciosamente
+    if (!insforge.realtime) return;
+
+    const rt = insforge.realtime;
+    let cancelled = false;   // true cuando el efecto se limpia antes de conectar
+    let didConnect = false;  // true solo si connect() completó con éxito
+    let subscribed = false;
+
+    const handleConnect    = () => { if (!cancelled) setConnected(true); };
+    const handleDisconnect = () => { if (!cancelled) setConnected(false); };
+    const handleUpdate     = (msg: unknown) => {
+      if (cancelled) return;
+      const payload = (msg as { payload?: LedgerEntry })?.payload;
+      if (payload) onUpdate(payload);
+    };
+
+    rt.on("connect",                 handleConnect);
+    rt.on("disconnect",              handleDisconnect);
+    rt.on("stock_updated",           handleUpdate);
+    rt.on("inventory_ledger:INSERT", handleUpdate);
 
     const setup = async () => {
       try {
-        const rt = insforge.realtime;
+        const result = await Promise.race([
+          rt.connect().then(() => "ok" as const),
+          new Promise<"timeout">((res) => setTimeout(() => res("timeout"), 4000)),
+        ]);
 
-        rt.on("connect", () => {
-          if (mounted) setConnected(true);
-        });
-        rt.on("disconnect", () => {
-          if (mounted) setConnected(false);
-        });
+        // Si el componente se desmontó o llegamos al timeout, no continuar
+        if (cancelled || result === "timeout") return;
 
-        await rt.connect();
+        didConnect = true;
         await rt.subscribe("inventory");
-
-        // Escuchar eventos de nuevos movimientos
-        rt.on("stock_updated", (msg: unknown) => {
-          if (!mounted) return;
-          const payload = (msg as { payload?: LedgerEntry })?.payload;
-          if (payload) onUpdate(payload);
-        });
-
-        // También escuchar el event genérico para INSERT en inventory_ledger
-        rt.on("inventory_ledger:INSERT", (msg: unknown) => {
-          if (!mounted) return;
-          const payload = (msg as { payload?: LedgerEntry })?.payload;
-          if (payload) onUpdate(payload);
-        });
+        subscribed = true;
       } catch {
-        // Realtime no disponible en este plan — funciona sin live updates
-        if (mounted) setConnected(false);
+        // Realtime no disponible en este plan — modo estático sin errores
+        if (!cancelled) setConnected(false);
       }
     };
 
     setup();
 
     return () => {
-      mounted = false;
+      cancelled = true;
+      setConnected(false);
+
+      // Desregistrar listeners siempre
       try {
-        insforge.realtime.unsubscribe("inventory");
-        insforge.realtime.disconnect();
-      } catch {
-        // silenciar errores de cleanup
-      }
+        rt.off?.("connect",                 handleConnect);
+        rt.off?.("disconnect",              handleDisconnect);
+        rt.off?.("stock_updated",           handleUpdate);
+        rt.off?.("inventory_ledger:INSERT", handleUpdate);
+      } catch { /* ignorar */ }
+
+      // Solo desconectar si el handshake ya completó; de lo contrario
+      // el socket está en mid-handshake y llamar disconnect() genera el warning.
+      if (!didConnect) return;
+      try {
+        if (subscribed) rt.unsubscribe("inventory");
+        rt.disconnect();
+      } catch { /* socket ya cerrado */ }
     };
-  }, [insforge, onUpdate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [insforge]);
 
   return { connected };
 }
+
+

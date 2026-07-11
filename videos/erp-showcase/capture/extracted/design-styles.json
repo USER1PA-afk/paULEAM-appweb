@@ -1,0 +1,110 @@
+{
+  "typography": [
+    {
+      "role": "heading",
+      "fontFamily": "Inter",
+      "fontSize": "36px",
+      "fontWeight": "800",
+      "lineHeight": "45px",
+      "letterSpacing": "normal",
+      "color": "#FFFFFF",
+      "sampleText": "Gestión Integralde tu Planta"
+    },
+    {
+      "role": "display",
+      "fontFamily": "Inter",
+      "fontSize": "24px",
+      "fontWeight": "700",
+      "lineHeight": "32px",
+      "letterSpacing": "-0.6px",
+      "color": "#121212",
+      "sampleText": "Bienvenido de vuelta"
+    },
+    {
+      "role": "link",
+      "fontFamily": "Inter",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "24px",
+      "letterSpacing": "normal",
+      "color": "#121212",
+      "sampleText": "Saltar al contenido principal"
+    },
+    {
+      "role": "body",
+      "fontFamily": "Inter",
+      "fontSize": "14px",
+      "fontWeight": "400",
+      "lineHeight": "22.75px",
+      "letterSpacing": "normal",
+      "color": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+      "sampleText": "Inventario, producción, recetas y ventas en un solo lugar. C"
+    },
+    {
+      "role": "label",
+      "fontFamily": "Inter",
+      "fontSize": "14px",
+      "fontWeight": "500",
+      "lineHeight": "20px",
+      "letterSpacing": "normal",
+      "color": "#121212",
+      "sampleText": "Correo Electrónico"
+    }
+  ],
+  "spacing": {
+    "observed": [
+      2,
+      8,
+      12,
+      16,
+      24,
+      32,
+      48
+    ],
+    "baseUnit": 8
+  },
+  "radius": [
+    "10px"
+  ],
+  "shadows": [],
+  "buttons": [
+    {
+      "label": "button",
+      "background": "#000000",
+      "color": "#4A4A49",
+      "padding": "0px 12px",
+      "borderRadius": "0px",
+      "border": "0px solid rgb(74, 74, 73)",
+      "boxShadow": "none",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "height": "38px"
+    },
+    {
+      "label": "Iniciar Sesión",
+      "background": "#CC0000",
+      "color": "#FFFFFF",
+      "padding": "8px 16px",
+      "borderRadius": "10px",
+      "border": "0px solid rgb(255, 255, 255)",
+      "boxShadow": "none",
+      "fontSize": "14px",
+      "fontWeight": "500",
+      "height": "36px"
+    },
+    {
+      "label": "Continuar con Google",
+      "background": "#FFFFFF",
+      "color": "#121212",
+      "padding": "8px 16px",
+      "borderRadius": "10px",
+      "border": "1px solid rgb(229, 229, 229)",
+      "boxShadow": "none",
+      "fontSize": "14px",
+      "fontWeight": "500",
+      "height": "38px"
+    }
+  ],
+  "cards": [],
+  "nav": null
+}

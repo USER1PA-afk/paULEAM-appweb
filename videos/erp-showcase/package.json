@@ -1,0 +1,13 @@
+{
+  "name": "erp-showcase-screenshots",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "shoot:admin": "node scripts/shoot-admin.mjs",
+    "shoot:cliente": "node scripts/shoot-cliente.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}

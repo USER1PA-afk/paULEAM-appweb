@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>PAuleam — ERP & E-Commerce (Landscape 60s)</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; font-family: "Inter", system-ui, sans-serif; }
+      .scene {
+        position: absolute;
+        top: 0; left: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-qbnw" id="root" data-composition-id="main" data-start="0" data-duration="60" data-width="1920" data-height="1080">
+      <div data-hf-id="hf-1j4j" id="beat-1" class="scene" data-composition-id="beat-1" data-composition-src="compositions/beat-1.html" data-start="0" data-duration="5" data-track-index="1" data-width="1920" data-height="1080" style="background: #FFFFFF"></div>
+
+      <div data-hf-id="hf-hs50" id="beat-2" class="scene" data-composition-id="beat-2" data-composition-src="compositions/beat-2.html" data-start="5" data-duration="7" data-track-index="2" data-width="1920" data-height="1080" style="background: #FFFFFF"></div>
+
+      <div data-hf-id="hf-utm6" id="beat-3" class="scene" data-composition-id="beat-3" data-composition-src="compositions/beat-3.html" data-start="12" data-duration="9" data-track-index="3" data-width="1920" data-height="1080" style="background: #FFFFFF"></div>
+
+      <div data-hf-id="hf-1vc0" id="beat-4" class="scene" data-composition-id="beat-4" data-composition-src="compositions/beat-4.html" data-start="21" data-duration="10" data-track-index="3" data-width="1920" data-height="1080" style="background: #FFFFFF"></div>
+
+      <div data-hf-id="hf-hxvx" id="beat-5" class="scene" data-composition-id="beat-5" data-composition-src="compositions/beat-5.html" data-start="31" data-duration="12" data-track-index="5" data-width="1920" data-height="1080" style="background: #FFFFFF"></div>
+
+      <div data-hf-id="hf-38br" id="beat-6" class="scene" data-composition-id="beat-6" data-composition-src="compositions/beat-6.html" data-start="43" data-duration="8" data-track-index="6" data-width="1920" data-height="1080" style="background: #FFFFFF"></div>
+
+      <div data-hf-id="hf-9p57" id="beat-7" class="scene" data-composition-id="beat-7" data-composition-src="compositions/beat-7.html" data-start="51" data-duration="5" data-track-index="7" data-width="1920" data-height="1080" style="background: #FFFFFF"></div>
+
+      <div data-hf-id="hf-q32q" id="beat-8" class="scene" data-composition-id="beat-8" data-composition-src="compositions/beat-8.html" data-start="56" data-duration="3" data-track-index="8" data-width="1920" data-height="1080" style="background: #FFFFFF"></div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

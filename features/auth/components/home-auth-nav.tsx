@@ -15,14 +15,14 @@ export function HomeAuthNav() {
     return (
       <div className="flex items-center gap-4">
         <Link
-          href={role === "cliente" ? "/shop/catalog" : "/admin/dashboard"}
+          href={role === "cliente" ? "/shop/orders" : "/admin/dashboard"}
           className="text-sm font-medium text-brand-600 hover:text-brand-700 transition-colors"
         >
-          {role === "cliente" ? "Ir a la Tienda" : "Ir al Panel"}
+          {role === "cliente" ? "Mis Pedidos" : "Ir al Panel"}
         </Link>
         <button
-          onClick={signOut}
-          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all"
+          onClick={() => signOut()}
+          className="rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
         >
           Cerrar sesión
         </button>

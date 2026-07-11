@@ -1,0 +1,309 @@
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\app\(admin)\admin\store\products\[id]\page.tsx
+  128:3  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect')
+  131:5  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\app\(admin)\admin\store\products\[id]\page.tsx:131:5
+  129 |   useEffect(() => {
+  130 |     if (!product) return;
+> 131 |     setName(product.name);
+      |     ^^^^^^^ Avoid calling setState() directly within an effect
+  132 |     setSku(product.sku);
+  133 |     setUnit(product.unit);
+  134 |     setPrice(String(product.price || 0));  react-hooks/set-state-in-effect
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\auth\hooks\index.ts
+  104:23  warning  '_data' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\checkout\hooks\index.ts
+  116:3  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect')
+  131:5  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\checkout\hooks\index.ts:131:5
+  129 |       isCartInitialized = true;
+  130 |     }
+> 131 |     setItems([...globalCartItems]);
+      |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  132 |
+  133 |     const listener = () => setItems([...globalCartItems]);
+  134 |     cartListeners.add(listener);  react-hooks/set-state-in-effect
+  371:5  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\checkout\hooks\index.ts:371:5
+  369 |
+  370 |   useEffect(() => {
+> 371 |     fetchOrders();
+      |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  372 |   }, [fetchOrders]);
+  373 |
+  374 |   const approveOrder = useCallback(                                                                     react-hooks/set-state-in-effect
+  485:5  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\checkout\hooks\index.ts:485:5
+  483 |
+  484 |   useEffect(() => {
+> 485 |     fetchOrders();
+      |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  486 |   }, [fetchOrders]);
+  487 |
+  488 |   return { orders, loading, refetch: fetchOrders };                                                     react-hooks/set-state-in-effect
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\inventory\hooks\index.ts
+   68:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\inventory\hooks\index.ts:68:5
+  66 |
+  67 |   useEffect(() => {
+> 68 |     fetchLedger();
+     |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  69 |   }, [fetchLedger]);
+  70 |
+  71 |   return { entries, loading, error, refetch: fetchLedger };              react-hooks/set-state-in-effect
+  101:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\inventory\hooks\index.ts:101:5
+   99 |
+  100 |   useEffect(() => {
+> 101 |     fetchSummary();
+      |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  102 |   }, [fetchSummary]);
+  103 |
+  104 |   return { summary, loading, error, refetch: fetchSummary };  react-hooks/set-state-in-effect
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\pos\hooks\index.ts
+  99:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\pos\hooks\index.ts:99:5
+   97 |
+   98 |   useEffect(() => {
+>  99 |     fetchProducts();
+      |     ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  100 |   }, [fetchProducts]);
+  101 |
+  102 |   return { products, loading, error, refetch: fetchProducts };  react-hooks/set-state-in-effect
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\production\components\index.tsx
+    5:10  warning  'Recipe' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+    6:10  warning  'Product' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+    7:27  warning  'useRecipeIngredients' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+    8:32  warning  'MEASUREMENT_UNITS' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+  135:42  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  151:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\production\components\index.tsx:151:5
+  149 |     if (!orderId || !completedAt) return;
+  150 |     
+> 151 |     setLoading(true);
+      |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  152 |     insforge.database
+  153 |       .from("inventory_ledger_view")
+  154 |       .select("*")  react-hooks/set-state-in-effect
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\production\hooks\index.ts
+   40:5   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\production\hooks\index.ts:40:5
+  38 |
+  39 |   useEffect(() => {
+> 40 |     fetchOrders();
+     |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  41 |   }, [fetchOrders]);
+  42 |
+  43 |   const createOrder = useCallback(                                                              react-hooks/set-state-in-effect
+  185:5   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\production\hooks\index.ts:185:5
+  183 |
+  184 |   useEffect(() => {
+> 185 |     fetchRecipes();
+      |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  186 |   }, [fetchRecipes]);
+  187 |
+  188 |   return { recipes, loading, refetch: fetchRecipes };                                react-hooks/set-state-in-effect
+  220:5   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\production\hooks\index.ts:220:5
+  218 |
+  219 |   useEffect(() => {
+> 220 |     fetchIngredients();
+      |     ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  221 |   }, [fetchIngredients]);
+  222 |
+  223 |   return { ingredients, loading, refetch: fetchIngredients };            react-hooks/set-state-in-effect
+  258:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\production\hooks\index.ts:258:7
+  256 |   useEffect(() => {
+  257 |     if (!recipeId || targetYield <= 0) {
+> 258 |       setRecipe(null);
+      |       ^^^^^^^^^ Avoid calling setState() directly within an effect
+  259 |       setIngredients([]);
+  260 |       setStockMap({});
+  261 |       return;  react-hooks/set-state-in-effect
+  291:35  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+  301:25  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\recipes\components\recipe-form.tsx
+   5:10  warning  'Recipe' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   5:18  warning  'RecipeIngredient' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   6:10  warning  'Product' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+   8:23  warning  'createEmptyStep' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+  36:52  warning  'productsLoading' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+  61:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\recipes\components\recipe-form.tsx:61:7
+  59 |   useEffect(() => {
+  60 |     if (isEditing && recipe && !initialized) {
+> 61 |       setName(recipe.name);
+     |       ^^^^^^^ Avoid calling setState() directly within an effect
+  62 |       setDescription(recipe.description ?? "");
+  63 |       setOutputProductId(recipe.output_product_id);
+  64 |       setYieldBase(String(recipe.yield_base));  react-hooks/set-state-in-effect
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\recipes\hooks\index.ts
+   34:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\recipes\hooks\index.ts:34:5
+  32 |
+  33 |   useEffect(() => {
+> 34 |     fetchRecipes();
+     |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  35 |   }, [fetchRecipes]);
+  36 |
+  37 |   return { recipes, loading, refetch: fetchRecipes };                                                            react-hooks/set-state-in-effect
+  127:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\recipes\hooks\index.ts:127:5
+  125 |
+  126 |   useEffect(() => {
+> 127 |     fetchRecipe();
+      |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  128 |   }, [fetchRecipe]);
+  129 |
+  130 |   return { recipe, ingredients, outputProduct, ingredientProducts, loading, error, refetch: fetchRecipe };  react-hooks/set-state-in-effect
+  162:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\recipes\hooks\index.ts:162:5
+  160 |
+  161 |   useEffect(() => {
+> 162 |     fetchIngredients();
+      |     ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  163 |   }, [fetchIngredients]);
+  164 |
+  165 |   return { ingredients, loading, refetch: fetchIngredients };                                react-hooks/set-state-in-effect
+  193:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Alejandro-md\Desktop\ProjectPAuleam\features\recipes\hooks\index.ts:193:5
+  191 |
+  192 |   useEffect(() => {
+> 193 |     fetchProducts();
+      |     ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  194 |   }, [fetchProducts]);
+  195 |
+  196 |   const rawMaterials = products.filter((p) => p.type === "MATERIA_PRIMA");                            react-hooks/set-state-in-effect
+
+✖ 32 problems (20 errors, 12 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+

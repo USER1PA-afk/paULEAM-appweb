@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+  </head>
+  <body>
+    <template id="beat-2-template">
+      <style>
+        #root {
+          position: relative;
+          width: 1920px;
+          height: 1080px;
+          background: #FFFFFF;
+          overflow: hidden;
+          font-family: "Inter", system-ui, "Segoe UI", sans-serif;
+        }
+
+        .ecuador-stripe {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 12px;
+          display: flex;
+          z-index: 20;
+        }
+        .ecuador-stripe > div {
+          flex: 1;
+          height: 100%;
+        }
+        .ecuador-stripe .s-yellow { background: #FCD116; }
+        .ecuador-stripe .s-blue   { background: #003893; }
+        .ecuador-stripe .s-red    { background: #CC0000; }
+
+        .header {
+          position: absolute;
+          top: 30px;
+          left: 192px;
+          z-index: 10;
+        }
+        .eyebrow {
+          font-weight: 500;
+          font-size: 12px;
+          color: #CC0000;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          line-height: 1;
+          margin-bottom: 8px;
+        }
+        .headline {
+          font-weight: 700;
+          font-size: 28px;
+          color: #121212;
+          line-height: 1.1;
+          letter-spacing: -0.3px;
+        }
+
+        .camera {
+          position: absolute;
+          inset: 0;
+          transform-origin: center center;
+        }
+
+        .screenshot-wrap {
+          position: absolute;
+          left: 192px;
+          top: 100px;
+          width: 1536px;
+          height: 864px;
+          border: 1px solid #E5E5E5;
+          border-radius: 10px;
+          overflow: hidden;
+          background: #FFFFFF;
+          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+        }
+        .screenshot-wrap img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+
+        .kpi-cover {
+          position: absolute;
+          width: 40px;
+          height: 32px;
+          background: #FFFFFF;
+        }
+        .kpi-cover-1 { top: 226px; left: 224px; }
+        .kpi-cover-2 { top: 226px; left: 550px; }
+        .kpi-cover-4 { top: 226px; left: 1198px; }
+
+        .kpi-counter {
+          position: absolute;
+          font-weight: 800;
+          font-size: 22px;
+          color: #121212;
+          font-variant-numeric: tabular-nums;
+          line-height: 1;
+          letter-spacing: -0.5px;
+        }
+        .kpi-1 { top: 230px; left: 230px; }
+        .kpi-2 { top: 230px; left: 556px; }
+        .kpi-4 { top: 230px; left: 1204px; }
+
+        .stock-cover {
+          position: absolute;
+          left: 888px;
+          top: 272px;
+          width: 612px;
+          height: 188px;
+          background: #FFFFFF;
+        }
+
+        .stock-row {
+          position: absolute;
+          left: 888px;
+          width: 612px;
+          height: 56px;
+          display: flex;
+          align-items: center;
+          padding: 0 4px;
+          gap: 12px;
+          color: #121212;
+        }
+        .stock-row .row-icon {
+          width: 18px;
+          height: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .stock-row .row-icon svg { width: 18px; height: 18px; display: block; }
+        .stock-row .row-text {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          min-width: 0;
+        }
+        .stock-row .row-name {
+          font-weight: 600;
+          font-size: 15px;
+          color: #121212;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .stock-row .row-sku {
+          font-size: 12px;
+          color: #4A4A49;
+          font-family: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+        }
+        .stock-row .row-qty-area {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 2px;
+          min-width: 60px;
+        }
+        .stock-row .row-qty {
+          font-weight: 700;
+          font-size: 16px;
+          font-variant-numeric: tabular-nums;
+          color: #121212;
+        }
+        .stock-row .row-unit {
+          font-size: 12px;
+          color: #4A4A49;
+        }
+        .stock-row-1 { top: 304px; }
+        .stock-row-2 { top: 360px; }
+        .stock-row-3 { top: 416px; }
+
+        .en-vivo {
+          position: absolute;
+          bottom: 36px;
+          right: 48px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-weight: 600;
+          font-size: 13px;
+          color: #94C11F;
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          z-index: 10;
+        }
+        .en-vivo-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: #94C11F;
+          box-shadow: 0 0 10px rgba(148, 193, 31, 0.8);
+        }
+      </style>
+
+      <div id="root" data-composition-id="beat-2" data-width="1920" data-height="1080" data-duration="7">
+        <div class="ecuador-stripe" aria-hidden="true">
+          <div class="s-yellow"></div>
+          <div class="s-blue"></div>
+          <div class="s-red"></div>
+        </div>
+
+        <div class="header">
+          <div class="eyebrow">DASHBOARD</div>
+          <div class="headline">Resumen general del sistema</div>
+        </div>
+
+        <div class="camera">
+          <div class="screenshot-wrap" id="dashboard">
+            <img src="capture/screenshots/admin/01-dashboard.png" alt="Dashboard">
+
+            <div class="kpi-cover kpi-cover-1"></div>
+            <div class="kpi-cover kpi-cover-2"></div>
+            
+
+            
+            
+            
+
+            <div class="stock-cover" id="stock-cover"></div>
+
+            <div class="stock-row stock-row-1" id="stock-row-1">
+              <span class="row-icon">
+                <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 2 L16 15 L2 15 Z" fill="#F59E0B" />
+                  <rect x="8.25" y="6" width="1.5" height="5" fill="#FFFFFF" />
+                  <rect x="8.25" y="12" width="1.5" height="1.5" fill="#FFFFFF" />
+                </svg>
+              </span>
+              <div class="row-text">
+                <div class="row-name">Queso Manaba</div>
+                <div class="row-sku">PT-001</div>
+              </div>
+              <div class="row-qty-area">
+                <div class="row-qty">7</div>
+                <div class="row-unit">lb</div>
+              </div>
+            </div>
+            <div class="stock-row stock-row-2" id="stock-row-2">
+              <span class="row-icon">
+                <svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="9" cy="9" r="5" fill="#94C11F" />
+                </svg>
+              </span>
+              <div class="row-text">
+                <div class="row-name">Requesón Manaba</div>
+                <div class="row-sku">PT-004</div>
+              </div>
+              <div class="row-qty-area">
+                <div class="row-qty">14</div>
+                <div class="row-unit">unid.</div>
+              </div>
+            </div>
+            <div class="stock-row stock-row-3" id="stock-row-3">
+              <span class="row-icon">
+                <svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="9" cy="9" r="5" fill="#94C11F" />
+                </svg>
+              </span>
+              <div class="row-text">
+                <div class="row-name">Chifle Alargado 150g</div>
+                <div class="row-sku">PT-002</div>
+              </div>
+              <div class="row-qty-area">
+                <div class="row-qty">88</div>
+                <div class="row-unit">unid.</div>
+              </div>
+            </div>
+          </div>
+
+          
+        </div>
+      </div>
+
+      <script>
+        window.__timelines = window.__timelines || {};
+        const tl = gsap.timeline({ paused: true });
+
+        // Subtle camera dolly across the whole beat
+        tl.fromTo(
+          ".camera",
+          { scale: 1.0 },
+          { scale: 1.02, duration: 7, ease: "none" },
+          0
+        );
+
+        // Screenshot entrance (scale 0.96 -> 1.0, y 16 -> 0, opacity 0 -> 1)
+        tl.from(
+          "#dashboard",
+          { scale: 0.96, y: 16, opacity: 0, duration: 0.6, ease: "power2.out" },
+          0
+        );
+
+        // Header text fades up with the screenshot
+        tl.from(
+          ".header",
+          { y: 8, opacity: 0, duration: 0.5, ease: "power2.out" },
+          0.2
+        );
+
+        // KPI counters tick 0 -> real value over 1.2s starting at 0.4s
+        // NOTE: kpi-3 (PRODUCCIÓN ACTIVA = 0) is omitted — the screenshot's "0" is shown directly.
+        //       The previous composed "0" was at the wrong position; the dashboard value
+        //       at the correct position is what the viewer should see.
+        const counters = [
+          { id: "#kpi-1", target: 3 },
+          { id: "#kpi-2", target: 1 },
+          { id: "#kpi-4", target: 1 },
+        ];
+        counters.forEach(function (c) {
+          const el = document.querySelector(c.id);
+          const proxy = { n: 0 };
+          tl.set(c.id, { textContent: "0" }, 0.4);
+          tl.to(
+            proxy,
+            {
+              n: c.target,
+              duration: 1.2,
+              ease: "power2.out",
+              onUpdate: function () {
+                el.textContent = String(Math.round(proxy.n));
+              },
+            },
+            0.4
+          );
+        });
+
+        // Stock list rows stagger in starting at 1.8s
+        tl.from(
+          "#stock-row-1",
+          { y: 12, opacity: 0, duration: 0.4, ease: "power2.out" },
+          1.8
+        );
+        tl.from(
+          "#stock-row-2",
+          { y: 12, opacity: 0, duration: 0.4, ease: "power2.out" },
+          1.9
+        );
+        tl.from(
+          "#stock-row-3",
+          { y: 12, opacity: 0, duration: 0.4, ease: "power2.out" },
+          2.0
+        );
+
+        // En vivo green dot pulse (continuous, 1.6s cycle, 3 repeats)
+        tl.fromTo(
+          "#en-vivo-dot",
+          { scale: 1, opacity: 0.85 },
+          {
+            scale: 1.15,
+            opacity: 1,
+            duration: 0.8,
+            ease: "sine.inOut",
+            yoyo: true,
+            repeat: 3,
+          },
+          0
+        );
+
+        tl.set(".en-vivo", { x: -309, y: -169, immediateRender: true }, 0);
+
+        window.__timelines["beat-2"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>PAuleam — Beat 4: Operario (Portrait)</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  </head>
+  <body>
+    <template id="beat-4-template">
+      <style>
+        #root {
+          position: relative;
+          width: 1080px;
+          height: 1920px;
+          overflow: hidden;
+          background: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        }
+
+        .ecuador-stripe {
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 16px;
+          height: 1920px;
+          display: flex;
+          flex-direction: column;
+          z-index: 30;
+        }
+        .ecuador-stripe > div { flex: 1; }
+        .s-y { background: #FCD116; }
+        .s-b { background: #003893; }
+        .s-r { background: #CC0000; }
+
+        .role-badge {
+          position: absolute;
+          top: 50px;
+          left: 60px;
+          z-index: 25;
+          padding: 10px 20px;
+          border-radius: 999px;
+          background: #F59E0B;
+          color: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 16px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          line-height: 1;
+        }
+
+        .moment {
+          position: absolute;
+          left: 60px;
+          right: 80px;
+          z-index: 10;
+          will-change: opacity, transform;
+        }
+
+        .label-eyebrow {
+          color: #CC0000;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 18px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          line-height: 1;
+          white-space: nowrap;
+          margin-bottom: 14px;
+        }
+        .label-desc {
+          color: #121212;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 26px;
+          font-weight: 500;
+          line-height: 1.2;
+          max-width: 920px;
+        }
+
+        .screenshot-anchor {
+          position: absolute;
+          left: 0;
+          right: 0;
+          height: 420px;
+        }
+        .screenshot-frame {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          border: 1px solid #E5E5E5;
+          border-radius: 10px;
+          background: #ffffff;
+          will-change: transform, opacity;
+          transform-origin: 50% 50%;
+        }
+        .screenshot-frame img {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: top center;
+        }
+
+        .batch-chip {
+          position: absolute;
+          top: 20px;
+          right: 20px;
+          z-index: 20;
+          padding: 10px 22px;
+          background: #ffffff;
+          border: 2px solid #CC0000;
+          border-radius: 999px;
+          color: #CC0000;
+          font-family: ui-monospace, "SF Mono", "JetBrains Mono", Consolas, monospace;
+          font-size: 30px;
+          font-weight: 800;
+          letter-spacing: 0.02em;
+          line-height: 1;
+          white-space: nowrap;
+          transform-origin: 50% 50%;
+          will-change: transform, opacity;
+          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.6);
+        }
+      </style>
+
+      <div
+        id="root"
+        data-composition-id="beat-4"
+        data-width="1080"
+        data-height="1920"
+        data-duration="10"
+      >
+        <div class="ecuador-stripe">
+          <div class="s-y"></div>
+          <div class="s-b"></div>
+          <div class="s-r"></div>
+        </div>
+
+        <div class="role-badge">OPERARIO</div>
+
+        <div id="moment-a" class="moment" style="top: 130px;">
+          <div class="label-eyebrow">1. RECETAS</div>
+          <div class="label-desc">Materias Primas + Insumos</div>
+          <div class="screenshot-anchor" style="top: 130px;">
+            <div class="screenshot-frame">
+              <img src="capture/screenshots/admin/05-recipes.png" alt="Recipes" />
+            </div>
+          </div>
+        </div>
+
+        <div id="moment-b" class="moment" style="top: 700px;">
+          <div class="label-eyebrow">2. PRODUCCIÓN</div>
+          <div class="label-desc">Lote PROD-2026-0001 generado automáticamente.</div>
+          <div class="screenshot-anchor" style="top: 130px;">
+            <div class="screenshot-frame">
+              <img src="capture/screenshots/admin/06-production.png" alt="Production" />
+              <div class="batch-chip">PROD-2026-0001</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="moment-c" class="moment" style="top: 1270px;">
+          <div class="label-eyebrow">3. EMPAQUE</div>
+          <div class="label-desc">Plantilla + materiales consumidos en una corrida.</div>
+          <div class="screenshot-anchor" style="top: 130px;">
+            <div class="screenshot-frame">
+              <img src="capture/screenshots/admin/07-packaging.png" alt="Packaging" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          if (typeof window === "undefined" || !window.gsap) return;
+          window.__timelines = window.__timelines || {};
+          const tl = window.gsap.timeline({ paused: true });
+
+          tl.fromTo(".ecuador-stripe > div:nth-child(1)", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out", transformOrigin: "top center" }, 0);
+          tl.fromTo(".ecuador-stripe > div:nth-child(2)", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out", transformOrigin: "top center" }, 0.05);
+          tl.fromTo(".ecuador-stripe > div:nth-child(3)", { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out", transformOrigin: "top center" }, 0.1);
+
+          tl.fromTo(".role-badge", { opacity: 0, y: -12 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.2);
+
+          tl.set("#moment-a", { opacity: 1, scale: 1, x: 0, y: 0 }, 0);
+          tl.set("#moment-b", { opacity: 0, scale: 1, x: 0, y: 0 }, 0);
+          tl.set("#moment-c", { opacity: 0, scale: 1, x: 0, y: 0 }, 0);
+
+          tl.set("#moment-a .label-eyebrow, #moment-a .label-desc", { x: -40, opacity: 0 }, 0);
+          tl.set("#moment-a .screenshot-frame", { scale: 0.94, y: 12, opacity: 0 }, 0);
+
+          tl.set("#moment-b .label-eyebrow, #moment-b .label-desc", { x: -40, opacity: 0 }, 0);
+          tl.set("#moment-b .screenshot-frame", { scale: 0.94, y: 12, opacity: 0 }, 0);
+          tl.set("#moment-b .batch-chip", { scale: 0.5, opacity: 0 }, 0);
+
+          tl.set("#moment-c .label-eyebrow, #moment-c .label-desc", { x: -40, opacity: 0 }, 0);
+          tl.set("#moment-c .screenshot-frame", { scale: 0.94, y: 12, opacity: 0 }, 0);
+
+          tl.fromTo("#moment-a .label-eyebrow", { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 0.0);
+          tl.fromTo("#moment-a .label-desc", { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 0.0);
+          tl.fromTo("#moment-a .screenshot-frame", { scale: 0.94, y: 12, opacity: 0 }, { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" }, 0.2);
+          tl.fromTo("#moment-a .screenshot-frame", { y: 0 }, { y: -3, duration: 1.3, ease: "sine.inOut", yoyo: true }, 2.0);
+
+          tl.fromTo("#moment-a", { opacity: 1, scale: 1 }, { opacity: 0, scale: 0.97, duration: 0.3, ease: "power2.in" }, 3.3);
+          tl.fromTo("#moment-b", { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power2.out" }, 3.3);
+          tl.fromTo("#moment-b .label-eyebrow", { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 3.3);
+          tl.fromTo("#moment-b .label-desc", { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 3.3);
+          tl.fromTo("#moment-b .screenshot-frame", { scale: 0.94, y: 12, opacity: 0 }, { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" }, 3.5);
+          tl.fromTo("#moment-b .batch-chip", { scale: 0.5, opacity: 0 }, { scale: 1.0, opacity: 1, duration: 0.5, ease: "back.out(1.6)" }, 4.5);
+          tl.fromTo("#moment-b .screenshot-frame", { y: 0 }, { y: -3, duration: 1.6, ease: "sine.inOut", yoyo: true }, 5.0);
+
+          tl.fromTo("#moment-b", { opacity: 1, scale: 1 }, { opacity: 0, scale: 0.97, duration: 0.3, ease: "power2.in" }, 6.6);
+          tl.fromTo("#moment-c", { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power2.out" }, 6.6);
+          tl.fromTo("#moment-c .label-eyebrow", { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 6.6);
+          tl.fromTo("#moment-c .label-desc", { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 6.6);
+          tl.fromTo("#moment-c .screenshot-frame", { scale: 0.94, y: 12, opacity: 0 }, { scale: 1.0, y: 0, opacity: 1, duration: 0.7, ease: "power2.out" }, 6.8);
+          tl.fromTo("#moment-c .screenshot-frame", { y: 0 }, { y: -3, duration: 2.5, ease: "sine.inOut", yoyo: true }, 7.5);
+
+          window.__timelines["beat-4"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

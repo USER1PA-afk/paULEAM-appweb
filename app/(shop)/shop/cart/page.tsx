@@ -1,18 +1,74 @@
 "use client";
 
 import { useCart } from "@features/checkout/hooks";
+import { useAuth } from "@features/auth/hooks";
+import { useActivePromotions } from "@features/promotions/hooks";
+import { applyPromotions, round2 } from "@features/promotions/lib/apply-promotions";
+import { DeliveryInfoBanner } from "@features/checkout/components/DeliveryInfoBanner";
+import { QuantityStepper } from "@features/checkout/components/QuantityStepper";
+import { getInsforge } from "@shared/lib/insforge/client";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { ShoppingCart, Package, X } from "lucide-react";
+import { formatCurrency } from "@shared/lib/utils";
 
 export default function CartPage() {
-  const { items, total, itemCount, removeItem, clearCart, isEmpty } = useCart();
+  const { user } = useAuth();
+  const { items, total, itemCount, removeItem, updateQuantity, clearCart, isEmpty, loading } = useCart(user?.id ?? null);
+  const { data: activePromotions } = useActivePromotions();
+  const promoResult = useMemo(
+    () => applyPromotions(items, activePromotions ?? []),
+    [items, activePromotions]
+  );
+  const insforge = getInsforge();
+
+  // Stock disponible (físico) por producto, para topar el stepper. El valor
+  // ya descuenta las reservas activas del usuario (que cubren la cantidad
+  // actual en el carrito), así que el máximo total = cantidad + disponible.
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const productIds = items.map((i) => i.product_id).join(",");
+
+  useEffect(() => {
+    // Cart empty → nothing to query; the empty-state UI renders so a stale
+    // map is never read. Avoids a synchronous setState in the effect body.
+    if (!productIds) return;
+    const ids = productIds.split(",");
+    insforge.database
+      .from("stock_summary")
+      .select("product_id, stock_available")
+      .in("product_id", ids)
+      .then(
+        ({ data }) => {
+          const map: Record<string, number> = {};
+          ((data as { product_id: string; stock_available: number | string }[]) ?? []).forEach((s) => {
+            map[s.product_id] = Number(s.stock_available);
+          });
+          setStockMap(map);
+        },
+        () => {}
+      );
+  }, [productIds, insforge]);
+
+  const handleQuantityChange = useCallback(
+    async (productId: string, newQuantity: number) => {
+      setFeedback(null);
+      const result = await updateQuantity(productId, newQuantity);
+      if (result.error) {
+        setFeedback(result.error);
+        setTimeout(() => setFeedback(null), 4000);
+      }
+    },
+    [updateQuantity]
+  );
 
   if (isEmpty) {
     return (
       <div className="mx-auto max-w-2xl px-6 py-24 text-center">
-        <span className="text-6xl block mb-4">🛒</span>
-        <h1 className="text-2xl font-bold text-foreground">
-          Tu carrito está vacío
-        </h1>
+        <ShoppingCart aria-hidden="true" className="h-16 w-16 mx-auto mb-4 opacity-25" />
+        <h1 className="text-2xl font-bold text-foreground">Tu carrito está vacío</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Explora nuestro catálogo para agregar productos.
         </p>
@@ -27,7 +83,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10">
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <h1 className="text-2xl font-bold tracking-tight text-foreground">
         Carrito de Compras
       </h1>
@@ -35,45 +91,88 @@ export default function CartPage() {
         {itemCount} artículo{itemCount !== 1 ? "s" : ""} en tu carrito
       </p>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-3">
+      {feedback && (
+        <div
+          role="alert"
+          className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm font-medium text-destructive"
+        >
+          {feedback}
+        </div>
+      )}
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
         {/* Items */}
         <div className="lg:col-span-2 space-y-3">
           {items.map((item) => (
             <div
               key={item.product_id}
-              className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm"
+              className="flex gap-3 rounded-xl border border-border bg-card p-3.5 shadow-sm"
             >
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted text-2xl">
-                🧀
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-foreground truncate">
-                  {item.name}
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  {item.sku} · {item.unit}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-bold tabular-nums">{item.quantity}</p>
-                <p className="text-[10px] text-muted-foreground">und</p>
-              </div>
-              <div className="text-right w-28">
-                <p className="font-semibold tabular-nums">
-                  {(item.price * item.quantity).toLocaleString("es-EC", {
-                    style: "currency",
-                    currency: "USD",
-                    minimumFractionDigits: 2,
-                  })}
-                </p>
-              </div>
-              <button
-                onClick={() => removeItem(item.product_id)}
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                title="Eliminar"
+              {/* Thumbnail */}
+              <div
+                aria-hidden="true"
+                className="relative flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-lg bg-muted overflow-hidden"
               >
-                ✕
-              </button>
+                {item.image_url ? (
+                  <Image
+                    src={item.image_url}
+                    alt={item.name}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <Package className="h-7 w-7 text-muted-foreground opacity-40" />
+                )}
+              </div>
+
+              {/* Content — stacks vertically on mobile */}
+              <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                {/* Top row: name + remove */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-foreground text-sm leading-tight truncate">{item.name}</h3>
+                    <p className="text-xs text-muted-foreground">{item.sku}</p>
+                  </div>
+                  <button
+                    onClick={() => removeItem(item.product_id)}
+                    aria-label={`Eliminar ${item.name} del carrito`}
+                    className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  >
+                    <X aria-hidden="true" className="h-4 w-4" />
+                  </button>
+                </div>
+                {/* Bottom row: unit price + qty stepper + subtotal */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(item.price)} / {item.sales_unit_name || item.capacity_unit || item.unit}
+                  </p>
+                  <div className="flex items-center gap-3 ml-auto">
+                    <div className="flex flex-col items-center gap-1">
+                      <QuantityStepper
+                        value={item.quantity}
+                        max={item.quantity + Math.floor((stockMap[item.product_id] ?? 0) / (item.conversion_factor ?? 1))}
+                        onChange={(n) => handleQuantityChange(item.product_id, n)}
+                        disabled={loading}
+                      />
+                      {stockMap[item.product_id] !== undefined && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {Math.floor((stockMap[item.product_id] ?? 0) / (item.conversion_factor ?? 1))} disponible{Math.floor((stockMap[item.product_id] ?? 0) / (item.conversion_factor ?? 1)) !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-semibold tabular-nums text-sm w-16 text-right">
+                      {formatCurrency(item.price * item.quantity)}
+                    </p>
+                  </div>
+                </div>
+                {promoResult.lineDiscounts[item.product_id] && (
+                  <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 text-right">
+                    −{formatCurrency(promoResult.lineDiscounts[item.product_id].discount)}{" "}
+                    ({promoResult.lineDiscounts[item.product_id].promoNames.join(", ")})
+                  </p>
+                )}
+              </div>
             </div>
           ))}
 
@@ -87,19 +186,21 @@ export default function CartPage() {
 
         {/* Summary */}
         <div className="space-y-4">
+          <DeliveryInfoBanner />
+
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <h3 className="font-semibold text-foreground">Resumen</h3>
             <div className="mt-4 space-y-2 border-t border-border pt-4">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium tabular-nums">
-                  {total.toLocaleString("es-EC", {
-                    style: "currency",
-                    currency: "USD",
-                    minimumFractionDigits: 2,
-                  })}
-                </span>
+                <span className="font-medium tabular-nums">{formatCurrency(total)}</span>
               </div>
+              {promoResult.discountTotal > 0 && (
+                <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400">
+                  <span>Descuentos</span>
+                  <span className="font-medium tabular-nums">−{formatCurrency(promoResult.discountTotal)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Envío</span>
                 <span className="text-xs text-muted-foreground">A calcular</span>
@@ -107,13 +208,7 @@ export default function CartPage() {
             </div>
             <div className="mt-4 flex justify-between border-t border-border pt-4 text-base font-bold">
               <span>Total</span>
-              <span className="tabular-nums">
-                {total.toLocaleString("es-EC", {
-                  style: "currency",
-                  currency: "USD",
-                  minimumFractionDigits: 2,
-                })}
-              </span>
+              <span className="tabular-nums">{formatCurrency(round2(total - promoResult.discountTotal))}</span>
             </div>
 
             <Link

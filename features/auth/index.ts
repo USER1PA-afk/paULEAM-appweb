@@ -11,7 +11,9 @@
  * Exports:
  * - Components: LoginForm, RegisterForm
  * - Hooks: useAuth, useRole
+ * - Lib: signEmailUrl, verifyEmailUrlSignature
  */
 
 export { LoginForm, RegisterForm } from "./components";
 export { useAuth, useRole } from "./hooks";
+export { signEmailUrl, verifyEmailUrlSignature } from "./lib";

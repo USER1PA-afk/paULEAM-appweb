@@ -1,9 +1,12 @@
 "use client";
 
 import { getInsforge } from "@shared/lib/insforge/client";
+import { getNextDeliveryWindow } from "@shared/lib/utils";
 import { useState, useEffect, useCallback } from "react";
+import { useCachedQuery, invalidateCache } from "@shared/hooks/use-cached-query";
+import type { AppliedPromotion } from "@entities/promotion";
 
-interface CartItem {
+export interface CartItem {
   product_id: string;
   name: string;
   sku: string;
@@ -12,43 +15,199 @@ interface CartItem {
   quantity: number;
   image_url: string | null;
   reservation_id: string | null;
+  conversion_factor?: number;
+  sales_unit_name?: string | null;
+  capacity_unit?: string | null;
+}
+
+export interface PaymentConfig {
+  id: number;
+  pichincha_holder:       string | null;
+  pichincha_account:      string | null;
+  pichincha_account_type: string | null;
+  pichincha_qr_path:      string | null;
+  pichincha_qr_key:       string | null;
+  guayaquil_holder:       string | null;
+  guayaquil_account:      string | null;
+  guayaquil_account_type: string | null;
+  guayaquil_qr_key:       string | null;
+  paypal_email:           string | null;
+  paypal_me:              string | null;
+  updated_at:             string | null;
+  updated_by:             string | null;
 }
 
 interface Order {
   id: string;
   user_id: string;
   status: string;
+  fulfillment_type: string;
   total: number;
   payment_receipt_url: string | null;
+  payment_method: string | null;
+  delivery_date: string | null;
+  shipping_address: string | null;
+  notes: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  /** Set by the POS kiosk when the cashier ticked "Generar comprobante". */
+  invoice_generated_at: string | null;
+  /** 'ECOMMERCE' (default) or 'KIOSK' for POS sales. */
+  sale_origin: string | null;
+  /** Descuento total por promociones; total ya lo tiene restado (NETO). */
+  discount_total?: number;
+  /** Snapshot JSONB de promos aplicadas al momento del checkout. */
+  applied_promotions?: AppliedPromotion[] | null;
   created_at: string;
   updated_at: string;
+}
+
+interface OrderItemDetail {
+  id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  discount_amount?: number;
+  products: {
+    name: string;
+    sku: string;
+    unit: string;
+    sales_unit_name: string | null;
+    conversion_factor: number;
+  } | null;
+}
+
+export interface OrderWithDetails extends Order {
+  order_items?: OrderItemDetail[];
+}
+
+const ORDER_ITEMS_SELECT = `
+  id,
+  product_id,
+  quantity,
+  unit_price,
+  subtotal,
+  products(name, sku, unit, sales_unit_name, conversion_factor)
+`;
+
+/**
+ * Genera el código de retiro a partir del UUID de la orden.
+ * Formato: PAU-XXXXXXXX (8 hex chars del UUID sin guiones)
+ */
+export function pickupCode(orderId: string): string {
+  return "PAU-" + orderId.replace(/-/g, "").substring(0, 8).toUpperCase();
+}
+
+/**
+ * Convierte la clave de storage (`pichincha_qr_key`) del QR Pichincha/DeUna
+ * en la ruta del proxy autenticado `/api/payment-qr/<key>`.
+ *
+ * Devuelve `null` si no hay clave — el caller debe mostrar el placeholder
+ * de "QR pendiente de configuración".
+ */
+export function paymentQrUrl(key: string | null | undefined): string | null {
+  if (!key) return null;
+  return `/api/payment-qr/${key}`;
+}
+
+/**
+ * Convierte el valor almacenado en `payment_receipt_url` en la ruta del
+ * proxy autenticado `/api/receipts/<path>`.
+ *
+ * Soporta dos formatos:
+ *  - Nuevo (path):   "userId/1234567890.pdf"  → "/api/receipts/userId/1234567890.pdf"
+ *  - Legacy (URL):   "https://…/objects/userId%2F…" → extrae el path y construye la ruta
+ */
+export function receiptProxyUrl(value: string): string {
+  if (!value) return "";
+  // Ya es una ruta relativa (nuevo formato)
+  if (!value.startsWith("http")) {
+    return `/api/receipts/${value}`;
+  }
+  // Legacy: URL pública de Insforge — extraer el path del segmento /objects/
+  try {
+    const url = new URL(value);
+    const match = url.pathname.match(/\/objects\/(.+)$/);
+    if (match) {
+      const storagePath = decodeURIComponent(match[1]);
+      return `/api/receipts/${storagePath}`;
+    }
+  } catch { /* ignorar URL inválida */ }
+  // Fallback: devolver la URL original (bucket público aún)
+  return value;
+}
+
+const CART_KEY_PREFIX = "pauleam_cart_";
+export { CART_KEY_PREFIX };
+
+function cartKey(userId: string): string {
+  return `${CART_KEY_PREFIX}${userId}`;
+}
+
+let globalCartItems: CartItem[] = [];
+let currentUserId: string | null = null;
+const cartListeners = new Set<() => void>();
+
+function loadCartForUser(userId: string | null): CartItem[] {
+  if (typeof window === "undefined" || !userId) return [];
+  try {
+    const saved = localStorage.getItem(cartKey(userId));
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCartForUser(userId: string | null, items: CartItem[]): void {
+  if (typeof window === "undefined" || !userId) return;
+  try {
+    if (items.length === 0) {
+      localStorage.removeItem(cartKey(userId));
+    } else {
+      localStorage.setItem(cartKey(userId), JSON.stringify(items));
+    }
+  } catch {
+    /* ignore quota / serialization errors */
+  }
+}
+
+function notifyCart() {
+  saveCartForUser(currentUserId, globalCartItems);
+  cartListeners.forEach((l) => l());
 }
 
 /**
  * Hook para el carrito de compras con reservas de stock.
  * Las reservas usan pg_try_advisory_xact_lock para evitar sobreventa.
+ *
+ * PER-USER ISOLATION: cart storage is keyed by userId (`pauleam_cart_<userId>`).
+ * Passing `null` (guest) yields an empty cart. Logging out / switching user
+ * triggers a reload via the `[userId]` effect dep, so each user only ever
+ * sees their own items. The legacy single-key `pauleam_cart` (no suffix)
+ * is intentionally ignored — it was the source of the cross-session leak.
  */
-export function useCart() {
+export function useCart(userId: string | null = null) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const insforge = getInsforge();
 
-  // Cargar carrito desde localStorage al montar
   useEffect(() => {
-    const saved = localStorage.getItem("pauleam_cart");
-    if (saved) {
-      try {
-        setItems(JSON.parse(saved));
-      } catch {
-        localStorage.removeItem("pauleam_cart");
-      }
-    }
-  }, []);
+    // Reload cart when the active user changes (login, logout, switch user).
+    currentUserId = userId;
+    globalCartItems = loadCartForUser(userId);
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setItems([...globalCartItems]);
 
-  // Persistir en localStorage
-  useEffect(() => {
-    localStorage.setItem("pauleam_cart", JSON.stringify(items));
-  }, [items]);
+    const listener = () => setItems([...globalCartItems]);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    cartListeners.add(listener);
+    return () => {
+      cartListeners.delete(listener);
+    };
+  }, [userId]);
 
   const addItem = useCallback(
     async (
@@ -59,76 +218,158 @@ export function useCart() {
         unit: string;
         price: number;
         image_url: string | null;
+        conversion_factor?: number;
+        sales_unit_name?: string | null;
+        capacity_unit?: string | null;
       },
       quantity: number = 1
     ) => {
       setLoading(true);
       try {
-        // Reservar stock vía función RPC
         const { data: userData } = await insforge.auth.getCurrentUser();
         if (!userData?.user?.id) throw new Error("No autenticado");
+
+        const conversionFactor = product.conversion_factor ?? 1.0;
+        const physicalQuantity = Number((quantity / conversionFactor).toFixed(4));
 
         const { data, error } = await insforge.database.rpc("reserve_stock", {
           p_user_id: userData.user.id,
           p_product_id: product.id,
-          p_quantity: quantity,
+          p_quantity: physicalQuantity,
         });
 
         if (error) throw error;
 
-        const existing = items.find((i) => i.product_id === product.id);
+        // Sync module-level user to the in-flight add (handles login
+        // transition where useEffect hasn't re-run with the new userId yet).
+        if (currentUserId !== userData.user.id) {
+          currentUserId = userData.user.id;
+          globalCartItems = loadCartForUser(currentUserId);
+        }
+
+        const existing = globalCartItems.find((i) => i.product_id === product.id);
         if (existing) {
-          setItems((prev) =>
-            prev.map((i) =>
-              i.product_id === product.id
-                ? { ...i, quantity: i.quantity + quantity, reservation_id: data }
-                : i
-            )
+          globalCartItems = globalCartItems.map((i) =>
+            i.product_id === product.id
+              ? {
+                  ...i,
+                  quantity: i.quantity + quantity,
+                  reservation_id: data as string,
+                  conversion_factor: product.conversion_factor,
+                  sales_unit_name: product.sales_unit_name,
+                  capacity_unit: product.capacity_unit,
+                }
+              : i
           );
         } else {
-          setItems((prev) => [
-            ...prev,
+          globalCartItems = [
+            ...globalCartItems,
             {
               product_id: product.id,
               name: product.name,
               sku: product.sku,
               unit: product.unit,
               price: product.price,
-              quantity: quantity,
+              quantity,
               image_url: product.image_url,
               reservation_id: data as string,
+              conversion_factor: product.conversion_factor,
+              sales_unit_name: product.sales_unit_name,
+              capacity_unit: product.capacity_unit,
             },
-          ]);
+          ];
         }
+        notifyCart();
         return { error: null };
       } catch (err: unknown) {
         return {
-          error:
-            err instanceof Error ? err.message : "Error al agregar al carrito",
+          error: err instanceof Error ? err.message : "Error al agregar al carrito",
         };
       } finally {
         setLoading(false);
       }
     },
-    [items, insforge]
+    [insforge]
   );
 
   const removeItem = useCallback(
     async (productId: string) => {
-      const item = items.find((i) => i.product_id === productId);
+      const item = globalCartItems.find((i) => i.product_id === productId);
       if (item?.reservation_id) {
         await insforge.database
           .from("stock_reservations")
           .delete()
           .eq("id", item.reservation_id);
       }
-      setItems((prev) => prev.filter((i) => i.product_id !== productId));
+      globalCartItems = globalCartItems.filter((i) => i.product_id !== productId);
+      notifyCart();
     },
-    [items, insforge]
+    [insforge]
+  );
+
+  /**
+   * Fija la cantidad ABSOLUTA de un item del carrito (no suma un delta).
+   *
+   * Reservas: `reserve_stock` valida `get_available_stock` que ya descuenta
+   * las reservas activas del propio usuario. Por eso primero se borran TODAS
+   * las reservas del usuario para ese producto y luego se reserva el total
+   * nuevo — así la validación se hace contra el balance completo y queda una
+   * sola fila de reserva limpia. Cantidad < 1 elimina el item.
+   */
+  const updateQuantity = useCallback(
+    async (productId: string, newQuantity: number) => {
+      const item = globalCartItems.find((i) => i.product_id === productId);
+      if (!item) return { error: "El producto no está en el carrito" };
+      if (newQuantity < 1) {
+        await removeItem(productId);
+        return { error: null };
+      }
+      if (newQuantity === item.quantity) return { error: null };
+
+      setLoading(true);
+      try {
+        const { data: userData } = await insforge.auth.getCurrentUser();
+        if (!userData?.user?.id) throw new Error("No autenticado");
+        const uid = userData.user.id;
+
+        const conversionFactor = item.conversion_factor ?? 1.0;
+        const physicalQuantity = Number((newQuantity / conversionFactor).toFixed(4));
+
+        // Liberar reservas previas de este producto para validar contra el
+        // balance completo (evita el doble conteo de la reserva propia).
+        await insforge.database
+          .from("stock_reservations")
+          .delete()
+          .eq("user_id", uid)
+          .eq("product_id", productId);
+
+        const { data, error } = await insforge.database.rpc("reserve_stock", {
+          p_user_id: uid,
+          p_product_id: productId,
+          p_quantity: physicalQuantity,
+        });
+
+        if (error) throw error;
+
+        globalCartItems = globalCartItems.map((i) =>
+          i.product_id === productId
+            ? { ...i, quantity: newQuantity, reservation_id: data as string }
+            : i
+        );
+        notifyCart();
+        return { error: null };
+      } catch (err: unknown) {
+        return {
+          error: err instanceof Error ? err.message : "Error al actualizar la cantidad",
+        };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [insforge, removeItem]
   );
 
   const clearCart = useCallback(async () => {
-    // Liberar todas las reservas
     const { data: userData } = await insforge.auth.getCurrentUser();
     if (userData?.user?.id) {
       await insforge.database
@@ -136,15 +377,13 @@ export function useCart() {
         .delete()
         .eq("user_id", userData.user.id);
     }
-    setItems([]);
-    localStorage.removeItem("pauleam_cart");
+    globalCartItems = [];
+    notifyCart();
   }, [insforge]);
 
-  const total = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // Distinct products (one tick per SKU, not units). 8 lbs of the same cheese = 1.
+  const itemCount = items.length;
 
   return {
     items,
@@ -153,6 +392,7 @@ export function useCart() {
     itemCount,
     addItem,
     removeItem,
+    updateQuantity,
     clearCart,
     isEmpty: items.length === 0,
   };
@@ -160,7 +400,6 @@ export function useCart() {
 
 /**
  * Hook para el proceso de checkout.
- * Sube el comprobante de pago a Insforge Storage y crea la orden.
  */
 export function useCheckout() {
   const [loading, setLoading] = useState(false);
@@ -170,10 +409,19 @@ export function useCheckout() {
   const submitOrder = useCallback(
     async (params: {
       items: CartItem[];
+      /** Total NETO (bruto − descuentos). */
       total: number;
       shippingAddress: string;
       paymentReceipt: File;
+      paymentMethod: string;
+      fulfillmentType: "ENVIO" | "RETIRO_EN_PLANTA";
       notes?: string;
+      /** Descuento total por promociones (0 si no hay). */
+      discountTotal?: number;
+      /** Snapshot de promos aplicadas → orders.applied_promotions. */
+      appliedPromotions?: AppliedPromotion[];
+      /** Descuento informativo por línea (product_id → $). */
+      lineDiscounts?: Record<string, number>;
     }) => {
       setLoading(true);
       setError(null);
@@ -182,7 +430,22 @@ export function useCheckout() {
         if (!userData?.user?.id) throw new Error("No autenticado");
 
         // 1. Subir comprobante a Storage
-        const fileExt = params.paymentReceipt.name.split(".").pop();
+        const ALLOWED_EXTENSIONS = ["pdf", "jpg", "jpeg", "png", "webp"];
+        const ALLOWED_MIME_TYPES  = [
+          "application/pdf",
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+        ];
+        const fileExt = params.paymentReceipt.name.split(".").pop()?.toLowerCase() ?? "";
+        if (
+          !ALLOWED_EXTENSIONS.includes(fileExt) ||
+          !ALLOWED_MIME_TYPES.includes(params.paymentReceipt.type)
+        ) {
+          throw new Error(
+            "Solo se permiten archivos PDF, JPG, PNG o WEBP como comprobante de pago"
+          );
+        }
         const filePath = `${userData.user.id}/${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await insforge.storage
@@ -191,34 +454,58 @@ export function useCheckout() {
 
         if (uploadError) throw uploadError;
 
-        // 2. Obtener URL pública del comprobante
-        const publicUrl = insforge.storage
-          .from("payment-receipts")
-          .getPublicUrl(filePath);
+        // 2. Guardar la ruta del archivo (no la URL pública).
+        //    El bucket es privado — el acceso se hace a través del proxy /api/receipts/*.
+        const publicUrl = filePath;
 
-        // 3. Crear la orden
+        // 3. Calcular fecha de entrega (próximo viernes tras corte del jueves 5 PM Ecuador)
+        const { deliveryDate } = getNextDeliveryWindow();
+        const deliveryDateStr = deliveryDate.toISOString().split("T")[0];
+
+        // 4. Crear la orden
         const { data: order, error: orderError } = await insforge.database
           .from("orders")
           .insert({
             user_id: userData.user.id,
             status: "PAGADO",
+            fulfillment_type: params.fulfillmentType,
             total: params.total,
+            // Columnas de la migración 20260708000005 — solo se envían cuando
+            // hay descuento real. Sin la migración no pueden existir promos
+            // (la tabla no existe), así que el checkout sigue funcionando.
+            ...(params.discountTotal && params.discountTotal > 0
+              ? {
+                  discount_total: params.discountTotal,
+                  applied_promotions: params.appliedPromotions ?? null,
+                }
+              : {}),
             payment_receipt_url: publicUrl,
-            shipping_address: params.shippingAddress,
-            notes: params.notes,
+            payment_method: params.paymentMethod,
+            delivery_date: deliveryDateStr,
+            shipping_address: params.shippingAddress || null,
+            notes: params.notes ?? null,
           })
           .select()
           .single();
 
         if (orderError) throw orderError;
 
-        // 4. Crear los items de la orden
+        const orderId = (order as Order).id;
+
+        // 5. Crear los items
+        // unit_price y subtotal quedan BRUTOS (precio original); el descuento
+        // vive a nivel de orden + discount_amount informativo por línea.
+        // discount_amount solo se envía cuando hay descuentos (ver nota arriba).
+        const hasDiscounts = !!params.discountTotal && params.discountTotal > 0;
         const orderItems = params.items.map((item) => ({
-          order_id: (order as Order).id,
+          order_id: orderId,
           product_id: item.product_id,
           quantity: item.quantity,
           unit_price: item.price,
           subtotal: item.price * item.quantity,
+          ...(hasDiscounts
+            ? { discount_amount: params.lineDiscounts?.[item.product_id] ?? 0 }
+            : {}),
         }));
 
         const { error: itemsError } = await insforge.database
@@ -226,18 +513,6 @@ export function useCheckout() {
           .insert(orderItems);
 
         if (itemsError) throw itemsError;
-
-        // 5. Registrar EGRESOs en inventory_ledger
-        for (const item of params.items) {
-          await insforge.database.from("inventory_ledger").insert({
-            product_id: item.product_id,
-            movement_type: "EGRESO",
-            quantity: item.quantity,
-            reference_type: "VENTA",
-            reference_id: (order as Order).id,
-            notes: `Venta #${((order as Order).id).substring(0, 8)}`,
-          });
-        }
 
         // 6. Limpiar reservas del usuario
         await insforge.database
@@ -247,8 +522,7 @@ export function useCheckout() {
 
         return { data: order as Order, error: null };
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Error en el checkout";
+        const message = err instanceof Error ? err.message : "Error en el checkout";
         setError(message);
         return { data: null, error: message };
       } finally {
@@ -263,52 +537,82 @@ export function useCheckout() {
 
 /**
  * Hook para que el admin gestione órdenes de venta.
+ * Incluye items de cada orden con detalles del producto.
  */
 export function useOrderManagement() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
   const insforge = getInsforge();
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await insforge.database
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false });
+  const queryOrders = useCallback(async () => {
+    const { data } = await insforge.database
+      .from("orders")
+      .select(`*, order_items(${ORDER_ITEMS_SELECT})`)
+      .order("created_at", { ascending: false });
 
-      setOrders((data as Order[]) ?? []);
-    } catch {
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
+    return (data as OrderWithDetails[]) ?? [];
   }, [insforge]);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+  const { data, loading, refetch: fetchOrders } =
+    useCachedQuery<OrderWithDetails[]>("orders_admin", queryOrders);
+  const orders = data ?? [];
 
   const approveOrder = useCallback(
     async (orderId: string) => {
       try {
-        const { data: userData } = await insforge.auth.getCurrentUser();
-        const { error } = await insforge.database
+        const { data: orderData, error: orderFetchError } = await insforge.database
           .from("orders")
-          .update({
-            status: "APROBADO",
-            approved_by: userData?.user?.id,
-            approved_at: new Date().toISOString(),
-          })
-          .eq("id", orderId);
+          .select("fulfillment_type")
+          .eq("id", orderId)
+          .single();
 
-        if (error) throw error;
+        if (orderFetchError) throw orderFetchError;
+        const fulfillmentType = (orderData as { fulfillment_type: string }).fulfillment_type;
+
+        if (fulfillmentType === "ENVIO") {
+          const { error: rpcError } = await insforge.database.rpc("fn_finalize_online_order", {
+            p_order_id: orderId,
+            p_target_status: "APROBADO",
+          });
+          if (rpcError) throw rpcError;
+        } else {
+          const { data: userData } = await insforge.auth.getCurrentUser();
+          const { error } = await insforge.database
+            .from("orders")
+            .update({
+              status: "APROBADO",
+              approved_by: userData?.user?.id,
+              approved_at: new Date().toISOString(),
+            })
+            .eq("id", orderId);
+          if (error) throw error;
+        }
+
+        invalidateCache("stock_summary", "inventory_ledger");
         await fetchOrders();
         return { error: null };
       } catch (err: unknown) {
         return {
-          error:
-            err instanceof Error ? err.message : "Error al aprobar orden",
+          error: err instanceof Error ? err.message : "Error al aprobar orden",
+        };
+      }
+    },
+    [insforge, fetchOrders]
+  );
+
+  const confirmPickup = useCallback(
+    async (orderId: string) => {
+      try {
+        const { error: rpcError } = await insforge.database.rpc("fn_finalize_online_order", {
+          p_order_id: orderId,
+          p_target_status: "COMPLETADO",
+        });
+        if (rpcError) throw rpcError;
+
+        invalidateCache("stock_summary", "inventory_ledger");
+        await fetchOrders();
+        return { error: null };
+      } catch (err: unknown) {
+        return {
+          error: err instanceof Error ? err.message : "Error al confirmar entrega",
         };
       }
     },
@@ -328,13 +632,107 @@ export function useOrderManagement() {
         return { error: null };
       } catch (err: unknown) {
         return {
-          error:
-            err instanceof Error ? err.message : "Error al rechazar orden",
+          error: err instanceof Error ? err.message : "Error al rechazar orden",
         };
       }
     },
     [insforge, fetchOrders]
   );
 
-  return { orders, loading, approveOrder, rejectOrder, refetch: fetchOrders };
+  return { orders, loading, approveOrder, rejectOrder, confirmPickup, refetch: fetchOrders };
+}
+
+/**
+ * Hook para leer la configuración de métodos de pago.
+ * Todos los usuarios autenticados pueden leer; solo admins pueden escribir (RLS).
+ */
+export function usePaymentConfig() {
+  const [config, setConfig] = useState<PaymentConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const insforge = getInsforge();
+
+  useEffect(() => {
+    insforge.database
+      .from("payment_config")
+      .select("*")
+      .eq("id", 1)
+      .then(
+        ({ data, error }) => {
+          if (!error && data?.[0]) setConfig(data[0] as PaymentConfig);
+          setLoading(false);
+        },
+        () => setLoading(false)
+      );
+  }, [insforge]);
+
+  return { config, loading };
+}
+
+/**
+ * Hook para que el admin actualice la configuración de métodos de pago.
+ * El RLS de la DB rechaza llamadas de usuarios sin rol admin.
+ */
+export function usePaymentConfigMutations() {
+  const insforge = getInsforge();
+
+  const saveConfig = useCallback(
+    async (values: Partial<PaymentConfig>) => {
+      const { data: userData } = await insforge.auth.getCurrentUser();
+      const payload = {
+        ...values,
+        updated_at: new Date().toISOString(),
+        updated_by: userData?.user?.id ?? null,
+      };
+      // Remove read-only id field if present
+      delete (payload as Partial<PaymentConfig> & { id?: unknown }).id;
+
+      const { error } = await insforge.database
+        .from("payment_config")
+        .update(payload)
+        .eq("id", 1);
+
+      return { error: error ? (error instanceof Error ? error.message : String(error)) : null };
+    },
+    [insforge]
+  );
+
+  return { saveConfig };
+}
+
+/**
+ * Hook para que el usuario vea su historial de órdenes.
+ */
+export function useUserOrders() {
+  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const insforge = getInsforge();
+
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: userData } = await insforge.auth.getCurrentUser();
+      if (!userData?.user?.id) {
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data } = await insforge.database
+        .from("orders")
+        .select(`*, order_items(${ORDER_ITEMS_SELECT})`)
+        .eq("user_id", userData.user.id)
+        .order("created_at", { ascending: false });
+
+      setOrders((data as OrderWithDetails[]) ?? []);
+    } catch {
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [insforge]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
+
+  return { orders, loading, refetch: fetchOrders };
 }

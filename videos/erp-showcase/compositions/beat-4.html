@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>PAuleam — Beat 4: Operario</title>
+  </head>
+  <body>
+    <template id="beat-4-template">
+      <style>
+        #root {
+          position: relative;
+          width: 1920px;
+          height: 1080px;
+          overflow: hidden;
+          background: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        }
+
+        .ecuador-stripe {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 12px;
+          display: flex;
+          z-index: 30;
+        }
+        .ecuador-stripe > div { flex: 1 1 0; height: 100%; }
+        .stripe-yellow { background: #fcd116; }
+        .stripe-blue   { background: #003893; }
+        .stripe-red    { background: #cc0000; }
+
+        .role-badge {
+          position: absolute;
+          top: 36px;
+          left: 32px;
+          z-index: 25;
+          padding: 8px 16px;
+          border-radius: 999px;
+          background: #f59e0b;
+          color: #ffffff;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 14px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          line-height: 1;
+        }
+
+        /* All 3 moments fill the viewport. Only one is visible at a time. */
+        .moment {
+          position: absolute;
+          inset: 0;
+          z-index: 10;
+          opacity: 0;
+        }
+
+        /* Consistent text settings across all 3 moments (matches Producción) */
+        .label-eyebrow {
+          position: absolute;
+          top: 100px;
+          left: 32px;
+          z-index: 12;
+          color: #cc0000;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 14px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          line-height: 1;
+          white-space: nowrap;
+        }
+        .label-desc {
+          position: absolute;
+          top: 132px;
+          left: 32px;
+          z-index: 12;
+          color: #121212;
+          font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+          font-size: 22px;
+          font-weight: 500;
+          line-height: 1.2;
+          max-width: 520px;
+        }
+
+        .screenshot-anchor {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 1344px;
+          height: 648px;
+          max-width: 70%;
+          max-height: 60%;
+        }
+        .screenshot-frame {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          border: 1px solid #e5e5e5;
+          border-radius: 10px;
+          background: #ffffff;
+        }
+        .screenshot-frame img {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: top center;
+        }
+
+        .batch-chip {
+          position: absolute;
+          top: 18px;
+          right: 18px;
+          z-index: 20;
+          padding: 8px 18px;
+          background: #ffffff;
+          border: 2px solid #cc0000;
+          border-radius: 999px;
+          color: #cc0000;
+          font-family: ui-monospace, "SF Mono", "JetBrains Mono", Consolas, monospace;
+          font-size: 28px;
+          font-weight: 800;
+          letter-spacing: 0.02em;
+          line-height: 1;
+          white-space: nowrap;
+          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.6);
+        }
+      </style>
+
+      <div
+        id="root"
+        data-composition-id="beat-4"
+        data-width="1920"
+        data-height="1080"
+        data-start="22"
+        data-duration="10"
+      >
+        <div class="ecuador-stripe">
+          <div class="stripe-yellow"></div>
+          <div class="stripe-blue"></div>
+          <div class="stripe-red"></div>
+        </div>
+
+        <div class="role-badge">OPERARIO</div>
+
+        <!-- 1) RECETAS -->
+        <div id="moment-a" class="moment">
+          <div class="label-eyebrow">1. RECETAS</div>
+          <div class="label-desc">Materias Primas + Insumos</div>
+          <div class="screenshot-anchor">
+            <div class="screenshot-frame">
+              <img src="capture/screenshots/admin/05-recipes.png" alt="Recetas" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 2) PRODUCCIÓN -->
+        <div id="moment-b" class="moment">
+          <div class="label-eyebrow">2. PRODUCCIÓN</div>
+          <div class="label-desc">Lote PROD-2026-0001 generado automáticamente.</div>
+          <div class="screenshot-anchor">
+            <div class="screenshot-frame">
+              <img src="capture/screenshots/admin/06-production.png" alt="Producción" />
+              <div class="batch-chip">PROD-2026-0001</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3) EMPAQUE -->
+        <div id="moment-c" class="moment">
+          <div class="label-eyebrow">3. EMPAQUE</div>
+          <div class="label-desc">Plantilla + materiales consumidos en una corrida.</div>
+          <div class="screenshot-anchor">
+            <div class="screenshot-frame">
+              <img src="capture/screenshots/admin/07-packaging.png" alt="Empaque" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          if (typeof window === "undefined" || !window.gsap) return;
+          window.__timelines = window.__timelines || {};
+          const tl = window.gsap.timeline({ paused: true });
+
+          // All 3 moments: pure opacity, cross-faded so something is always visible.
+          // Text settings are identical (defined in CSS) so all 3 pages match Producción.
+          //
+          //  0.0s ─── 2.9s ─── 3.3s ─── 6.3s ─── 6.7s ─── 10.0s
+          //  A fade-in      cross-fade    cross-fade
+          //  A full         A out, B in   B out, C in     C full
+          tl.fromTo("#moment-a", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out" }, 0.0);
+          tl.fromTo("#moment-a", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 2.9);
+          tl.fromTo("#moment-b", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.inOut" }, 2.9);
+          tl.fromTo("#moment-b", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 6.3);
+          tl.fromTo("#moment-c", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.inOut" }, 6.3);
+
+          window.__timelines["beat-4"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
