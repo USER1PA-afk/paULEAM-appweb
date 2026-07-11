@@ -6,7 +6,56 @@ import { HomeMobileNav } from "@features/auth/components/home-mobile-nav";
 import { Footer } from "@shared/components/footer";
 import { ProductCarousel } from "@features/store-products/components/product-carousel";
 import { LandingHeaderLogo } from "@shared/components/landing-header-logo";
+import { JsonLd } from "@shared/components/json-ld";
 import { Leaf, Award, Truck } from "lucide-react";
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_APP_URL ?? "https://pauleam.vercel.app";
+
+const ORG_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "PAuleam — Planta de Alimentos ULEAM",
+  alternateName: ["PAuleam", "Planta de Alimentos ULEAM", "Panchitos ULEAM"],
+  url: SITE_URL,
+  logo: `${SITE_URL}/icons/icon-512.png`,
+  description:
+    "Productos alimenticios artesanales elaborados en la Planta de Alimentos de la Universidad Laica Eloy Alfaro de Manabí (ULEAM), Chone, Ecuador.",
+  parentOrganization: {
+    "@type": "CollegeOrUniversity",
+    name: "Universidad Laica Eloy Alfaro de Manabí",
+    alternateName: "ULEAM",
+    url: "https://www.uleam.edu.ec",
+  },
+  address: {
+    "@type": "PostalAddress",
+    addressCountry: "EC",
+    addressRegion: "Manabí",
+    addressLocality: "Chone",
+  },
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer service",
+    availableLanguage: ["es"],
+  },
+};
+
+const WEBSITE_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "PAuleam",
+  url: SITE_URL,
+  inLanguage: "es-EC",
+  publisher: {
+    "@type": "Organization",
+    name: "Planta de Alimentos ULEAM",
+  },
+  potentialAction: {
+    "@type": "SearchAction",
+    target: `${SITE_URL}/shop/catalog?search={search_term_string}`,
+    "query-input": "required name=search_term_string",
+  },
+};
 
 // ─── Value props ──────────────────────────────────────────────────────────────
 
@@ -39,6 +88,8 @@ const VALUES = [
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col">
+      <JsonLd data={ORG_JSON_LD} />
+      <JsonLd data={WEBSITE_JSON_LD} />
 
       {/* ── Navbar ── */}
       <header className="sticky top-0 z-50 border-b border-border/60 bg-card/90 backdrop-blur-lg">

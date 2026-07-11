@@ -1,5 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+
+/**
+ * Las páginas de autenticación (login, registro, recuperación, etc.) no deben
+ * aparecer en Google — son vistas internas que solo existen para clientes que
+ * ya conocen la URL.
+ */
+export const metadata: Metadata = {
+  title: "Acceso — PAuleam",
+  robots: { index: false, follow: false, nocache: true },
+};
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (

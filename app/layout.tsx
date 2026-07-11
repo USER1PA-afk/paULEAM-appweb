@@ -11,10 +11,74 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_APP_URL ?? "https://pauleam.vercel.app";
+
 export const metadata: Metadata = {
-  title: "PAuleam — ERP & E-Commerce | Planta de Alimentos",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "PAuleam — Planta de Alimentos ULEAM | Productos Artesanales",
+    template: "%s | PAuleam — Planta de Alimentos ULEAM",
+  },
   description:
-    "Sistema integrado de gestión industrial y comercio electrónico para planta de alimentos. Inventario, producción, ventas y más.",
+    "Productos alimenticios artesanales elaborados en la Planta de Alimentos de la ULEAM. Quesos, embutidos y más. Calidad académica, trazabilidad completa, directo a tu mesa.",
+  keywords: [
+    "PAuleam",
+    "Planta de Alimentos ULEAM",
+    "ULEAM",
+    "productos artesanales Ecuador",
+    "queso manaba",
+    "embutidos artesanales",
+    "planta de alimentos Chone",
+    "productos lácteos ULEAM",
+    "Queso Manaba",
+    "Panchitos ULEAM",
+  ],
+  authors: [{ name: "Planta de Alimentos ULEAM" }],
+  creator: "Planta de Alimentos ULEAM",
+  publisher: "Universidad Laica Eloy Alfaro de Manabí (ULEAM)",
+  applicationName: "PAuleam",
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  verification: {
+    google: "o3DzClk0eI-CVW7kn3tbyHSPy-Gx-eOL8ce0zwBm6Ps",
+  },
+  openGraph: {
+    type: "website",
+    locale: "es_EC",
+    url: SITE_URL,
+    siteName: "PAuleam — Planta de Alimentos ULEAM",
+    title: "PAuleam — Productos Artesanales de la Planta de Alimentos ULEAM",
+    description:
+      "Productos alimenticios artesanales elaborados en la Planta de Alimentos de la ULEAM. Calidad académica, trazabilidad completa, directo a tu mesa.",
+    images: [
+      {
+        url: "/logo-pauleam.png",
+        width: 512,
+        height: 512,
+        alt: "PAuleam — Planta de Alimentos ULEAM",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PAuleam — Planta de Alimentos ULEAM",
+    description:
+      "Productos alimenticios artesanales elaborados en la Planta de Alimentos de la ULEAM.",
+    images: ["/logo-pauleam.png"],
+  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -25,10 +89,13 @@ export const metadata: Metadata = {
     icon: "/icons/icon-192.png",
     apple: "/icons/apple-touch-icon.png",
   },
+  category: "food",
 };
 
 export const viewport: Viewport = {
   themeColor: "#cc0000",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

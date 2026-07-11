@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
 
 // Allowed CORS origin — set NEXT_PUBLIC_APP_URL in each Vercel environment:
-//   Production:  https://plantadalimentos.vercel.app
-//   Preview:     https://plantaalimentostest.vercel.app
+//   Production:  https://pauleam.vercel.app
+//   Preview:     https://pauleam-git-*.vercel.app
 const ALLOWED_ORIGIN =
-  process.env.NEXT_PUBLIC_APP_URL ?? "https://plantadalimentos.vercel.app";
+  process.env.NEXT_PUBLIC_APP_URL ?? "https://pauleam.vercel.app";
 
 /**
  * Security headers that DO NOT need a per-request nonce (Content-Security-

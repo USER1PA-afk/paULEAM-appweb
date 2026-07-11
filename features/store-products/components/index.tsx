@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { useProductImages, type ProductImage, type StoreProductWithStock } from "../hooks";
 
+export { ProductDetailView, type ProductDetailViewProps } from "./product-detail-view";
+
 // ─── ProductStatusBadge ───────────────────────────────────────────────────────
 
 interface StatusBadgeProps {
