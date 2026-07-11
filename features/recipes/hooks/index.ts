@@ -347,13 +347,29 @@ export function useRecipeMutations() {
       ingredient_role?: "MATERIA_PRIMA" | "INSUMO";
       notes?: string | null;
     }[]) => {
-      // Eliminar existentes
-      const { error: delErr } = await insforge.database
+      // Count existing rows first so we can detect a silent RLS-blocked DELETE
+      const { data: existingRows, error: countErr } = await insforge.database
         .from("recipe_ingredients")
-        .delete()
+        .select("id")
+        .eq("recipe_id", recipeId);
+
+      if (countErr) throw new Error(countErr.details ? `${countErr.message}: ${countErr.details}` : countErr.message || "Error al verificar ingredientes existentes");
+
+      const existingCount = (existingRows ?? []).length;
+
+      // Eliminar existentes
+      const { error: delErr, count: deletedCount } = await insforge.database
+        .from("recipe_ingredients")
+        .delete({ count: "exact" })
         .eq("recipe_id", recipeId);
 
       if (delErr) throw new Error(delErr.details ? `${delErr.message}: ${delErr.details}` : delErr.message || "Error al limpiar ingredientes anteriores");
+
+      // Guard: if rows existed but none were deleted, RLS blocked the DELETE
+      // (PostgREST returns { error: null, count: 0 } instead of an error)
+      if (existingCount > 0 && deletedCount === 0) {
+        throw new Error("No se tienen permisos para reemplazar los ingredientes de esta receta. Contacte a un administrador.");
+      }
 
       // Insertar nuevos
       if (ingredients.length > 0) {

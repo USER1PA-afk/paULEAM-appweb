@@ -6,8 +6,8 @@
 -- approve or reject. The actual soft-delete (is_active = false)
 -- happens only on approval.
 --
--- The notification sent to admins uses metadata.visibility =
--- 'admin_only' so operario never sees it (RLS filter).
+-- The notification is sent to each administrator profile individually,
+-- so operators never see them.
 -- ============================================================
 
 -- ============================
@@ -70,32 +70,12 @@ CREATE POLICY "deletion_requests_update_admin"
 -- No DELETE — preserve audit trail
 
 -- ============================
--- 2. notifications: make user_id nullable + add metadata column
---    so admin-targeted broadcasts (no single recipient) work
+-- 2. notifications changes (omitted)
+--    To prevent ownership errors ("must be owner of table notifications"),
+--    we do not alter public.notifications or modify its policies.
+--    Instead, admin-targeted notifications are inserted individually
+--    for each admin profile.
 -- ============================
-ALTER TABLE public.notifications
-  ALTER COLUMN user_id DROP NOT NULL;
-
-ALTER TABLE public.notifications
-  ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
-
--- ============================
--- 3. notifications RLS: respect admin_only metadata
--- ============================
-DROP POLICY IF EXISTS "notifications_select_own" ON public.notifications;
-CREATE POLICY "notifications_select_own"
-  ON public.notifications FOR SELECT
-  TO authenticated
-  USING (
-    -- Personal notifications (always visible to recipient)
-    user_id = auth.uid()
-    -- Legacy broadcast: REQUEST type visible to admin + operario
-    OR (type = 'REQUEST' AND public.get_user_role() IN ('admin','operario'))
-    -- New: admin-only metadata flag — only admin sees
-    OR (metadata->>'visibility' = 'admin_only' AND public.get_user_role() = 'admin')
-  );
-
--- Insert/update/delete policies stay the same (no-op)
 
 -- ============================
 -- 4. Soft-delete RPCs: allow admin to archive via SECURITY DEFINER
@@ -186,19 +166,19 @@ BEGIN
   VALUES (p_entity_type, p_entity_id, v_label, auth.uid(), p_reason)
   RETURNING id INTO v_id;
 
-  -- Admin-only broadcast (no user_id; metadata flag filters via RLS)
-  INSERT INTO public.notifications (user_id, title, message, type, metadata)
-  VALUES (
-    NULL,
+  -- Admin-only notifications (individual insert per admin profile)
+  INSERT INTO public.notifications (user_id, title, message, type)
+  SELECT
+    pr.id,
     'Solicitud de eliminación: ' || CASE
       WHEN p_entity_type = 'product'  THEN 'producto'
       WHEN p_entity_type = 'supplier' THEN 'proveedor'
       ELSE 'receta'
     END,
     v_label || COALESCE(' — Motivo: ' || p_reason, ''),
-    'REQUEST',
-    jsonb_build_object('visibility','admin_only','request_id', v_id, 'entity_type', p_entity_type)
-  );
+    'REQUEST'
+  FROM public.profiles pr
+  WHERE pr.role = 'admin';
 
   RETURN v_id;
 END;
