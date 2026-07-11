@@ -368,10 +368,12 @@ export function SuppliersTable({
   suppliers,
   onToggle,
   onEdit,
+  onRequestDelete,
 }: {
   suppliers: Supplier[];
-  onToggle: (id: string, current: boolean) => void;
-  onEdit: (s: Supplier) => void;
+  onToggle: ((id: string, current: boolean) => void) | null;
+  onEdit: ((s: Supplier) => void) | null;
+  onRequestDelete?: ((s: Supplier) => void) | null;
 }) {
   const { page, setPage, paged, from, to, total, totalPages } = usePagination(suppliers);
   if (suppliers.length === 0) {
@@ -442,24 +444,41 @@ export function SuppliersTable({
                 </span>
               </td>
               <td className="px-4 py-3 text-center">
-                <div className="flex items-center justify-center gap-2">
-                  <button
-                    onClick={() => onEdit(s)}
-                    className="rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => onToggle(s.id, s.is_active)}
-                    className={`rounded-md px-2 py-1 text-xs font-medium text-white transition-colors ${
-                      s.is_active
-                        ? "bg-red-600 hover:bg-red-700"
-                        : "bg-green-600 hover:bg-green-700"
-                    }`}
-                  >
-                    {s.is_active ? "Desactivar" : "Activar"}
-                  </button>
-                </div>
+                {(onEdit || onToggle || onRequestDelete) ? (
+                  <div className="flex items-center justify-center gap-2">
+                    {onEdit && (
+                      <button
+                        onClick={() => onEdit(s)}
+                        className="rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
+                      >
+                        Editar
+                      </button>
+                    )}
+                    {onToggle && (
+                      <button
+                        onClick={() => onToggle(s.id, s.is_active)}
+                        className={`rounded-md px-2 py-1 text-xs font-medium text-white transition-colors ${
+                          s.is_active
+                            ? "bg-red-600 hover:bg-red-700"
+                            : "bg-green-600 hover:bg-green-700"
+                        }`}
+                      >
+                        {s.is_active ? "Desactivar" : "Activar"}
+                      </button>
+                    )}
+                    {onRequestDelete && s.is_active && (
+                      <button
+                        onClick={() => onRequestDelete(s)}
+                        title="Solicitar eliminación (requiere aprobación de admin)"
+                        className="inline-flex items-center gap-1 rounded-md border border-destructive/40 bg-destructive/5 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
               </td>
             </tr>
           ))}

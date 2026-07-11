@@ -89,6 +89,7 @@ export default function AdminProductionPage() {
     [recipes]
   );
   const isAdmin = role === "admin";
+  const isStaff = role === "admin" || role === "operario";
   const router = useRouter();
 
   const [showForm, setShowForm] = useState(false);
@@ -677,7 +678,7 @@ export default function AdminProductionPage() {
                                 >
                                   Iniciar
                                 </button>
-                                {isAdmin && (
+                                {isStaff && (
                                   <button
                                     onClick={() => handleCancel(order.id)}
                                     className="rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors"
@@ -696,7 +697,7 @@ export default function AdminProductionPage() {
                                   >
                                     Completar
                                   </button>
-                                  {isAdmin && (
+                                  {isStaff && (
                                     <button
                                       onClick={() => handleCancel(order.id)}
                                       className="rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors"
@@ -720,21 +721,21 @@ export default function AdminProductionPage() {
                                 >
                                   Ver Detalle
                                 </button>
+                                {isStaff && (
+                                  <button
+                                    onClick={() => setWasteOrderId(wasteOrderId === order.id ? null : order.id)}
+                                    className="rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                                  >
+                                    <Trash2 className="h-3 w-3 inline mr-0.5" />Merma
+                                  </button>
+                                )}
                                 {isAdmin && (
-                                  <>
-                                    <button
-                                      onClick={() => setWasteOrderId(wasteOrderId === order.id ? null : order.id)}
-                                      className="rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
-                                    >
-                                      <Trash2 className="h-3 w-3 inline mr-0.5" />Merma
-                                    </button>
-                                    <button
-                                      onClick={() => setReverseOrderId(reverseOrderId === order.id ? null : order.id)}
-                                      className="rounded-md border border-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                                    >
-                                      <RotateCcw className="h-3 w-3 inline mr-0.5" />Revertir
-                                    </button>
-                                  </>
+                                  <button
+                                    onClick={() => setReverseOrderId(reverseOrderId === order.id ? null : order.id)}
+                                    className="rounded-md border border-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                                  >
+                                    <RotateCcw className="h-3 w-3 inline mr-0.5" />Revertir
+                                  </button>
                                 )}
                               </div>
                             )}

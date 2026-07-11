@@ -3,7 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useAuth, useRole } from "@features/auth/hooks";
 import { useNotifications } from "@features/notifications/hooks";
 import { ThemeToggle } from "@shared/components/theme-toggle";
@@ -28,17 +29,19 @@ import {
   Settings,
   ChevronDown,
   BadgePercent,
+  Trash2,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Inicio",      href: "/admin/dashboard",  icon: LayoutDashboard, roles: ["admin", "operario"] },
   { label: "Productos",   href: "/admin/products",    icon: Tag,             roles: ["admin", "operario"] },
-  { label: "Proveedores", href: "/admin/suppliers",   icon: Handshake,       roles: ["admin"] },
-  { label: "Recetas",     href: "/admin/recipes",     icon: ClipboardList,   roles: ["admin"] },
+  { label: "Proveedores", href: "/admin/suppliers",   icon: Handshake,       roles: ["admin", "operario"] },
+  { label: "Recetas",     href: "/admin/recipes",     icon: ClipboardList,   roles: ["admin", "operario"] },
   { label: "Inventario",  href: "/admin/inventory",   icon: Boxes,           roles: ["admin", "operario"] },
   { label: "Producción",  href: "/admin/production",  icon: Factory,         roles: ["admin", "operario"] },
   { label: "Producción bajo demanda", href: "/admin/production-requests", icon: Factory, roles: ["admin", "operario"] },
   { label: "Empaque",     href: "/admin/packaging",   icon: PackageOpen,     roles: ["admin", "operario"] },
+  { label: "Eliminaciones", href: "/admin/deletion-requests", icon: Trash2, roles: ["admin"] },
   { label: "Usuarios",    href: "/admin/users",       icon: Users,           roles: ["admin"] },
   { label: "Auditoría",  href: "/admin/audit",       icon: Shield,          roles: ["admin"] },
   { label: "Pagos",      href: "/admin/settings",    icon: Settings,        roles: ["admin"] },
@@ -152,10 +155,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen,      setSidebarOpen]      = useState(false);
   const [notifOpen,        setNotifOpen]        = useState(false);
+  const [notifPos,         setNotifPos]         = useState<{ top: number; right: number } | null>(null);
   const [storeOpen,        setStoreOpen]        = useState(() =>
     pathname.startsWith("/admin/store") || pathname === "/shop/catalog"
   );
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const bellRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleHamburgerClick = () => {
     if (window.innerWidth >= 1024) {
@@ -181,11 +187,70 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       setStoreOpen(true);
     }
   }, [pathname]);
+
+  const closeNotif = useCallback(() => setNotifOpen(false), []);
+
+  // ── Close notifications dropdown on outside click / Escape ────────────
+  // The dropdown is rendered in a React portal at document.body level, so
+  // it cannot rely on the parent tree for click-outside. A document-level
+  // mousedown listener checks both the bell ref (so the bell toggles, not
+  // closes) and the dropdown ref (so clicks inside don't close it).
+  useEffect(() => {
+    if (!notifOpen) return;
+
+    function onPointerDown(e: MouseEvent) {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (bellRef.current && bellRef.current.contains(target)) return;
+      if (dropdownRef.current && dropdownRef.current.contains(target)) return;
+      setNotifOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setNotifOpen(false);
+    }
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [notifOpen]);
+
+  // ── Compute dropdown position when opening ────────────────────────────
+  // Portal renders at body level, so we must compute the absolute viewport
+  // coordinates from the bell button's bounding rect. Recompute on resize
+  // / scroll so the dropdown stays anchored.
+  useEffect(() => {
+    if (!notifOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setNotifPos(null);
+      return;
+    }
+    function recalc() {
+      const btn = bellRef.current;
+      if (!btn) return;
+      const r = btn.getBoundingClientRect();
+      setNotifPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+    }
+    recalc();
+    window.addEventListener("resize", recalc);
+    window.addEventListener("scroll", recalc, true);
+    return () => {
+      window.removeEventListener("resize", recalc);
+      window.removeEventListener("scroll", recalc, true);
+    };
+  }, [notifOpen]);
+
   useSessionGuard(() => signOut(false));
   const filteredNav  = NAV_ITEMS.filter((item) => role && item.roles.includes(role));
   const roleInfo     = role ? ROLE_LABELS[role] : null;
 
   const menuIconOpen = sidebarOpen || !sidebarCollapsed;
+
+  // Portal is only safe to render after hydration — typeof document guards
+  // against SSR mismatch errors.
+  const canPortal = typeof document !== "undefined";
 
   if (
     authLoading ||
@@ -260,8 +325,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           {/* Notifications */}
           <div className="relative">
             <button
+              ref={bellRef}
               onClick={() => setNotifOpen((prev) => !prev)}
               aria-label="Notificaciones"
+              aria-expanded={notifOpen}
+              aria-haspopup="dialog"
               title="Notificaciones"
               className="flex h-8 w-8 items-center justify-center rounded-lg
                 text-muted-foreground hover:bg-muted hover:text-foreground
@@ -275,72 +343,73 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 </span>
               )}
             </button>
-
-            {notifOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setNotifOpen(false)}
-                />
-                <div className="absolute right-0 top-10 z-50 w-80
-                  rounded-xl border border-border bg-card shadow-xl
-                  overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                    <span className="text-sm font-semibold text-foreground">Notificaciones</span>
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={() => markAllRead()}
-                        className="rounded-full bg-brand-100 dark:bg-brand-900/40
-                          px-2 py-0.5 text-[10px] font-bold text-brand-600 dark:text-brand-300
-                          hover:bg-brand-200 dark:hover:bg-brand-900/60 transition-colors"
-                      >
-                        Marcar leídas
-                      </button>
-                    )}
-                  </div>
-                  <ul className="divide-y divide-border max-h-72 overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <li className="px-4 py-6 text-center text-sm text-muted-foreground">
-                        No hay notificaciones
-                      </li>
-                    ) : (
-                      notifications.map((n) => (
-                        <li key={n.id}>
-                          <Link
-                            href={n.title.includes("producción") ? "/admin/production-requests" : "/admin/notifications"}
-                            onClick={() => { markRead(n.id); setNotifOpen(false); }}
-                            className={`flex items-start gap-3 px-4 py-3 text-sm
-                              transition-colors hover:bg-muted/50 cursor-pointer
-                              ${n.is_read ? "opacity-60" : ""}`}
-                          >
-                            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full
-                              ${n.is_read ? "bg-muted-foreground/30" : "bg-brand-600"}`} />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-foreground leading-snug font-medium">{n.title}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{n.message}</p>
-                              <p className="text-[10px] text-muted-foreground/60 mt-1">
-                                {new Date(n.created_at).toLocaleString("es-EC", { dateStyle: "short", timeStyle: "short" })}
-                              </p>
-                            </div>
-                          </Link>
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                  <div className="px-4 py-2.5 border-t border-border">
-                    <Link
-                      href="/admin/notifications"
-                      onClick={() => setNotifOpen(false)}
-                      className="block w-full text-center text-xs text-brand-600 dark:text-brand-400
-                        font-medium hover:underline"
-                    >
-                      Ver todas las notificaciones
-                    </Link>
-                  </div>
-                </div>
-              </>
-            )}
           </div>
+
+          {notifOpen && canPortal && notifPos &&
+            createPortal(
+              <div
+                ref={dropdownRef}
+                role="dialog"
+                aria-label="Notificaciones"
+                style={{ position: "fixed", top: notifPos.top, right: notifPos.right, zIndex: 9999 }}
+                className="w-80 rounded-xl border border-border bg-card shadow-xl overflow-hidden"
+              >
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                  <span className="text-sm font-semibold text-foreground">Notificaciones</span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={() => markAllRead()}
+                      className="rounded-full bg-brand-100 dark:bg-brand-900/40
+                        px-2 py-0.5 text-[10px] font-bold text-brand-600 dark:text-brand-300
+                        hover:bg-brand-200 dark:hover:bg-brand-900/60 transition-colors"
+                    >
+                      Marcar leídas
+                    </button>
+                  )}
+                </div>
+                <ul className="divide-y divide-border max-h-72 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <li className="px-4 py-6 text-center text-sm text-muted-foreground">
+                      No hay notificaciones
+                    </li>
+                  ) : (
+                    notifications.map((n) => (
+                      <li key={n.id}>
+                        <Link
+                          href={n.title.includes("producción") ? "/admin/production-requests" : "/admin/notifications"}
+                          onClick={() => { markRead(n.id); closeNotif(); }}
+                          className={`flex items-start gap-3 px-4 py-3 text-sm
+                            transition-colors hover:bg-muted/50 cursor-pointer
+                            ${n.is_read ? "opacity-60" : ""}`}
+                        >
+                          <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full
+                            ${n.is_read ? "bg-muted-foreground/30" : "bg-brand-600"}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-foreground leading-snug font-medium">{n.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{n.message}</p>
+                            <p className="text-[10px] text-muted-foreground/60 mt-1">
+                              {new Date(n.created_at).toLocaleString("es-EC", { dateStyle: "short", timeStyle: "short" })}
+                            </p>
+                          </div>
+                        </Link>
+                      </li>
+                    ))
+                  )}
+                </ul>
+                <div className="px-4 py-2.5 border-t border-border">
+                  <Link
+                    href="/admin/notifications"
+                    onClick={closeNotif}
+                    className="block w-full text-center text-xs text-brand-600 dark:text-brand-400
+                      font-medium hover:underline"
+                  >
+                    Ver todas las notificaciones
+                  </Link>
+                </div>
+              </div>,
+              document.body
+            )
+          }
           <div className="hidden sm:flex flex-col items-end leading-tight">
             <span className="text-sm font-semibold text-foreground max-w-52 overflow-hidden text-ellipsis whitespace-nowrap" title={user?.profile?.name ?? user?.email ?? ""}>
               {user?.profile?.name ?? user?.email ?? "Sin sesión"}

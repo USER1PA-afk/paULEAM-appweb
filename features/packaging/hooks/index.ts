@@ -519,6 +519,144 @@ export function usePackagingPreview(
 }
 
 // ============================================================
+// Hook: stock pre-check para una lista de órdenes de empaque
+// Devuelve un mapa orderId → { canComplete, shortfalls[] }
+//   - canComplete=false si bulk < bulk_needed O algún material < material_needed
+//   - shortfalls es un array legible para mostrar al usuario
+// ============================================================
+export interface PackagingShortfall {
+  product_id: string;
+  product_name: string;
+  unit: string;
+  required: number;
+  available: number;
+}
+
+export interface PackagingStockCheck {
+  orderId: string;
+  canComplete: boolean;
+  shortfalls: PackagingShortfall[];
+}
+
+export function usePackagingStockCheck(orders: PackagingOrder[]) {
+  const insforge = getInsforge();
+  const [map, setMap] = useState<Record<string, PackagingStockCheck>>({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (orders.length === 0) {
+      setMap({});
+      return;
+    }
+
+    let cancelled = false;
+    async function run() {
+      setLoading(true);
+      try {
+        // 1. Cargar todas las plantillas referenciadas (incluyendo materiales)
+        const templateIds = [...new Set(orders.map((o) => o.template_id))];
+        const { data: tplData } = await insforge.database
+          .from("packaging_templates")
+          .select(`
+            id,
+            bulk_qty_per_unit,
+            bulk_unit,
+            finished_product_id,
+            materials:packaging_template_materials(
+              material_product_id,
+              quantity_per_unit,
+              unit
+            )
+          `)
+          .in("id", templateIds);
+
+        type TplRow = {
+          id: string;
+          bulk_qty_per_unit: number;
+          bulk_unit: string;
+          finished_product_id: string;
+          materials: { material_product_id: string; quantity_per_unit: number; unit: string }[];
+        };
+        const tplMap: Record<string, TplRow> = {};
+        ((tplData as TplRow[]) ?? []).forEach((t) => { tplMap[t.id] = t; });
+
+        // 2. Recolectar product_ids a consultar en stock_summary
+        const productIds = new Set<string>();
+        Object.values(tplMap).forEach((t) => {
+          productIds.add(t.finished_product_id);
+          t.materials?.forEach((m) => productIds.add(m.material_product_id));
+        });
+
+        // 3. Cargar stock_summary para todos los productos relevantes
+        const { data: stockData } = await insforge.database
+          .from("stock_summary")
+          .select("product_id, name, unit, stock_actual")
+          .in("product_id", [...productIds]);
+        const stockMap: Record<string, { name: string; unit: string; stock_actual: number }> = {};
+        ((stockData as { product_id: string; name: string; unit: string; stock_actual: number }[]) ?? []).forEach(
+          (s) => {
+            stockMap[s.product_id] = { name: s.name, unit: s.unit, stock_actual: Number(s.stock_actual) };
+          }
+        );
+
+        // 4. Calcular shortfalls por orden
+        const result: Record<string, PackagingStockCheck> = {};
+        for (const o of orders) {
+          const tpl = tplMap[o.template_id];
+          if (!tpl) {
+            result[o.id] = { orderId: o.id, canComplete: false, shortfalls: [] };
+            continue;
+          }
+
+          const shortfalls: PackagingShortfall[] = [];
+          const bulkNeeded = Number(o.units_to_package) * Number(tpl.bulk_qty_per_unit);
+          const bulk = stockMap[tpl.finished_product_id];
+          if (!bulk || bulk.stock_actual < bulkNeeded) {
+            shortfalls.push({
+              product_id: tpl.finished_product_id,
+              product_name: bulk?.name ?? "Producto a granel",
+              unit: tpl.bulk_unit,
+              required: bulkNeeded,
+              available: bulk?.stock_actual ?? 0,
+            });
+          }
+          for (const m of tpl.materials ?? []) {
+            const need = Number(o.units_to_package) * Number(m.quantity_per_unit);
+            const s = stockMap[m.material_product_id];
+            if (!s || s.stock_actual < need) {
+              shortfalls.push({
+                product_id: m.material_product_id,
+                product_name: s?.name ?? "Material",
+                unit: m.unit,
+                required: need,
+                available: s?.stock_actual ?? 0,
+              });
+            }
+          }
+
+          result[o.id] = {
+            orderId: o.id,
+            canComplete: shortfalls.length === 0,
+            shortfalls,
+          };
+        }
+
+        if (!cancelled) setMap(result);
+      } catch {
+        if (!cancelled) setMap({});
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    run();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders.length, orders.map((o) => `${o.id}:${o.units_to_package}:${o.status}`).join("|"), insforge]);
+
+  return { stockMap: map, loading };
+}
+
+// ============================================================
 // Hook: Órdenes de empaque por orden de producción
 // ============================================================
 export function usePackagingOrdersByProduction(productionOrderId: string | null) {

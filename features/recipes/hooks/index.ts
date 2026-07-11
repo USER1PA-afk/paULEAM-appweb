@@ -37,6 +37,38 @@ export function useRecipes() {
 }
 
 /**
+ * Hook: todas las recetas (incluye archivadas) — para vista admin/operario
+ * con toggle "Mostrar archivados".
+ */
+export function useAllRecipes() {
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
+  const insforge = getInsforge();
+
+  const fetchRecipes = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await insforge.database
+        .from("recipes")
+        .select("*")
+        .order("is_active", { ascending: false })
+        .order("name");
+
+      setRecipes((data as Recipe[]) ?? []);
+    } catch {
+      setRecipes([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [insforge]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchRecipes(); }, [fetchRecipes]);
+
+  return { recipes, loading, refetch: fetchRecipes };
+}
+
+/**
  * Hook para obtener una receta individual con sus ingredientes y producto de salida.
  */
 export function useRecipe(recipeId: string | null) {

@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { SupplierSelect } from "@features/suppliers/components";
 import { useSupplierActions } from "@features/suppliers/hooks";
 import { useRole } from "@features/auth/hooks";
+import { RequestDeletionDialog } from "@features/deletion-requests";
 import { Tag, AlertTriangle, Pencil, Trash2, Star, ImagePlus, X as XIcon, Search, Wheat, FlaskConical, Box, Layers, Archive, ChevronDown } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { TablePagination } from "@shared/components/ui/table-pagination";
@@ -190,6 +191,7 @@ export default function AdminProductsPage() {
   const { role } = useRole();
   const isAdmin = role === "admin";
   const PROD_PAGE_SIZE = 5;
+  const [requestDeleteProduct, setRequestDeleteProduct] = useState<ProductWithSuppliers | null>(null);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -955,6 +957,20 @@ export default function AdminProductsPage() {
         </div>
       )}
 
+      {/* ─── Request-deletion dialog (operario flow) ─── */}
+      <RequestDeletionDialog
+        open={!!requestDeleteProduct}
+        onClose={() => setRequestDeleteProduct(null)}
+        onSubmitted={() => {
+          setRequestDeleteProduct(null);
+          fetchProducts();
+          if (archivedLoaded) fetchArchivedProducts();
+        }}
+        entityType="product"
+        entityId={requestDeleteProduct?.id ?? ""}
+        entityLabel={requestDeleteProduct?.name ?? ""}
+      />
+
       {/* ─── Create / Edit Form Modal — centered on the viewport ─── */}
       {showForm && createPortal(
         <div
@@ -1693,10 +1709,20 @@ export default function AdminProductsPage() {
                                   <button onClick={() => openEdit(p)} className="inline-flex items-center gap-1 rounded-md bg-zinc-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors">
                                     <Pencil className="h-3 w-3" /> Editar
                                   </button>
-                                  {isAdmin && (
+                                  {isAdmin ? (
                                     <button onClick={() => openDeleteConfirm(p)} className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition-colors">
                                       <Trash2 className="h-3 w-3" /> Eliminar
                                     </button>
+                                  ) : (
+                                    p.is_active && (
+                                      <button
+                                        onClick={() => setRequestDeleteProduct(p)}
+                                        title="Solicitar eliminación (requiere aprobación de admin)"
+                                        className="inline-flex items-center gap-1 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                                      >
+                                        <Trash2 className="h-3 w-3" /> Eliminar
+                                      </button>
+                                    )
                                   )}
                                 </div>
                               </td>

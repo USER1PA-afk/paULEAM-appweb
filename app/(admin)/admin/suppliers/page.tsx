@@ -4,26 +4,39 @@ import { useState, useMemo } from "react";
 import { SuppliersTable, SupplierForm } from "@features/suppliers/components";
 import { useAllSuppliers, useSupplierActions } from "@features/suppliers/hooks";
 import type { Supplier } from "@entities/supplier";
-import { CircleCheck, Search, X as XIcon } from "lucide-react";
+import { useRole } from "@features/auth/hooks";
+import { RequestDeletionDialog } from "@features/deletion-requests";
+import { CircleCheck, Search, X as XIcon, Archive } from "lucide-react";
 
 export default function AdminSuppliersPage() {
   const { suppliers, loading, error, refetch } = useAllSuppliers();
   const { toggleActive } = useSupplierActions();
+  const { role } = useRole();
+  const isAdmin = role === "admin";
+  const isStaff = role === "admin" || role === "operario";
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const [deletingSupplier, setDeletingSupplier] = useState<Supplier | null>(null);
 
   const filteredSuppliers = useMemo(() => {
+    const baseList = showArchived ? suppliers : suppliers.filter((s) => s.is_active);
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return suppliers;
-    return suppliers.filter(
+    if (!q) return baseList;
+    return baseList.filter(
       (s) =>
         (s.company ?? "").toLowerCase().includes(q) ||
         s.name.toLowerCase().includes(q) ||
         (s.ruc ?? "").toLowerCase().includes(q)
     );
-  }, [suppliers, searchQuery]);
+  }, [suppliers, searchQuery, showArchived]);
+
+  const archivedCount = useMemo(
+    () => suppliers.filter((s) => !s.is_active).length,
+    [suppliers]
+  );
 
   function flash(msg: string) {
     setSuccessMsg(msg);
@@ -31,6 +44,7 @@ export default function AdminSuppliersPage() {
   }
 
   async function handleToggle(id: string, current: boolean) {
+    if (!isAdmin) return;
     await toggleActive(id, current);
     refetch();
     flash(`Proveedor ${current ? "desactivado" : "activado"}.`);
@@ -54,6 +68,10 @@ export default function AdminSuppliersPage() {
     setEditing(null);
   }
 
+  function handleRequestDelete(s: Supplier) {
+    setDeletingSupplier(s);
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -61,22 +79,26 @@ export default function AdminSuppliersPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Proveedores</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gestión de proveedores de materias primas. Solo admin puede crear o editar.
+            {isAdmin
+              ? "Gestión de proveedores de materias primas."
+              : "Gestión de proveedores. Las eliminaciones requieren aprobación de un administrador."}
           </p>
         </div>
-        <button
-          onClick={() => {
-            if (showForm && !editing) {
-              setShowForm(false);
-            } else {
-              setEditing(null);
-              setShowForm(true);
-            }
-          }}
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors"
-        >
-          {showForm && !editing ? "Cancelar" : "+ Nuevo Proveedor"}
-        </button>
+        {isStaff && (
+          <button
+            onClick={() => {
+              if (showForm && !editing) {
+                setShowForm(false);
+              } else {
+                setEditing(null);
+                setShowForm(true);
+              }
+            }}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors"
+          >
+            {showForm && !editing ? "Cancelar" : "+ Nuevo Proveedor"}
+          </button>
+        )}
       </div>
 
       {/* Success toast */}
@@ -102,29 +124,46 @@ export default function AdminSuppliersPage() {
         </div>
       )}
 
-      {/* Search */}
-      {!loading && suppliers.length > 0 && (
-        <div className="relative max-w-md">
-          <Search aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar proveedor por nombre, empresa o RUC…"
-            className="w-full rounded-md border border-border bg-background pl-9 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              aria-label="Limpiar búsqueda"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <XIcon aria-hidden="true" className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-      )}
+      {/* Filters + archived toggle */}
+      <div className="flex flex-wrap items-center gap-3">
+        {!loading && suppliers.length > 0 && (
+          <div className="relative max-w-md flex-1 min-w-[240px]">
+            <Search aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar proveedor por nombre, empresa o RUC…"
+              className="w-full rounded-md border border-border bg-background pl-9 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                aria-label="Limpiar búsqueda"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <XIcon aria-hidden="true" className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {archivedCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowArchived((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+              showArchived
+                ? "border-amber-400 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+                : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <Archive className="h-3.5 w-3.5" />
+            {showArchived ? "Ocultar archivados" : `Mostrar archivados (${archivedCount})`}
+          </button>
+        )}
+      </div>
 
       {searchQuery && (
         <p className="text-xs text-muted-foreground -mt-3">
@@ -144,10 +183,20 @@ export default function AdminSuppliersPage() {
       ) : (
         <SuppliersTable
           suppliers={filteredSuppliers}
-          onToggle={handleToggle}
-          onEdit={handleEdit}
+          onToggle={isAdmin ? handleToggle : null}
+          onEdit={isStaff ? handleEdit : null}
+          onRequestDelete={isStaff ? handleRequestDelete : null}
         />
       )}
+
+      <RequestDeletionDialog
+        open={!!deletingSupplier}
+        onClose={() => setDeletingSupplier(null)}
+        onSubmitted={() => refetch()}
+        entityType="supplier"
+        entityId={deletingSupplier?.id ?? ""}
+        entityLabel={deletingSupplier ? (deletingSupplier.company ?? deletingSupplier.name) : ""}
+      />
     </div>
   );
 }

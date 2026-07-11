@@ -1,6 +1,11 @@
 "use client";
 
-import { usePackagingOrders, usePackagingTemplates, usePackagingActions } from "@features/packaging";
+import {
+  usePackagingOrders,
+  usePackagingTemplates,
+  usePackagingActions,
+  usePackagingStockCheck,
+} from "@features/packaging";
 import { useRole } from "@features/auth/hooks";
 import { formatDate } from "@shared/lib/utils";
 import { getInsforge } from "@shared/lib/insforge/client";
@@ -13,6 +18,7 @@ import {
   PACKAGING_STATUS_LABELS,
   PACKAGING_STATUS_COLORS,
 } from "@entities/packaging";
+import { AlertTriangle } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────
 // Inner component que usa useSearchParams (requiere Suspense)
@@ -22,10 +28,12 @@ function AdminPackagingPageInner() {
   const { templates } = usePackagingTemplates();
   const { role } = useRole();
   const isAdmin = role === "admin";
+  const isStaff = role === "admin" || role === "operario";
   const searchParams = useSearchParams();
 
   const { completeOrder, cancelOrder, updateStatus, createOrder } = usePackagingActions(refetch);
   const insforge = getInsforge();
+  const { stockMap: stockCheck, loading: stockLoading } = usePackagingStockCheck(orders);
 
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -430,7 +438,7 @@ function AdminPackagingPageInner() {
                                 >
                                   Iniciar
                                 </button>
-                                {isAdmin && (
+                                {isStaff && (
                                   <button
                                     onClick={() => handleCancel(order.id)}
                                     className="rounded-md bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700 transition-colors"
@@ -440,30 +448,53 @@ function AdminPackagingPageInner() {
                                 )}
                               </>
                             )}
-                            {order.status === "EN_PROCESO" && (
-                              <>
-                                <button
-                                  onClick={() => handleComplete(order.id)}
-                                  className="rounded-md bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700 transition-colors"
-                                >
-                                  Completar
-                                </button>
-                                {isAdmin && (
+                            {order.status === "EN_PROCESO" && (() => {
+                              const check = stockCheck[order.id];
+                              const noStock =
+                                !stockLoading && check && !check.canComplete;
+                              return (
+                                <>
                                   <button
-                                    onClick={() => handleCancel(order.id)}
-                                    className="rounded-md bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700 transition-colors"
+                                    onClick={() => handleComplete(order.id)}
+                                    disabled={noStock}
+                                    title={noStock
+                                      ? `Sin stock suficiente: ${check?.shortfalls.map(s => `${s.product_name} (${s.available}/${s.required} ${s.unit})`).join(", ")}`
+                                      : "Marcar como completada"}
+                                    className="rounded-md bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-brand-600"
                                   >
-                                    Cancelar
+                                    Completar
                                   </button>
-                                )}
-                              </>
-                            )}
+                                  {isStaff && (
+                                    <button
+                                      onClick={() => handleCancel(order.id)}
+                                      className="rounded-md bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700 transition-colors"
+                                    >
+                                      Cancelar
+                                    </button>
+                                  )}
+                                </>
+                              );
+                            })()}
                             {order.status === "COMPLETADA" && (
                               <span className="text-xs text-muted-foreground">
                                 {order.completed_at ? formatDate(order.completed_at) : "Completada"}
                               </span>
                             )}
                           </div>
+                          {order.status === "EN_PROCESO" && !stockLoading && stockCheck[order.id] && stockCheck[order.id].shortfalls.length > 0 && (
+                            <div className="max-w-xs rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 px-2 py-1 text-[10px] text-amber-800 dark:text-amber-300 leading-snug flex items-start gap-1">
+                              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+                              <span>
+                                Stock insuficiente:{" "}
+                                {stockCheck[order.id].shortfalls.map((s, i) => (
+                                  <span key={s.product_id}>
+                                    {i > 0 && "; "}
+                                    {s.product_name} ({s.available.toLocaleString("es-EC", { maximumFractionDigits: 4 })}/{s.required.toLocaleString("es-EC", { maximumFractionDigits: 4 })} {s.unit})
+                                  </span>
+                                ))}
+                              </span>
+                            </div>
+                          )}
                           {rowErrors[order.id] && (
                             <div className="max-w-xs rounded-md bg-destructive/10 border border-destructive/20 px-2 py-1 text-[10px] text-destructive leading-tight">
                               {rowErrors[order.id]}

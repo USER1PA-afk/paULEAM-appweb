@@ -72,6 +72,7 @@ export default function ProductionOrderDetailPage() {
   const { role } = useRole();
   const { declareWaste, reverseOrder } = useProductionOrders();
   const isAdmin = role === "admin";
+  const isStaff = role === "admin" || role === "operario";
 
   const [showWaste, setShowWaste] = useState(false);
   const [wasteQty, setWasteQty] = useState("");
@@ -216,7 +217,7 @@ export default function ProductionOrderDetailPage() {
           </div>
         </div>
 
-        {isAdmin && order.status === "COMPLETADA" && (
+        {isStaff && order.status === "COMPLETADA" && (
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setShowWaste(!showWaste)}
@@ -224,12 +225,14 @@ export default function ProductionOrderDetailPage() {
             >
               <Trash2 className="h-3.5 w-3.5 inline mr-1" />Declarar Merma
             </button>
-            <button
-              onClick={() => { setShowReverseConfirm(!showReverseConfirm); setShowWaste(false); }}
-              className="rounded-md border border-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-            >
-              <RotateCcw className="h-3.5 w-3.5 inline mr-1" />Revertir Producción
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => { setShowReverseConfirm(!showReverseConfirm); setShowWaste(false); }}
+                className="rounded-md border border-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+              >
+                <RotateCcw className="h-3.5 w-3.5 inline mr-1" />Revertir Producción
+              </button>
+            )}
           </div>
         )}
       </div>

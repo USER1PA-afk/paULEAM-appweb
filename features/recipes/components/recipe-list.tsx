@@ -1,16 +1,37 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useRecipes, useProducts } from "../hooks";
-import { Beaker, Eye, Pencil } from "lucide-react";
+import { useAllRecipes, useProducts } from "../hooks";
+import { RequestDeletionDialog } from "@features/deletion-requests";
+import { Beaker, Eye, Pencil, Archive } from "lucide-react";
 import { usePagination } from "@shared/hooks/use-pagination";
 import { TablePagination } from "@shared/components/ui/table-pagination";
+import type { Recipe } from "@entities/recipe";
 
-export function RecipeList() {
+export function RecipeList({
+  canEdit = false,
+  canRequestDelete = false,
+}: {
+  canEdit?: boolean;
+  canRequestDelete?: boolean;
+} = {}) {
   const router = useRouter();
-  const { recipes, loading } = useRecipes();
+  const { recipes, loading, refetch } = useAllRecipes();
+  const [showArchived, setShowArchived] = useState(false);
+  const [deletingRecipe, setDeletingRecipe] = useState<Recipe | null>(null);
+
+  const visibleRecipes = useMemo(
+    () => (showArchived ? recipes : recipes.filter((r) => r.is_active !== false)),
+    [recipes, showArchived]
+  );
+  const archivedCount = useMemo(
+    () => recipes.filter((r) => r.is_active === false).length,
+    [recipes]
+  );
   const { finishedProducts } = useProducts();
-  const { page, setPage, paged: pagedRecipes, from, to, total, totalPages } = usePagination(recipes);
+  const { page, setPage, paged: pagedRecipes, from, to, total, totalPages } =
+    usePagination(visibleRecipes);
 
   if (loading) {
     return (
@@ -43,6 +64,24 @@ export function RecipeList() {
 
   return (
     <div className="space-y-4">
+      {/* Archived toggle */}
+      {archivedCount > 0 && (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowArchived((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+              showArchived
+                ? "border-amber-400 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+                : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <Archive className="h-3.5 w-3.5" />
+            {showArchived ? "Ocultar archivadas" : `Mostrar archivadas (${archivedCount})`}
+          </button>
+        </div>
+      )}
+
       {/* Desktop: Table View */}
       <div className="hidden lg:block overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
         <table aria-label="Lista de recetas" className="w-full text-sm">
@@ -92,9 +131,15 @@ export function RecipeList() {
                   <span className="text-xs text-muted-foreground ml-1">{r.yield_unit}</span>
                 </td>
                 <td className="px-5 py-4 text-center">
-                  <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-[10px] font-semibold text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
-                    Activa
-                  </span>
+                  {r.is_active === false ? (
+                    <span className="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                      Archivada
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-[10px] font-semibold text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
+                      Activa
+                    </span>
+                  )}
                 </td>
                 <td className="px-5 py-4 text-center">
                   <div className="flex items-center justify-center gap-2">
@@ -106,14 +151,25 @@ export function RecipeList() {
                       <Eye aria-hidden="true" className="h-3.5 w-3.5" />
                       Ver Ingredientes
                     </button>
-                    <button
-                      onClick={() => router.push(`/admin/recipes/${r.id}/edit`)}
-                      aria-label={`Editar receta ${r.name}`}
-                      className="flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 transition-colors"
-                    >
-                      <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
-                      Editar
-                    </button>
+                    {canEdit && r.is_active !== false && (
+                      <button
+                        onClick={() => router.push(`/admin/recipes/${r.id}/edit`)}
+                        aria-label={`Editar receta ${r.name}`}
+                        className="flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 transition-colors"
+                      >
+                        <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    )}
+                    {canRequestDelete && r.is_active !== false && (
+                      <button
+                        onClick={() => setDeletingRecipe(r)}
+                        title="Solicitar eliminación (requiere aprobación de admin)"
+                        className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        Eliminar
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -144,9 +200,15 @@ export function RecipeList() {
                   {getProductName(r.output_product_id)}
                 </p>
               </div>
-              <span className="inline-flex shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700 ml-2 dark:bg-brand-900/30 dark:text-brand-400">
-                Activa
-              </span>
+              {r.is_active === false ? (
+                <span className="inline-flex shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-600 ml-2 dark:bg-zinc-800 dark:text-zinc-400">
+                  Archivada
+                </span>
+              ) : (
+                <span className="inline-flex shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700 ml-2 dark:bg-brand-900/30 dark:text-brand-400">
+                  Activa
+                </span>
+              )}
             </div>
 
             {r.description && (
@@ -177,14 +239,25 @@ export function RecipeList() {
                   <Eye aria-hidden="true" className="h-3.5 w-3.5" />
                   Ver
                 </button>
-                <button
-                  onClick={() => router.push(`/admin/recipes/${r.id}/edit`)}
-                  aria-label={`Editar receta ${r.name}`}
-                  className="flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 transition-colors"
-                >
-                  <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
-                  Editar
-                </button>
+                {canEdit && r.is_active !== false && (
+                  <button
+                    onClick={() => router.push(`/admin/recipes/${r.id}/edit`)}
+                    aria-label={`Editar receta ${r.name}`}
+                    className="flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 transition-colors"
+                  >
+                    <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
+                    Editar
+                  </button>
+                )}
+                {canRequestDelete && r.is_active !== false && (
+                  <button
+                    onClick={() => setDeletingRecipe(r)}
+                    title="Solicitar eliminación"
+                    className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    Eliminar
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -200,6 +273,15 @@ export function RecipeList() {
           onPageChange={setPage}
         />
       </div>
+
+      <RequestDeletionDialog
+        open={!!deletingRecipe}
+        onClose={() => setDeletingRecipe(null)}
+        onSubmitted={() => refetch()}
+        entityType="recipe"
+        entityId={deletingRecipe?.id ?? ""}
+        entityLabel={deletingRecipe?.name ?? ""}
+      />
     </div>
   );
 }

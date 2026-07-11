@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRecipe } from "../hooks";
+import { useRole } from "@features/auth/hooks";
+import { RequestDeletionDialog } from "@features/deletion-requests";
 import { InstructionStep, INGREDIENT_ROLE_LABELS } from "@entities/recipe";
-import { ArrowLeft, Printer, Pencil, Beaker, Thermometer, Clock, FileText } from "lucide-react";
+import { ArrowLeft, Printer, Pencil, Beaker, Thermometer, Clock, FileText, Trash2 } from "lucide-react";
 
 interface RecipeDetailProps {
   recipeId: string;
@@ -11,8 +14,12 @@ interface RecipeDetailProps {
 
 export function RecipeDetail({ recipeId }: RecipeDetailProps) {
   const router = useRouter();
+  const { role } = useRole();
+  const isAdmin = role === "admin";
+  const isStaff = role === "admin" || role === "operario";
   const { recipe, ingredients, outputProduct, ingredientProducts, loading, error } =
     useRecipe(recipeId);
+  const [showRequestDelete, setShowRequestDelete] = useState(false);
 
   if (loading) {
     return (
@@ -69,13 +76,25 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
             <Printer className="h-4 w-4" />
             Imprimir
           </button>
-          <button
-            onClick={() => router.push(`/admin/recipes/${recipeId}/edit`)}
-            className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors"
-          >
-            <Pencil className="h-4 w-4" />
-            Editar
-          </button>
+          {isStaff && recipe.is_active !== false && (
+            <button
+              onClick={() => router.push(`/admin/recipes/${recipeId}/edit`)}
+              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors"
+            >
+              <Pencil className="h-4 w-4" />
+              Editar
+            </button>
+          )}
+          {isStaff && recipe.is_active !== false && (
+            <button
+              onClick={() => setShowRequestDelete(true)}
+              title="Solicitar eliminación (requiere aprobación de admin)"
+              className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+              Eliminar
+            </button>
+          )}
         </div>
       </div>
 
@@ -489,6 +508,14 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
       </div>
 
     </div>
+    <RequestDeletionDialog
+      open={showRequestDelete}
+      onClose={() => setShowRequestDelete(false)}
+      onSubmitted={() => router.push("/admin/recipes")}
+      entityType="recipe"
+      entityId={recipe.id}
+      entityLabel={recipe.name}
+    />
     </>
   );
 }
