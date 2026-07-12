@@ -17,6 +17,7 @@
 -- ============================================================
 
 DROP POLICY IF EXISTS "ingredients_delete_admin" ON public.recipe_ingredients;
+DROP POLICY IF EXISTS "ingredients_delete_staff" ON public.recipe_ingredients;
 
 CREATE POLICY "ingredients_delete_staff"
   ON public.recipe_ingredients FOR DELETE

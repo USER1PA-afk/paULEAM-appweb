@@ -175,12 +175,27 @@ function AdminPackagingPageInner() {
 
   return (
     <div className="space-y-8">
+      {/* ── Banner de deprecación ─────────────────────────── */}
+      <div className="flex items-start gap-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-5 py-4 text-sm">
+        <span className="text-amber-500 text-lg shrink-0 mt-0.5">⚠️</span>
+        <div className="space-y-1">
+          <p className="font-semibold text-amber-800 dark:text-amber-200">Módulo de empaque independiente desactivado</p>
+          <p className="text-amber-700 dark:text-amber-300">
+            Los nuevos lotes de empaque se crean desde{" "}
+            <a href="/admin/production" className="underline font-medium hover:text-amber-900 dark:hover:text-amber-100 transition-colors">
+              Producción → Nuevo Lote
+            </a>{" "}
+            (flujo unificado). Este módulo muestra el historial de órdenes anteriores en solo lectura.
+          </p>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Empaque</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Empaque — Historial</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Conversión de producto a granel en presentaciones empacadas.
+            Vista de solo lectura. Registro histórico de órdenes de empaque independientes.
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -192,14 +207,9 @@ function AdminPackagingPageInner() {
               Plantillas
             </Link>
           )}
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className={showForm ? "btn-outline" : "btn-primary"}
-          >
-            {showForm ? "Cancelar" : "+ Nueva Orden"}
-          </button>
         </div>
       </div>
+
 
       {/* Stats */}
       <div className="grid gap-3 sm:grid-cols-3">

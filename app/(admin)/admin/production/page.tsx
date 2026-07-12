@@ -1,291 +1,379 @@
 "use client";
 
-import {
-  useProductionOrders,
-  useRecipes,
-  ProductionScalePreview,
-} from "@features/production";
-import { usePackagingTemplates } from "@features/packaging";
-import { formatDate } from "@shared/lib/utils";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useRole } from "@features/auth/hooks";
-import { Printer, Trash2, RotateCcw } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { formatDate } from "@shared/lib/utils";
 import { usePagination } from "@shared/hooks/use-pagination";
 import { TablePagination } from "@shared/components/ui/table-pagination";
 import { SearchableSelect } from "@shared/components/ui/searchable-select";
+import { getInsforge } from "@shared/lib/insforge/client";
+import {
+  useUnifiedOrders,
+  useUnifiedIngredients,
+  useFinishedProducts,
+} from "@features/production/hooks/use-unified-production";
+import { useRecipes } from "@features/production/hooks";
+import {
+  UnifiedProductionOrder,
+  DraftPresentation,
+} from "@entities/production/unified";
+import { PackageCheck, ChevronRight, Trash2, AlertCircle, CheckCircle2, Scale, FlaskConical, Printer } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────
-// Sistema de unidades
+// Helpers
 // ─────────────────────────────────────────────────────────────
-const UNIT_GROUPS: Record<string, { label: string; factor: number }[]> = {
-  MASA: [
-    { label: "g",  factor: 1       },
-    { label: "kg", factor: 1000    },
-    { label: "lb", factor: 453.592 },
-    { label: "oz", factor: 28.3495 },
-  ],
-  VOLUMEN: [
-    { label: "ml",  factor: 1       },
-    { label: "lt",  factor: 1000    },
-    { label: "gal", factor: 3785.41 },
-  ],
+
+const STATUS_META: Record<string, { label: string; dot: string; ring: string }> = {
+  BORRADOR:   { label: "Borrador",   dot: "bg-gray-400",     ring: "ring-gray-200"     },
+  EN_PROCESO: { label: "En Proceso", dot: "bg-blue-500",     ring: "ring-blue-200"     },
+  COMPLETADA: { label: "Completada", dot: "bg-emerald-500",  ring: "ring-emerald-200"  },
+  CANCELADA:  { label: "Cancelada",  dot: "bg-red-500",      ring: "ring-red-200"      },
 };
 
-function getUnitGroup(unit: string): string | null {
-  const u = unit.toLowerCase();
-  if (["g", "kg", "lb", "lbs", "libra", "libras", "oz"].includes(u)) return "MASA";
-  if (["ml", "lt", "gal"].includes(u)) return "VOLUMEN";
-  return null;
+function pct(n: number) {
+  return n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function getUnitFactor(unit: string): number {
-  const u = unit.toLowerCase();
-  for (const group of Object.values(UNIT_GROUPS)) {
-    const match = group.find((x) => x.label === u);
-    if (match) return match.factor;
-  }
-  return 1;
+function kg(n: number, decimals = 3) {
+  return n.toLocaleString("es-EC", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-const STATUS_LABELS: Record<string, { label: string; dot: string }> = {
-  BORRADOR:  { label: "Borrador",   dot: "bg-gray-400"   },
-  EN_PROCESO:{ label: "En Proceso", dot: "bg-blue-500"   },
-  COMPLETADA:{ label: "Completada", dot: "bg-accent-500" },
-  CANCELADA: { label: "Cancelada",  dot: "bg-red-500"    },
-};
+function generateClientId() {
+  return Math.random().toString(36).substring(2);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Sub-component: MassBar
+// ─────────────────────────────────────────────────────────────
+
+function MassBar({ assigned, total }: { assigned: number; total: number }) {
+  if (total <= 0) return null;
+  const ratio = Math.min(assigned / total, 1);
+  const percent = ratio * 100;
+  const diff = assigned - total;
+  const isOver  = diff > 0.5;
+  const isOk    = Math.abs(diff) <= 0.5;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-xs">
+        <span className="font-medium text-foreground">Balance de masa</span>
+        <span className={`tabular-nums font-semibold ${isOver ? "text-red-500" : isOk ? "text-emerald-500" : "text-muted-foreground"}`}>
+          {kg(assigned)} / {kg(total)} kg
+          {isOk && " ✓"}
+          {isOver && ` (+${kg(diff)} exceso)`}
+          {!isOk && !isOver && ` (${kg(Math.abs(diff))} restante)`}
+        </span>
+      </div>
+      <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-300 ${
+            isOver ? "bg-red-500" : isOk ? "bg-emerald-500" : "bg-brand-500"
+          }`}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Sub-component: PresentationRow
+// ─────────────────────────────────────────────────────────────
+
+interface PresentationRowProps {
+  draft:     DraftPresentation;
+  onChange:  (clientId: string, units: string) => void;
+  onRemove:  (clientId: string) => void;
+}
+
+function PresentationRow({ draft, onChange, onRemove }: PresentationRowProps) {
+  const units = Number(draft.units_to_produce) || 0;
+  const totalKg = units * draft.capacity_kg;
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-border bg-card/80 px-4 py-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-foreground truncate">{draft.product_name}</p>
+        <p className="text-[10px] text-muted-foreground font-mono">{draft.product_sku} · {kg(draft.capacity_kg)} kg/unidad</p>
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <input
+          type="number"
+          min="0.001"
+          step="0.001"
+          value={draft.units_to_produce}
+          onChange={(e) => onChange(draft.clientId, e.target.value)}
+          className="w-24 rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label={`Unidades de ${draft.product_name}`}
+        />
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{draft.sales_unit_name}</span>
+      </div>
+
+      <div className="text-right shrink-0 min-w-[64px]">
+        <p className="text-sm font-semibold tabular-nums">{kg(totalKg)}</p>
+        <p className="text-[10px] text-muted-foreground">kg</p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onRemove(draft.clientId)}
+        className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+        aria-label={`Eliminar ${draft.product_name}`}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Main page
+// ─────────────────────────────────────────────────────────────
 
 export default function AdminProductionPage() {
-  const {
-    orders, loading,
-    completeOrder, updateStatus, createOrder,
-    cancelOrder, declareWaste, reverseOrder, refetch,
-  } = useProductionOrders();
-  const { recipes } = useRecipes();
   const { role } = useRole();
-
-  const recipeOptions = useMemo(
-    () =>
-      recipes.map((r) => {
-        const rUnit = r.yield_unit?.toLowerCase() || "";
-        const rGroup = getUnitGroup(rUnit);
-        const baseStr = rGroup
-          ? (() => {
-              const rFactor = getUnitFactor(rUnit);
-              const displayOpt = UNIT_GROUPS[rGroup]?.find(
-                (u) => u.factor >= rFactor && u.factor <= rFactor * 1000
-              );
-              const df = displayOpt?.factor ?? rFactor;
-              const dl = displayOpt?.label ?? rUnit;
-              const val = r.yield_base / (df / rFactor);
-              return `${Number(val).toLocaleString("es-EC", { maximumFractionDigits: 3 })} ${dl}`;
-            })()
-          : `${r.yield_base} ${r.yield_unit}`;
-        return {
-          value: r.id,
-          label: `${r.name} (base: ${baseStr})`,
-        };
-      }),
-    [recipes]
-  );
   const isAdmin = role === "admin";
-  const isStaff = role === "admin" || role === "operario";
-  const router = useRouter();
 
+  // ── Data hooks ──────────────────────────────────────────────
+  const insforge = getInsforge();
+  const { orders, loading: ordersLoading, createOrder, updateWaste, executeOrder, cancelOrder, refetch } = useUnifiedOrders();
+  const { recipes, loading: recipesLoading } = useRecipes();
+  const { products: finishedProducts, loading: productsLoading } = useFinishedProducts();
+
+  // ── Form state ───────────────────────────────────────────────
   const [showForm, setShowForm] = useState(false);
-  const [creating, setCreating] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+
+  // Block A
+  const [recipeId, setRecipeId] = useState("");
+  const [batchKgInput, setBatchKgInput] = useState("");
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [notes, setNotes] = useState("");
+
+  // Block B — presentaciones (borrador en memoria)
+  const [drafts, setDrafts] = useState<DraftPresentation[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState("");
+
+  // Block C — merma y cierre
+  const [wasteKgInput, setWasteKgInput] = useState("0");
+  const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [filterDate, setFilterDate] = useState("");
+
+  // Historial
   const [filterStatus, setFilterStatus] = useState("");
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  const [executing, setExecuting] = useState<string | null>(null);
 
-  const [displayUnit, setDisplayUnit] = useState<string>("");
-  const [packagingSelections, setPackagingSelections] = useState<
-    { templateId: string; units: string }[]
-  >([]);
+  // ── Derived ──────────────────────────────────────────────────
+  const batchKg = Number(batchKgInput) || 0;
 
-  // Merma
-  const [wasteOrderId, setWasteOrderId] = useState<string | null>(null);
-  const [wasteQty, setWasteQty] = useState("");
-  const [wasteNotes, setWasteNotes] = useState("");
-  const [savingWaste, setSavingWaste] = useState(false);
+  const {
+    recipe: selectedRecipe,
+    ingredientRows,
+    percentageSum,
+    allStockSufficient: ingredientStockOk,
+    hasPercentages,
+    loading: ingLoading,
+  } = useUnifiedIngredients(recipeId || null, batchKg);
 
-  // Reversión
-  const [reverseOrderId, setReverseOrderId] = useState<string | null>(null);
-  const [reversing, setReversing] = useState(false);
-
-  const [form, setForm] = useState({
-    recipe_id: "",
-    target_yield: "",
-    batch_number: "",
-    scheduled_date: "",
-    notes: "",
-  });
-
-  // ── Receta seleccionada ───────────────────────────────────
-  const selectedRecipe = recipes.find((r) => r.id === form.recipe_id);
-  const { templates: allPackagingTemplates } = usePackagingTemplates();
-  const relevantTemplates = allPackagingTemplates.filter(
-    (t) => t.finished_product_id === selectedRecipe?.output_product_id
+  const recipeOptions = useMemo(
+    () => recipes.map((r) => ({ value: r.id, label: `${r.name} (base: ${r.yield_base} ${r.yield_unit})` })),
+    [recipes]
   );
-  const recipeUnit = selectedRecipe?.yield_unit?.toLowerCase() || "";
-  const recipeUnitFactor = getUnitFactor(recipeUnit);
-  const unitGroup = recipeUnit ? getUnitGroup(recipeUnit) : null;
-  const unitGroupOptions = unitGroup ? UNIT_GROUPS[unitGroup] : [];
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const finishedOptions = useMemo(
+    () =>
+      finishedProducts
+        .filter((p) => !drafts.some((d) => d.product_id === p.id))
+        .map((p) => ({
+          value: p.id,
+          label: `${p.name} — ${p.sales_unit_name} (${kg(p.capacity_kg)} kg/u)`,
+        })),
+    [finishedProducts, drafts]
+  );
+
+  const totalAssignedKg = useMemo(
+    () => drafts.reduce((sum, d) => sum + (Number(d.units_to_produce) || 0) * d.capacity_kg, 0),
+    [drafts]
+  );
+
+  const massOk = batchKg > 0 && Math.abs(totalAssignedKg - batchKg) <= 0.5;
+  const percentOk = hasPercentages && percentageSum > 0;
+  const canComplete = massOk && percentOk && ingredientStockOk && drafts.length > 0;
+
+  // ── Reset when recipe changes ────────────────────────────────
   useEffect(() => {
-    if (recipeUnit) setDisplayUnit(recipeUnit);
-    else setDisplayUnit("");
-    setPackagingSelections([]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.recipe_id]);
+    setDrafts([]);
+    setSelectedProductId("");
+  }, [recipeId]);
 
-  const activeDisplayUnit = displayUnit || recipeUnit;
-  const displayFactor = getUnitFactor(activeDisplayUnit);
+  // ── Handlers: Block B ─────────────────────────────────────────
 
-  const inputValue = Number(form.target_yield);
-  const storedYield = inputValue > 0
-    ? inputValue * (displayFactor / recipeUnitFactor)
-    : 0;
+  function handleAddPresentation() {
+    if (!selectedProductId) return;
+    const p = finishedProducts.find((x) => x.id === selectedProductId);
+    if (!p) return;
 
-  const targetYieldForPreview = storedYield;
-
-  const isDiscrete = !unitGroup && ["unidad","unidades","unit","units"].includes(recipeUnit);
-  const targetMin  = isDiscrete ? "1"     : "0.001";
-  const targetStep = isDiscrete ? "1"     : "0.001";
-
-  function handleUnitChange(newUnit: string) {
-    const oldFactor = displayFactor;
-    const newFactor = getUnitFactor(newUnit);
-    if (inputValue > 0 && oldFactor !== newFactor) {
-      const converted = inputValue * (oldFactor / newFactor);
-      const rounded = parseFloat(converted.toPrecision(6));
-      setForm((p) => ({ ...p, target_yield: String(rounded) }));
-    }
-    setDisplayUnit(newUnit);
+    setDrafts((prev) => [
+      ...prev,
+      {
+        clientId:        generateClientId(),
+        product_id:      p.id,
+        product_name:    p.name,
+        product_sku:     p.sku,
+        units_to_produce: "",
+        capacity_kg:     p.capacity_kg,
+        sales_unit_name: p.sales_unit_name,
+        total_kg:        0,
+        stock_available: 0,
+        packaging_ok:    null,
+      },
+    ]);
+    setSelectedProductId("");
   }
 
-  async function handleCreateOrder(e: React.FormEvent) {
-    e.preventDefault();
-    setCreating(true);
-    setFormError(null);
-
-    const result = await createOrder({
-      recipe_id: form.recipe_id,
-      target_yield: storedYield,
-      batch_number: form.batch_number || null,
-      scheduled_date: form.scheduled_date || null,
-      notes: form.notes || null,
-    });
-
-    if (result.error) {
-      setFormError(result.error as string);
-      setCreating(false);
-      return;
-    }
-
-    setForm({ recipe_id: "", target_yield: "", batch_number: "", scheduled_date: "", notes: "" });
-    setDisplayUnit("");
-    setShowForm(false);
-    setCreating(false);
-    refetch();
-  }
-
-  function setRowError(orderId: string, msg: string | null) {
-    setRowErrors((prev) => {
-      if (msg === null) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { [orderId]: _, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [orderId]: msg };
-    });
-  }
-
-  async function handleComplete(orderId: string) {
-    setRowError(orderId, null);
-    const result = await completeOrder(orderId);
-    if (result.error) setRowError(orderId, result.error as string);
-  }
-
-  async function handleCancel(orderId: string) {
-    if (!confirm("¿Cancelar esta orden de producción? Esta acción no se puede deshacer.")) return;
-    setRowError(orderId, null);
-    const result = await cancelOrder(orderId);
-    if (result.error) setRowError(orderId, result.error as string);
-  }
-
-  async function handleDeclareWaste(e: React.FormEvent) {
-    e.preventDefault();
-    if (!wasteOrderId || !wasteQty) return;
-    setSavingWaste(true);
-    const { error: wErr } = await declareWaste(wasteOrderId, Number(wasteQty), wasteNotes || undefined);
-    setSavingWaste(false);
-    if (wErr) setRowErrors((prev) => ({ ...prev, [wasteOrderId!]: wErr }));
-    setWasteOrderId(null);
-    setWasteQty("");
-    setWasteNotes("");
-  }
-
-  async function handleReverseOrder(orderId: string) {
-    setReversing(true);
-    const { error: rErr } = await reverseOrder(orderId);
-    setReversing(false);
-    if (rErr) {
-      setRowErrors((prev) => ({ ...prev, [orderId]: rErr }));
-    }
-    setReverseOrderId(null);
-  }
-
-  function togglePackagingSelection(templateId: string) {
-    setPackagingSelections((prev) => {
-      const exists = prev.find((s) => s.templateId === templateId);
-      return exists
-        ? prev.filter((s) => s.templateId !== templateId)
-        : [...prev, { templateId, units: "" }];
-    });
-  }
-
-  function setPackagingUnits(templateId: string, value: string) {
-    setPackagingSelections((prev) =>
-      prev.map((s) => s.templateId === templateId ? { ...s, units: value } : s)
+  function handleDraftChange(clientId: string, units: string) {
+    setDrafts((prev) =>
+      prev.map((d) =>
+        d.clientId === clientId
+          ? { ...d, units_to_produce: units, total_kg: (Number(units) || 0) * d.capacity_kg }
+          : d
+      )
     );
   }
 
-  const completedOrders = orders.filter((o) => o.status === "COMPLETADA");
-  const filteredOrders = orders.filter((o) => {
-    if (filterStatus && o.status !== filterStatus) return false;
-    if (filterDate) {
-      const orderDate = o.created_at ? o.created_at.substring(0, 10) : "";
-      if (orderDate !== filterDate) return false;
-    }
-    return true;
-  });
-  const { page: prodPage, setPage: setProdPage, paged: pagedOrders, from: prodFrom, to: prodTo, total: prodTotal, totalPages: prodTotalPages } = usePagination(filteredOrders);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { setProdPage(1); }, [filterDate, filterStatus]);
+  function handleDraftRemove(clientId: string) {
+    setDrafts((prev) => prev.filter((d) => d.clientId !== clientId));
+  }
 
-  const showPreview = form.recipe_id !== "" && targetYieldForPreview > 0;
+  // ── Handlers: Submit ──────────────────────────────────────────
+
+  async function handleSubmitOrder(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    setSubmitting(true);
+
+    // 1. Create order
+    const { data: order, error: createErr } = await createOrder({
+      recipe_id:      recipeId,
+      batch_kg:       batchKg,
+      waste_kg:       Number(wasteKgInput) || 0,
+      scheduled_date: scheduledDate || null,
+      notes:          notes || null,
+    });
+
+    if (createErr || !order) {
+      setFormError(createErr ?? "Error al crear la orden");
+      setSubmitting(false);
+      return;
+    }
+
+    // 2. Insert presentations
+    const presentationRows = drafts.map((d) => ({
+      order_id:         order.id,
+      product_id:       d.product_id,
+      units_to_produce: Number(d.units_to_produce) || 0,
+      capacity_kg:      d.capacity_kg,
+      total_kg:         (Number(d.units_to_produce) || 0) * d.capacity_kg,
+    }));
+
+    const { error: presErr } = await insforge.database
+      .from("unified_production_presentations")
+      .insert(presentationRows);
+
+    if (presErr) {
+      setFormError((presErr as { message?: string })?.message ?? "Error al guardar presentaciones");
+      setSubmitting(false);
+      return;
+    }
+
+    // 3. Execute RPC
+    const { error: execErr } = await executeOrder(order.id);
+    if (execErr) {
+      setFormError(execErr);
+      setSubmitting(false);
+      return;
+    }
+
+    // 4. Reset form
+    setRecipeId("");
+    setBatchKgInput("");
+    setDrafts([]);
+    setWasteKgInput("0");
+    setScheduledDate("");
+    setNotes("");
+    setStep(1);
+    setShowForm(false);
+    setSubmitting(false);
+    refetch();
+  }
+
+  // ── Historial handlers ────────────────────────────────────────
+
+  const setRowError = useCallback((id: string, msg: string | null) => {
+    setRowErrors((prev) => {
+      if (msg === null) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [id]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [id]: msg };
+    });
+  }, []);
+
+  async function handleExecuteExisting(orderId: string) {
+    setExecuting(orderId);
+    setRowError(orderId, null);
+    const { error: execErr } = await executeOrder(orderId);
+    if (execErr) setRowError(orderId, execErr);
+    setExecuting(null);
+  }
+
+  async function handleCancelOrder(orderId: string) {
+    if (!confirm("¿Cancelar esta orden? Esta acción no se puede deshacer.")) return;
+    setRowError(orderId, null);
+    const { error } = await cancelOrder(orderId);
+    if (error) setRowError(orderId, error);
+  }
+
+  // ── Pagination ────────────────────────────────────────────────
+  const filteredOrders = useMemo(
+    () => orders.filter((o) => !filterStatus || o.status === filterStatus),
+    [orders, filterStatus]
+  );
+  const {
+    page, setPage, paged, from, to, total: totalPages2, totalPages,
+  } = usePagination(filteredOrders);
+
+  const completedCount  = orders.filter((o) => o.status === "COMPLETADA").length;
+  const borradorCount   = orders.filter((o) => o.status === "BORRADOR").length;
+
+  // ─────────────────────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────────────────────
 
   return (
     <>
       {/* Print header */}
       <div className="hidden print:block print:mb-6">
-        <h1 className="text-2xl font-bold">PAuleam ERP — Reporte de Producción</h1>
+        <h1 className="text-2xl font-bold">PAuleam ERP — Producción Unificada</h1>
         <p className="text-sm text-gray-500">
-          Generado: {new Date().toLocaleString("es-EC")} — Total: {orders.length} | Completadas: {completedOrders.length}
+          Generado: {new Date().toLocaleString("es-EC")} — Total: {orders.length} | Completadas: {completedCount}
         </p>
         <hr className="my-3" />
       </div>
 
       <div className="space-y-8 print:space-y-4">
-        {/* Header */}
+        {/* ── Page Header ─────────────────────────────────────── */}
         <div className="flex items-start justify-between flex-wrap gap-3 print:hidden">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Producción</h1>
-            <p className="mt-1 text-muted-foreground">
-              Órdenes de producción con motor de escalado automático de recetas.
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <FlaskConical className="h-6 w-6 text-brand-500" />
+              Producción
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Lotes unificados: receta → materia prima → presentaciones empacadas en un solo paso.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -293,265 +381,21 @@ export default function AdminProductionPage() {
               <Printer className="h-4 w-4" /> PDF
             </button>
             <button
-              onClick={() => setShowForm(!showForm)}
+              onClick={() => { setShowForm(!showForm); setStep(1); }}
               className={showForm ? "btn-outline" : "btn-primary"}
             >
-              {showForm ? "Cancelar" : "+ Nueva Orden"}
+              {showForm ? "Cancelar" : "+ Nuevo Lote"}
             </button>
           </div>
         </div>
 
-        {/* ── Formulario nueva orden ───────────────────────────── */}
-        {showForm && (
-          <div className="space-y-4 print:hidden">
-            <form
-              onSubmit={handleCreateOrder}
-              className="rounded-xl border border-border bg-card shadow-sm overflow-hidden"
-            >
-              {/* Header del formulario */}
-              <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-foreground">Nueva Orden de Producción</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    El lote se auto-genera (PROD-YYYY-NNNN) si se deja vacío
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-6 space-y-6">
-                {/* Sección 1: Receta y rendimiento */}
-                <div className="space-y-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Producción</p>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {/* Receta */}
-                    <div className="space-y-1.5 min-w-0">
-                      <label htmlFor="prod-recipe" className="text-sm font-medium text-foreground">
-                        Receta <span className="text-brand-500">*</span>
-                      </label>
-                      <SearchableSelect
-                        id="prod-recipe"
-                        required
-                        options={recipeOptions}
-                        value={form.recipe_id}
-                        onChange={(val) => setForm((p) => ({ ...p, recipe_id: val, target_yield: "" }))}
-                        placeholder="Seleccionar receta..."
-                        searchPlaceholder="Buscar receta..."
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-brand-400"
-                      />
-                    </div>
-
-                    {/* Rendimiento + toggle de unidades */}
-                    <div className="space-y-1.5 min-w-0">
-                      <label htmlFor="prod-yield" className="text-sm font-medium text-foreground">
-                        Rendimiento Objetivo{activeDisplayUnit ? ` (${activeDisplayUnit})` : ""} <span className="text-brand-500">*</span>
-                      </label>
-
-                      <div className="flex items-stretch gap-1.5">
-                        <input
-                          id="prod-yield"
-                          type="number"
-                          required
-                          min={targetMin}
-                          step={targetStep}
-                          value={form.target_yield}
-                          onChange={(e) => setForm((p) => ({ ...p, target_yield: e.target.value }))}
-                          placeholder={`Ej: 2.5 ${activeDisplayUnit}`}
-                          className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-brand-400"
-                        />
-                        {unitGroupOptions.length > 0 && (
-                          <div
-                            role="group"
-                            aria-label="Unidad de medida"
-                            className="flex shrink-0 flex-wrap items-center gap-1 rounded-lg border border-border bg-muted/30 p-1"
-                          >
-                            {unitGroupOptions.map((opt) => (
-                              <button
-                                key={opt.label}
-                                type="button"
-                                onClick={() => handleUnitChange(opt.label)}
-                                aria-pressed={activeDisplayUnit === opt.label}
-                                className={`min-w-9 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
-                                  activeDisplayUnit === opt.label
-                                    ? "bg-brand-600 text-white shadow-sm"
-                                    : "text-muted-foreground hover:bg-background hover:text-foreground"
-                                }`}
-                              >
-                                {opt.label}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {unitGroup && selectedRecipe && inputValue > 0 && (
-                        <p className="text-xs text-muted-foreground tabular-nums">
-                          = {storedYield.toLocaleString("es-EC", { maximumFractionDigits: 4 })} {recipeUnit}
-                          <span className="mx-1.5 opacity-40">·</span>
-                          Base: {selectedRecipe.yield_base} {recipeUnit}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Divisor */}
-                <div className="border-t border-border/60" />
-
-                {/* Sección 2: Metadatos del lote */}
-                <div className="space-y-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Detalles del Lote</p>
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <div className="space-y-1.5">
-                      <label htmlFor="prod-batch" className="text-sm font-medium text-foreground">
-                        Nº Lote <span className="text-muted-foreground font-normal">(opcional)</span>
-                      </label>
-                      <input
-                        id="prod-batch"
-                        type="text"
-                        value={form.batch_number}
-                        onChange={(e) => setForm((p) => ({ ...p, batch_number: e.target.value }))}
-                        placeholder="PROD-2026-0001"
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-brand-400"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label htmlFor="prod-date" className="text-sm font-medium text-foreground">
-                        Fecha Planificada
-                      </label>
-                      <input
-                        id="prod-date"
-                        type="date"
-                        value={form.scheduled_date}
-                        onChange={(e) => setForm((p) => ({ ...p, scheduled_date: e.target.value }))}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-brand-400"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label htmlFor="prod-notes" className="text-sm font-medium text-foreground">
-                        Notas
-                      </label>
-                      <input
-                        id="prod-notes"
-                        type="text"
-                        value={form.notes}
-                        onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                        placeholder="Observaciones..."
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors hover:border-brand-400"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sección 3: Empaque planificado (opcional) */}
-                {relevantTemplates.length > 0 && <div className="border-t border-border/60" />}
-                {relevantTemplates.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Empaque Planificado
-                      </p>
-                      <span className="text-[10px] text-muted-foreground font-normal normal-case tracking-normal">(opcional)</span>
-                    </div>
-                    <div className="space-y-2">
-                      {relevantTemplates.map((template) => {
-                        const sel = packagingSelections.find((s) => s.templateId === template.id);
-                        const isChecked = !!sel;
-                        return (
-                          <div
-                            key={template.id}
-                            className={`rounded-lg border px-3 py-2.5 transition-colors ${
-                              isChecked
-                                ? "border-brand-400 bg-brand-50/40 dark:bg-brand-950/20"
-                                : "border-border bg-background hover:border-brand-300"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <input
-                                type="checkbox"
-                                id={`pkg-${template.id}`}
-                                checked={isChecked}
-                                onChange={() => togglePackagingSelection(template.id)}
-                                className="h-4 w-4 rounded border-border accent-brand-600"
-                              />
-                              <label
-                                htmlFor={`pkg-${template.id}`}
-                                className="flex-1 text-sm font-medium text-foreground cursor-pointer select-none"
-                              >
-                                {template.name}
-                                <span className="ml-2 text-xs text-muted-foreground font-normal">
-                                  {template.output_product_name}
-                                </span>
-                              </label>
-                              {isChecked && (
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    step="1"
-                                    value={sel!.units}
-                                    onChange={(e) => setPackagingUnits(template.id, e.target.value)}
-                                    placeholder="0"
-                                    className="w-20 rounded-md border border-border bg-background px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-ring tabular-nums transition-colors"
-                                    aria-label={`Unidades a empacar de ${template.name}`}
-                                  />
-                                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                    {template.output_unit}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Error */}
-                {formError && (
-                  <div role="alert" className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive flex items-start gap-2">
-                    <span aria-hidden="true" className="shrink-0 mt-0.5">✕</span>
-                    <span>{formError}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer del formulario con CTA principal */}
-              <div className="px-6 py-4 border-t border-border bg-muted/20 flex items-center justify-end">
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {creating ? (
-                    <>
-                      <span className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                      Creando...
-                    </>
-                  ) : "Crear Orden (Borrador)"}
-                </button>
-              </div>
-            </form>
-
-            {showPreview && (
-              <ProductionScalePreview
-                recipeId={form.recipe_id}
-                targetYield={targetYieldForPreview}
-                packagingSelections={packagingSelections
-                  .filter((s) => s.units !== "" && Number(s.units) > 0)
-                  .map((s) => ({ templateId: s.templateId, units: Number(s.units) }))}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Stats */}
+        {/* ── Stats ───────────────────────────────────────────── */}
         <div className="grid gap-3 sm:grid-cols-4 print:hidden">
           {[
             { label: "Total",       value: orders.length },
-            { label: "Borrador",    value: orders.filter((o) => o.status === "BORRADOR").length },
+            { label: "Borrador",    value: borradorCount  },
             { label: "En Proceso",  value: orders.filter((o) => o.status === "EN_PROCESO").length },
-            { label: "Completadas", value: completedOrders.length },
+            { label: "Completados", value: completedCount  },
           ].map((s) => (
             <div key={s.label} className="rounded-xl border border-border bg-card p-5 shadow-sm">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{s.label}</p>
@@ -560,264 +404,423 @@ export default function AdminProductionPage() {
           ))}
         </div>
 
-        {/* Filtros */}
+        {/* ── Formulario nuevo lote ─────────────────────────── */}
+        {showForm && (
+          <form onSubmit={handleSubmitOrder} className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden print:hidden">
+
+            {/* Step tabs */}
+            <div className="flex border-b border-border bg-muted/30">
+              {([
+                { n: 1 as const, label: "A · Lote e ingredientes", icon: Scale },
+                { n: 2 as const, label: "B · Presentaciones",       icon: PackageCheck },
+                { n: 3 as const, label: "C · Merma y cierre",       icon: CheckCircle2 },
+              ] as const).map(({ n, label, icon: Icon }) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setStep(n)}
+                  className={`flex items-center gap-2 flex-1 px-4 py-3 text-xs font-semibold transition-colors ${
+                    step === n
+                      ? "bg-background text-brand-600 border-b-2 border-brand-500"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{label}</span>
+                  <span className="sm:hidden">{n}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* ══ Block A ════════════════════════════════════ */}
+              {step === 1 && (
+                <div className="space-y-6">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {/* Receta */}
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">
+                        Receta <span className="text-brand-500">*</span>
+                      </label>
+                      <SearchableSelect
+                        required
+                        options={recipeOptions}
+                        value={recipeId}
+                        onChange={(val) => { setRecipeId(val); setBatchKgInput(""); }}
+                        placeholder="Seleccionar receta..."
+                        searchPlaceholder="Buscar receta..."
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+
+                    {/* batch_kg */}
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">
+                        Masa del lote (kg) <span className="text-brand-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="0.001"
+                        step="0.001"
+                        value={batchKgInput}
+                        onChange={(e) => setBatchKgInput(e.target.value)}
+                        placeholder="Ej: 50.000"
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+
+                    {/* Fecha planificada */}
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">Fecha planificada</label>
+                      <input
+                        type="date"
+                        value={scheduledDate}
+                        onChange={(e) => setScheduledDate(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+
+                    {/* Notas */}
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">Notas</label>
+                      <input
+                        type="text"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Observaciones..."
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tabla ingredientes */}
+                  {recipeId && batchKg > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Ingredientes del lote
+                        </p>
+                        <span className={`text-xs font-semibold tabular-nums ${hasPercentages && percentageSum > 0 ? "text-emerald-500" : "text-amber-500"}`}>
+                          Σ = {pct(percentageSum)}%
+                          {hasPercentages && percentageSum > 0 ? " ✓" : " (sin porcentajes)"}
+                        </span>
+                      </div>
+
+                      {ingLoading ? (
+                        <div className="flex justify-center py-6">
+                          <div className="h-6 w-6 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+                        </div>
+                      ) : !hasPercentages ? (
+                        <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 px-4 py-3 text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                          Esta receta no tiene porcentajes calculados. Guarda la receta con cantidades e <code>yield_base &gt; 0</code>.
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto rounded-xl border border-border">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-border bg-muted/50">
+                                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Ingrediente</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground">%</th>
+                                <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Requerido</th>
+                                <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Disponible</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground">OK</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                              {ingredientRows.map((row) => (
+                                <tr key={row.id} className={`transition-colors ${row.stock_sufficient ? "" : "bg-red-50/60 dark:bg-red-900/10"}`}>
+                                  <td className="px-3 py-2.5">
+                                    <p className="font-medium">{row.product_name}</p>
+                                    <p className="text-[10px] text-muted-foreground font-mono">{row.product_sku}</p>
+                                  </td>
+                                  <td className="px-3 py-2.5 text-center tabular-nums text-xs">{pct(row.percentage)}%</td>
+                                  <td className="px-3 py-2.5 text-right tabular-nums text-xs font-semibold">
+                                    {row.required_qty.toLocaleString("es-EC", { maximumFractionDigits: 4 })} {row.stock_unit}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-right tabular-nums text-xs">
+                                    {row.stock_available.toLocaleString("es-EC", { maximumFractionDigits: 4 })} {row.stock_unit}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-center">
+                                    {row.stock_sufficient
+                                      ? <span className="text-emerald-500 text-base">✓</span>
+                                      : <span className="text-red-500 text-base">✗</span>}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ══ Block B ════════════════════════════════════ */}
+              {step === 2 && (
+                <div className="space-y-5">
+                  {/* Selector de presentación */}
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1 space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">Añadir presentación</label>
+                      <SearchableSelect
+                        options={finishedOptions}
+                        value={selectedProductId}
+                        onChange={setSelectedProductId}
+                        placeholder="Seleccionar PRODUCTO_TERMINADO..."
+                        searchPlaceholder="Buscar producto..."
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!selectedProductId}
+                      onClick={handleAddPresentation}
+                      className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-40 transition-colors shrink-0"
+                    >
+                      Añadir
+                    </button>
+                  </div>
+
+                  {/* Lista de drafts */}
+                  {drafts.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-border px-6 py-10 text-center text-sm text-muted-foreground">
+                      Aún no hay presentaciones. Añade al menos una.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {drafts.map((d) => (
+                        <PresentationRow
+                          key={d.clientId}
+                          draft={d}
+                          onChange={handleDraftChange}
+                          onRemove={handleDraftRemove}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Balance de masa */}
+                  {batchKg > 0 && (
+                    <MassBar assigned={totalAssignedKg} total={batchKg} />
+                  )}
+                </div>
+              )}
+
+              {/* ══ Block C ════════════════════════════════════ */}
+              {step === 3 && (
+                <div className="space-y-6">
+                  {/* Resumen de validaciones */}
+                  <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3 text-sm">
+                    <p className="font-semibold text-foreground text-xs uppercase tracking-wider">Resumen de validaciones</p>
+                    <div className="space-y-2">
+                      {[
+                        { ok: percentOk,         label: `Porcentajes definidos (total: ${pct(percentageSum)}%)` },
+                        { ok: ingredientStockOk, label: "Stock de ingredientes suficiente" },
+                        { ok: drafts.length > 0, label: `Al menos una presentación (${drafts.length})` },
+                        { ok: massOk,            label: `Balance de masa dentro de tolerancia (±0.5 kg) — ${kg(totalAssignedKg)} / ${kg(batchKg)} kg` },
+                      ].map(({ ok, label }) => (
+                        <div key={label} className="flex items-center gap-2">
+                          {ok
+                            ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                            : <AlertCircle  className="h-4 w-4 text-red-500 shrink-0" />}
+                          <span className={ok ? "text-foreground" : "text-red-600 dark:text-red-400"}>{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Merma */}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">
+                      Merma (kg) <span className="text-muted-foreground font-normal text-xs">(opcional)</span>
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Se registra como <code>waste_kg</code>. El RPC calcula <code>actual_batch_kg = batch_kg − waste_kg</code>.
+                    </p>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      value={wasteKgInput}
+                      onChange={(e) => setWasteKgInput(e.target.value)}
+                      className="w-40 rounded-lg border border-border bg-background px-3 py-2.5 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+
+                  {formError && (
+                    <div role="alert" className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span className="whitespace-pre-wrap">{formError}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-border bg-muted/20 flex items-center justify-between gap-3">
+              {/* Back */}
+              {step > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
+                  className="rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  ← Anterior
+                </button>
+              )}
+              <div className="flex-1" />
+
+              {/* Next / Submit */}
+              {step < 3 ? (
+                <button
+                  type="button"
+                  onClick={() => setStep((s) => (s + 1) as 2 | 3)}
+                  disabled={
+                    (step === 1 && (!recipeId || batchKg <= 0)) ||
+                    (step === 2 && drafts.length === 0)
+                  }
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-40 transition-colors"
+                >
+                  Siguiente <ChevronRight className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={!canComplete || submitting}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {submitting ? (
+                    <>
+                      <span className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      <PackageCheck className="h-4 w-4" />
+                      Completar Lote
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </form>
+        )}
+
+        {/* ── Filtros ──────────────────────────────────────────── */}
         <div className="flex flex-wrap gap-3 print:hidden">
           <div className="flex items-center gap-2">
-            <label htmlFor="filter-date" className="text-xs font-medium text-muted-foreground whitespace-nowrap">Fecha</label>
-            <input
-              id="filter-date"
-              type="date"
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <label htmlFor="filter-status" className="text-xs font-medium text-muted-foreground whitespace-nowrap">Estado</label>
+            <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Estado</label>
             <select
-              id="filter-status"
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
               className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">Todos</option>
-              {Object.entries(STATUS_LABELS).map(([key, { label }]) => (
+              {Object.entries(STATUS_META).map(([key, { label }]) => (
                 <option key={key} value={key}>{label}</option>
               ))}
             </select>
           </div>
-          {(filterDate || filterStatus) && (
+          {filterStatus && (
             <button
-              onClick={() => { setFilterDate(""); setFilterStatus(""); }}
+              onClick={() => { setFilterStatus(""); setPage(1); }}
               className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
             >
-              Limpiar filtros
+              Limpiar
             </button>
           )}
         </div>
 
-        {/* Tabla */}
-        {loading ? (
+        {/* ── Historial de órdenes ────────────────────────────── */}
+        {ordersLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[600px] text-sm">
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">Lote</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Lote</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Receta</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Masa (kg)</th>
                   <th className="px-4 py-3 text-center font-medium text-muted-foreground">Fecha</th>
-                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">Receta</th>
-                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">Rendimiento</th>
                   <th className="px-4 py-3 text-center font-medium text-muted-foreground">Estado</th>
                   <th className="px-4 py-3 text-center font-medium text-muted-foreground print:hidden">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {orders.length === 0 ? (
+                {paged.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                      No hay órdenes de producción
+                    <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground text-sm">
+                      No hay órdenes de producción unificada
                     </td>
                   </tr>
                 ) : (
-                  pagedOrders.map((order) => {
-                    const status = STATUS_LABELS[order.status] ?? { label: order.status, dot: "bg-gray-400" };
+                  paged.map((order: UnifiedProductionOrder) => {
+                    const meta   = STATUS_META[order.status] ?? STATUS_META.BORRADOR;
                     const recipe = recipes.find((r) => r.id === order.recipe_id);
-
-                    // Mostrar rendimiento en unidad "grande" si aplica
-                    const displayYield = (() => {
-                      const rUnit = recipe?.yield_unit?.toLowerCase() || "";
-                      const rFactor = getUnitFactor(rUnit);
-                      const rGroup = getUnitGroup(rUnit);
-                      if (rGroup) {
-                        const preferred = rFactor < 100
-                          ? UNIT_GROUPS[rGroup]?.find((u) => u.factor >= 1000)
-                          : null;
-                        if (preferred) {
-                          const val = Number(order.target_yield) / (preferred.factor / rFactor);
-                          return `${val.toLocaleString("es-EC", { maximumFractionDigits: 3, useGrouping: false })} ${preferred.label}`;
-                        }
-                      }
-                      const isPhysical = ["kg","lt"].includes(rUnit);
-                      return `${Number(order.target_yield).toLocaleString("es-EC", {
-                        minimumFractionDigits: isPhysical ? 2 : 0,
-                        maximumFractionDigits: 2,
-                        useGrouping: false,
-                      })} ${recipe?.yield_unit ?? ""}`;
-                    })();
+                    const isExec = executing === order.id;
 
                     return (
                       <React.Fragment key={order.id}>
-                        <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 text-center font-mono text-xs text-muted-foreground">
+                        <tr className="hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                             {order.batch_number ?? order.id.substring(0, 8)}
+                          </td>
+                          <td className="px-4 py-3 font-medium">
+                            {recipe?.name ?? <span className="text-muted-foreground text-xs">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums font-semibold">
+                            {kg(Number(order.batch_kg))}
                           </td>
                           <td className="px-4 py-3 text-center text-xs text-muted-foreground whitespace-nowrap">
                             {order.created_at ? formatDate(order.created_at) : "—"}
                           </td>
-                          <td className="px-4 py-3 text-center text-sm font-medium">
-                            {recipe?.name ?? <span className="text-muted-foreground text-xs">—</span>}
-                          </td>
-                          <td className="px-4 py-3 text-center font-semibold tabular-nums">
-                            {displayYield}
-                          </td>
                           <td className="px-4 py-3 text-center">
-                            <span className="inline-flex items-center justify-center gap-1.5">
-                              <span aria-hidden="true" className={`h-2 w-2 rounded-full ${status.dot}`} />
-                              <span className="text-xs font-medium text-foreground">{status.label}</span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
+                              <span className="text-xs font-medium">{meta.label}</span>
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center print:hidden">
-                            {order.status === "BORRADOR" && (
-                              <div className="flex justify-center gap-2">
-                                <button
-                                  onClick={() => updateStatus(order.id, "EN_PROCESO")}
-                                  className="rounded-md bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 transition-colors"
-                                >
-                                  Iniciar
-                                </button>
-                                {isStaff && (
+                            <div className="flex justify-center flex-wrap gap-2">
+                              {order.status === "BORRADOR" && (
+                                <>
                                   <button
-                                    onClick={() => handleCancel(order.id)}
-                                    className="rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors"
+                                    onClick={() => handleExecuteExisting(order.id)}
+                                    disabled={isExec}
+                                    className="rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                                   >
-                                    Cancelar
+                                    {isExec ? "Ejecutando..." : "Ejecutar"}
                                   </button>
-                                )}
-                              </div>
-                            )}
-                            {order.status === "EN_PROCESO" && (
-                              <div className="flex flex-col items-center gap-2">
-                                <div className="flex justify-center gap-2">
-                                  <button
-                                    onClick={() => handleComplete(order.id)}
-                                    className="rounded-md bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700 transition-colors"
-                                  >
-                                    Completar
-                                  </button>
-                                  {isStaff && (
+                                  {isAdmin && (
                                     <button
-                                      onClick={() => handleCancel(order.id)}
-                                      className="rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors"
+                                      onClick={() => handleCancelOrder(order.id)}
+                                      className="rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors"
                                     >
                                       Cancelar
                                     </button>
                                   )}
-                                </div>
-                                {rowErrors[order.id] && (
-                                  <div className="max-w-xs rounded-md bg-destructive/10 border border-destructive/20 px-2 py-1 text-[10px] text-destructive leading-tight">
-                                    {rowErrors[order.id]}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            {order.status === "COMPLETADA" && (
-                              <div className="flex items-center justify-center gap-2 flex-wrap">
-                                <button
-                                  onClick={() => router.push(`/admin/production/${order.id}`)}
-                                  className="rounded-md bg-zinc-600 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-400 transition-colors"
-                                >
-                                  Ver Detalle
-                                </button>
-                                {isStaff && (
-                                  <button
-                                    onClick={() => setWasteOrderId(wasteOrderId === order.id ? null : order.id)}
-                                    className="rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
-                                  >
-                                    <Trash2 className="h-3 w-3 inline mr-0.5" />Merma
-                                  </button>
-                                )}
-                                {isAdmin && (
-                                  <button
-                                    onClick={() => setReverseOrderId(reverseOrderId === order.id ? null : order.id)}
-                                    className="rounded-md border border-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                                  >
-                                    <RotateCcw className="h-3 w-3 inline mr-0.5" />Revertir
-                                  </button>
-                                )}
-                              </div>
+                                </>
+                              )}
+                              {order.status === "COMPLETADA" && (
+                                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                  ✓ Lote {order.batch_number}
+                                </span>
+                              )}
+                            </div>
+                            {rowErrors[order.id] && (
+                              <p className="mt-1.5 max-w-xs mx-auto rounded-md bg-destructive/10 border border-destructive/20 px-2 py-1 text-[10px] text-destructive leading-tight text-left">
+                                {rowErrors[order.id]}
+                              </p>
                             )}
                           </td>
                         </tr>
-
-                        {/* Merma */}
-                        {wasteOrderId === order.id && order.status === "COMPLETADA" && (
-                          <tr className="bg-amber-50/60 dark:bg-amber-900/10 border-t-0">
-                            <td colSpan={6} className="px-4 py-3 pb-4">
-                              <form onSubmit={handleDeclareWaste} className="flex flex-wrap items-end gap-3">
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-medium text-amber-700 dark:text-amber-400">Cantidad de merma *</label>
-                                  <input
-                                    type="number" required min="0.001" step="0.001"
-                                    value={wasteQty} onChange={(e) => setWasteQty(e.target.value)}
-                                    placeholder="0.000"
-                                    className="w-28 rounded-md border border-amber-300 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                                  />
-                                </div>
-                                <div className="space-y-1 flex-1 min-w-32">
-                                  <label className="text-[10px] font-medium text-amber-700 dark:text-amber-400">Motivo (opcional)</label>
-                                  <input
-                                    type="text" value={wasteNotes} onChange={(e) => setWasteNotes(e.target.value)}
-                                    placeholder="Daño de empaque, contaminación..."
-                                    className="w-full rounded-md border border-amber-300 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                                  />
-                                </div>
-                                <button
-                                  type="submit" disabled={savingWaste || !wasteQty}
-                                  className="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
-                                >
-                                  {savingWaste ? "Registrando..." : "Registrar Merma"}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => { setWasteOrderId(null); setWasteQty(""); setWasteNotes(""); }}
-                                  className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
-                                >
-                                  Cancelar
-                                </button>
-                              </form>
-                              {rowErrors[order.id] && (
-                                <div className="mt-2 rounded-md bg-destructive/10 border border-destructive/20 px-2 py-1 text-xs text-destructive">
-                                  {rowErrors[order.id]}
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        )}
-
-                        {/* Confirmación de reversión */}
-                        {reverseOrderId === order.id && order.status === "COMPLETADA" && (
-                          <tr className="bg-red-50/60 dark:bg-red-900/10 border-t-0">
-                            <td colSpan={6} className="px-4 py-3 pb-4">
-                              <div className="flex flex-wrap items-center gap-3">
-                                <p className="text-xs text-red-800 dark:text-red-300 flex-1 min-w-48">
-                                  <strong>¿Revertir esta producción?</strong> Se eliminarán todos los movimientos de inventario (materia prima se restaura, producto terminado se retira) y la orden volverá a Borrador.
-                                </p>
-                                <button
-                                  onClick={() => handleReverseOrder(order.id)}
-                                  disabled={reversing}
-                                  className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
-                                >
-                                  {reversing ? "Revirtiendo..." : "Sí, revertir"}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setReverseOrderId(null)}
-                                  className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
-                                >
-                                  Cancelar
-                                </button>
-                              </div>
-                              {rowErrors[order.id] && (
-                                <div className="mt-2 rounded-md bg-destructive/10 border border-destructive/20 px-2 py-1 text-xs text-destructive">
-                                  {rowErrors[order.id]}
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        )}
                       </React.Fragment>
                     );
                   })
@@ -826,13 +829,14 @@ export default function AdminProductionPage() {
             </table>
           </div>
         )}
+
         <TablePagination
-          page={prodPage}
-          totalPages={prodTotalPages}
-          from={prodFrom}
-          to={prodTo}
-          total={prodTotal}
-          onPageChange={setProdPage}
+          page={page}
+          totalPages={totalPages}
+          from={from}
+          to={to}
+          total={totalPages2}
+          onPageChange={setPage}
         />
       </div>
     </>

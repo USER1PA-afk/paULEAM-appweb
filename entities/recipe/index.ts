@@ -31,6 +31,12 @@ export const RecipeIngredientSchema = z.object({
   ingredient_role: IngredientRoleEnum.default("MATERIA_PRIMA"),
   /** Notas de preparación específicas para este ingrediente */
   notes: z.string().nullable().optional(),
+  /**
+   * Porcentaje del ingrediente respecto al yield_base de la receta.
+   * Backfilleado por migración: percentage = (quantity / yield_base) × 100.
+   * Nulo para filas legacy donde yield_base = 0.
+   */
+  percentage: z.number().nullable().optional(),
   created_at: z.string().datetime().optional(),
 });
 

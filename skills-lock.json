@@ -100,6 +100,30 @@
       "skillPath": "skills/hyperframes-registry/SKILL.md",
       "computedHash": "62984a677583cb55beebbb5784e1caeabf7ac3e5a09e66bb5dd7205d5ab411bf"
     },
+    "insforge": {
+      "source": "insforge/insforge-skills",
+      "sourceType": "github",
+      "skillPath": "skills/insforge/SKILL.md",
+      "computedHash": "32afe581795c7e47a6c780d0f98860d491ea5a1fea07a54905a6fe1a8d940f95"
+    },
+    "insforge-cli": {
+      "source": "insforge/insforge-skills",
+      "sourceType": "github",
+      "skillPath": "skills/insforge-cli/SKILL.md",
+      "computedHash": "e9128ac86a2d8ffabd5fec1b015bdae6b8a29fe7dbce4c42dc4e3120a8521639"
+    },
+    "insforge-debug": {
+      "source": "insforge/insforge-skills",
+      "sourceType": "github",
+      "skillPath": "skills/insforge-debug/SKILL.md",
+      "computedHash": "48209964a136cc4772e3399522f9fb8bae95907d4957b7615ffef100548897d6"
+    },
+    "insforge-integrations": {
+      "source": "insforge/insforge-skills",
+      "sourceType": "github",
+      "skillPath": "skills/insforge-integrations/SKILL.md",
+      "computedHash": "2fb06e096b8dda1fc462334bc986708b94ed6608a1f087729919646733b14e24"
+    },
     "media-use": {
       "source": "heygen-com/hyperframes",
       "sourceType": "github",

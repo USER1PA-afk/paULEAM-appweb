@@ -283,12 +283,14 @@ GRANT EXECUTE ON FUNCTION public.reject_deletion_request(UUID, TEXT) TO authenti
 --    so operario can create/edit (the gating was only on the UI).
 -- ============================
 DROP POLICY IF EXISTS "suppliers_insert_admin" ON public.suppliers;
+DROP POLICY IF EXISTS "suppliers_insert_staff" ON public.suppliers;
 CREATE POLICY "suppliers_insert_staff"
   ON public.suppliers FOR INSERT
   TO authenticated
   WITH CHECK (public.get_user_role() IN ('admin','operario'));
 
 DROP POLICY IF EXISTS "suppliers_update_admin" ON public.suppliers;
+DROP POLICY IF EXISTS "suppliers_update_staff" ON public.suppliers;
 CREATE POLICY "suppliers_update_staff"
   ON public.suppliers FOR UPDATE
   TO authenticated
@@ -298,24 +300,28 @@ CREATE POLICY "suppliers_update_staff"
 -- (the policy suppliers_delete_admin from 20260511000000 stays as-is)
 
 DROP POLICY IF EXISTS "recipes_insert_admin" ON public.recipes;
+DROP POLICY IF EXISTS "recipes_insert_staff" ON public.recipes;
 CREATE POLICY "recipes_insert_staff"
   ON public.recipes FOR INSERT
   TO authenticated
   WITH CHECK (public.get_user_role() IN ('admin','operario'));
 
 DROP POLICY IF EXISTS "recipes_update_admin" ON public.recipes;
+DROP POLICY IF EXISTS "recipes_update_staff" ON public.recipes;
 CREATE POLICY "recipes_update_staff"
   ON public.recipes FOR UPDATE
   TO authenticated
   USING (public.get_user_role() IN ('admin','operario'));
 
 DROP POLICY IF EXISTS "ingredients_insert_admin" ON public.recipe_ingredients;
+DROP POLICY IF EXISTS "ingredients_insert_staff" ON public.recipe_ingredients;
 CREATE POLICY "ingredients_insert_staff"
   ON public.recipe_ingredients FOR INSERT
   TO authenticated
   WITH CHECK (public.get_user_role() IN ('admin','operario'));
 
 DROP POLICY IF EXISTS "ingredients_update_admin" ON public.recipe_ingredients;
+DROP POLICY IF EXISTS "ingredients_update_staff" ON public.recipe_ingredients;
 CREATE POLICY "ingredients_update_staff"
   ON public.recipe_ingredients FOR UPDATE
   TO authenticated
