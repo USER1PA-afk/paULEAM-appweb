@@ -2,14 +2,19 @@ import { productSlug } from "@shared/lib/slug";
 import { createServerClient } from "@shared/lib/insforge/client";
 
 /**
- * Resolves a slug like "queso-manaba-1234abcd" to the matching active product
- * by extracting the trailing 8-char id segment and looking it up in the
- * `products` table. Returns null when no active finished-product matches.
+ * Resolves a slug like "queso-manaba-1234abcd" to the matching active product.
+ *
+ * `productSlug` embeds only the first 8 hex chars of the UUID (its first group),
+ * so we cannot look up by the full id. PostgREST has no `LIKE` for the `uuid`
+ * type, but uuid comparison operators do exist — so we match every UUID whose
+ * first group equals the prefix via an indexed range scan
+ * `[prefix-0000-…, prefix-ffff-…]`. Returns null when no active finished-product
+ * matches.
  */
 export async function getProductBySlug(slug: string) {
   const m = slug.match(/-([0-9a-f]{8})$/i);
   if (!m) return null;
-  const id = m[1];
+  const prefix = m[1].toLowerCase();
 
   const db = createServerClient();
   const { data } = await db.database
@@ -17,13 +22,15 @@ export async function getProductBySlug(slug: string) {
     .select(
       "id, name, sku, type, unit, capacity_unit, price, image_url, short_description, description, long_description, specifications, ingredients, nutritional_info, weight, commercial_details, is_active, featured, conversion_factor, sales_unit_name, category_id, created_at, updated_at"
     )
-    .eq("id", id)
+    .gte("id", `${prefix}-0000-0000-0000-000000000000`)
+    .lte("id", `${prefix}-ffff-ffff-ffff-ffffffffffff`)
     .eq("type", "PRODUCTO_TERMINADO")
     .eq("is_active", true)
-    .maybeSingle();
+    .limit(1);
 
-  if (!data) return null;
-  return data as Record<string, unknown> & { id: string; name: string };
+  const row = Array.isArray(data) ? data[0] : null;
+  if (!row) return null;
+  return row as Record<string, unknown> & { id: string; name: string };
 }
 
 /**
