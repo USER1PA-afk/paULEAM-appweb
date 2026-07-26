@@ -33,6 +33,10 @@ export interface PaymentConfig {
   guayaquil_qr_key:       string | null;
   paypal_email:           string | null;
   paypal_me:              string | null;
+  /** Admin kill switch — when false, the method is hidden from checkout. */
+  pichincha_enabled:      boolean;
+  guayaquil_enabled:      boolean;
+  paypal_enabled:         boolean;
   updated_at:             string | null;
   updated_by:             string | null;
 }

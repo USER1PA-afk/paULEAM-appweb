@@ -250,6 +250,22 @@ function MethodDetails({ method, config }: { method: string; config: PaymentConf
 export function PaymentMethodSelector({ value, onChange }: Props) {
   const { config, loading } = usePaymentConfig();
 
+  // Drop methods the admin has disabled. While config is still loading
+  // we keep the previous selection renderable to avoid a flash; once
+  // config lands we filter strictly. Default to `true` for missing flags
+  // so a freshly-seeded row (pre-migration) keeps working.
+  const enabledMap: Record<(typeof METHODS)[number]["value"], boolean> = {
+    PICHINCHA:             config?.pichincha_enabled ?? true,
+    TRANSFERENCIA_GUAYAQUIL: config?.guayaquil_enabled ?? true,
+    PAYPAL:                config?.paypal_enabled    ?? true,
+  };
+  const visibleMethods = config
+    ? METHODS.filter((m) => enabledMap[m.value])
+    : METHODS;
+  const noMethodsAvailable = !loading && visibleMethods.length === 0;
+  const selectedHidden =
+    !loading && value != null && !visibleMethods.some((m) => m.value === value);
+
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium text-foreground">
@@ -266,9 +282,21 @@ export function PaymentMethodSelector({ value, onChange }: Props) {
           </div>
           Cargando métodos de pago…
         </div>
+      ) : noMethodsAvailable ? (
+        <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-5 text-sm text-muted-foreground">
+          No hay métodos de pago disponibles en este momento. Por favor,
+          contacta al administrador.
+        </div>
       ) : (
         <div className="space-y-2">
-          {METHODS.map((method) => {
+          {selectedHidden && (
+            <p role="status" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800
+              dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+              El método que tenías seleccionado ya no está disponible. Elige
+              otro para continuar.
+            </p>
+          )}
+          {visibleMethods.map((method) => {
             const isSelected = value === method.value;
             return (
               <div key={method.value}>

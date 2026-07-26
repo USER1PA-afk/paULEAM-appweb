@@ -9,15 +9,18 @@ import {
   type PaymentConfig,
 } from "@features/checkout/hooks";
 import { getInsforge } from "@shared/lib/insforge/client";
-import { Save, CircleCheck, Upload, Trash2 } from "lucide-react";
+import { Save, CircleCheck, Upload, Trash2, Eye, EyeOff } from "lucide-react";
 
 interface FormState {
+  pichincha_enabled:      boolean;
   pichincha_holder:       string;
   pichincha_account:      string;
   pichincha_account_type: string;
+  guayaquil_enabled:      boolean;
   guayaquil_holder:       string;
   guayaquil_account:      string;
   guayaquil_account_type: string;
+  paypal_enabled:         boolean;
   paypal_email:           string;
   paypal_me:              string;
 }
@@ -56,13 +59,70 @@ function Field({
   );
 }
 
+/**
+ * Pill-style toggle for the per-method kill switch. When off, the method
+ * is hidden from the checkout (and from the balance-payment modal in
+ * /shop/reservations). Renders the label + a short hint that explains
+ * what "off" actually does, plus the eye/eye-off icon for an at-a-glance
+ * read in the admin list.
+ */
+function ToggleRow({
+  id,
+  label,
+  hint,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  hint: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+      <div className="min-w-0">
+        <label htmlFor={id} className="block text-sm font-medium text-foreground">
+          {label}
+        </label>
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      </div>
+      <button
+        id={id}
+        type="button"
+        role="switch"
+        aria-checked={value}
+        onClick={() => onChange(!value)}
+        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background
+          ${value
+            ? "border-brand-600 bg-brand-600"
+            : "border-border bg-muted"
+          }`}
+      >
+        <span
+          aria-hidden="true"
+          className={`inline-flex h-5 w-5 transform items-center justify-center rounded-full bg-white shadow-sm transition-transform
+            ${value ? "translate-x-5" : "translate-x-0.5"}
+            ${value ? "text-brand-700" : "text-muted-foreground"}`}
+        >
+          {value ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+        </span>
+      </button>
+    </div>
+  );
+}
+
 const EMPTY: FormState = {
+  pichincha_enabled:      true,
   pichincha_holder:       "",
   pichincha_account:      "",
   pichincha_account_type: "Ahorro",
+  guayaquil_enabled:      true,
   guayaquil_holder:       "",
   guayaquil_account:      "",
   guayaquil_account_type: "Ahorro",
+  paypal_enabled:         true,
   paypal_email:           "",
   paypal_me:              "",
 };
@@ -70,12 +130,15 @@ const EMPTY: FormState = {
 function toForm(config: PaymentConfig | null): FormState {
   if (!config) return EMPTY;
   return {
+    pichincha_enabled:      config.pichincha_enabled      ?? true,
     pichincha_holder:       config.pichincha_holder       ?? "",
     pichincha_account:      config.pichincha_account      ?? "",
     pichincha_account_type: config.pichincha_account_type ?? "Ahorro",
+    guayaquil_enabled:      config.guayaquil_enabled      ?? true,
     guayaquil_holder:       config.guayaquil_holder       ?? "",
     guayaquil_account:      config.guayaquil_account      ?? "",
     guayaquil_account_type: config.guayaquil_account_type ?? "Ahorro",
+    paypal_enabled:         config.paypal_enabled         ?? true,
     paypal_email:           config.paypal_email           ?? "",
     paypal_me:              config.paypal_me              ?? "",
   };
@@ -128,6 +191,13 @@ export default function SettingsPage() {
 
   function set(key: keyof FormState) {
     return (val: string) => {
+      setForm((prev) => ({ ...prev, [key]: val }));
+      setSaved(false);
+    };
+  }
+
+  function setBool(key: keyof FormState) {
+    return (val: boolean) => {
       setForm((prev) => ({ ...prev, [key]: val }));
       setSaved(false);
     };
@@ -294,6 +364,13 @@ export default function SettingsPage() {
         {/* Banco Pichincha */}
         <section className="rounded-xl border border-border bg-card p-6 space-y-4 shadow-sm">
           <h2 className="text-base font-semibold text-foreground">Banco Pichincha</h2>
+          <ToggleRow
+            id="pichincha-enabled"
+            label="Método visible en la tienda"
+            hint="Si lo desactivas, la opción Banco Pichincha / DeUna se oculta en el checkout aunque los datos estén configurados."
+            value={form.pichincha_enabled}
+            onChange={setBool("pichincha_enabled")}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="p-holder"  label="Titular"         value={form.pichincha_holder}       onChange={set("pichincha_holder")}       placeholder="Nombre del titular" />
             <Field id="p-account" label="Número de Cuenta" value={form.pichincha_account}      onChange={set("pichincha_account")}      placeholder="2200000000" />
@@ -373,6 +450,13 @@ export default function SettingsPage() {
         {/* Banco Guayaquil */}
         <section className="rounded-xl border border-border bg-card p-6 space-y-4 shadow-sm">
           <h2 className="text-base font-semibold text-foreground">Banco Guayaquil</h2>
+          <ToggleRow
+            id="guayaquil-enabled"
+            label="Método visible en la tienda"
+            hint="Si lo desactivas, la opción Banco Guayaquil se oculta en el checkout aunque los datos estén configurados."
+            value={form.guayaquil_enabled}
+            onChange={setBool("guayaquil_enabled")}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="g-holder"  label="Titular"          value={form.guayaquil_holder}       onChange={set("guayaquil_holder")}       placeholder="Nombre del titular" />
             <Field id="g-account" label="Número de Cuenta" value={form.guayaquil_account}      onChange={set("guayaquil_account")}      placeholder="1000000000" />
@@ -452,6 +536,13 @@ export default function SettingsPage() {
         {/* PayPal */}
         <section className="rounded-xl border border-border bg-card p-6 space-y-4 shadow-sm">
           <h2 className="text-base font-semibold text-foreground">PayPal</h2>
+          <ToggleRow
+            id="paypal-enabled"
+            label="Método visible en la tienda"
+            hint="Si lo desactivas, la opción PayPal se oculta en el checkout aunque los datos estén configurados."
+            value={form.paypal_enabled}
+            onChange={setBool("paypal_enabled")}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
               id="pp-email"

@@ -215,16 +215,23 @@ export default function MyReservationsPage() {
                     {paymentConfig && (
                       <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
                         <p className="font-medium text-foreground">Datos para transferencia</p>
-                        {paymentConfig.pichincha_account && (
+                        {paymentConfig.pichincha_enabled !== false && paymentConfig.pichincha_account && (
                           <p className="text-muted-foreground">
                             <span className="font-medium text-foreground">Pichincha:</span>{" "}
                             {paymentConfig.pichincha_holder} — {paymentConfig.pichincha_account} ({paymentConfig.pichincha_account_type})
                           </p>
                         )}
-                        {paymentConfig.guayaquil_account && (
+                        {paymentConfig.guayaquil_enabled !== false && paymentConfig.guayaquil_account && (
                           <p className="text-muted-foreground">
                             <span className="font-medium text-foreground">Guayaquil:</span>{" "}
                             {paymentConfig.guayaquil_holder} — {paymentConfig.guayaquil_account} ({paymentConfig.guayaquil_account_type})
+                          </p>
+                        )}
+                        {paymentConfig.pichincha_enabled === false && paymentConfig.guayaquil_enabled === false && (
+                          <p className="text-xs text-muted-foreground">
+                            El administrador ha deshabilitado temporalmente los
+                            métodos de transferencia. Sube el comprobante de
+                            cualquier otro medio acordado con la planta.
                           </p>
                         )}
                       </div>
