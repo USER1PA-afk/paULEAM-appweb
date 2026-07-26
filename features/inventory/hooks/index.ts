@@ -1,6 +1,6 @@
 "use client";
 
-import { getInsforge } from "@shared/lib/insforge/client";
+import { getInsforge, getRealtimeInsforge } from "@shared/lib/insforge/client";
 import { useState, useEffect, useCallback } from "react";
 import { useCachedQuery, invalidateCache } from "@shared/hooks/use-cached-query";
 
@@ -145,7 +145,10 @@ export function useInventoryActions() {
  * @param onUpdate - Callback que se llama con la entrada actualizada
  */
 export function useRealtimeStock(onUpdate: (entry: LedgerEntry) => void) {
-  const insforge = getInsforge();
+  // Realtime bypasses the same-origin /api/insforge proxy because Next.js
+  // rewrites cannot tunnel WebSocket / socket.io upgrades. The rest of the
+  // SDK still goes through the proxy (see shared/lib/insforge/client.ts).
+  const insforge = getRealtimeInsforge();
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {

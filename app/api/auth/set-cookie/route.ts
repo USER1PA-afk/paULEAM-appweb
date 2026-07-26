@@ -95,5 +95,15 @@ export async function POST(request: Request) {
   response.cookies.set("pauleam-session", token, cookieOpts);
   response.cookies.set("pauleam-role", role, cookieOpts);
   response.cookies.set("pauleam-jwt-hmac", hmacSecret, hmacCookieOpts);
+  // Non-httpOnly session marker. The auth-recovery-boot needs to know from
+  // JavaScript whether the user has a valid session, but pauleam-session is
+  // httpOnly and invisible to document.cookie. This marker mirrors it
+  // (same lifespan, same path, same site) and is JS-readable. It carries no
+  // secret — its only job is to answer the question "did the user just log
+  // in?" so the recovery can short-circuit instead of nuking on a
+  // refresh-401 that is just a /api/insforge proxy artifact (the Insforge
+  // SDK's httpOnly refresh cookie is on insforge.app and never reaches
+  // localhost:3000, so refresh always 401s).
+  response.cookies.set("pauleam-session-marker", "1", hmacCookieOpts);
   return response;
 }

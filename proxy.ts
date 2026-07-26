@@ -166,7 +166,12 @@ export async function proxy(request: NextRequest) {
     // allowlisted for product gallery, receipt previews, etc.
     `img-src 'self' data: blob: https://*.insforge.app https://*.insforge.dev https://cdn.insforge.dev https://*.vercel.app`,
     `font-src 'self' data: https://fonts.gstatic.com`,
-    `connect-src 'self' https://*.insforge.app https://*.insforge.dev https://*.vercel.app https://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com`,
+    // wss:// MUST be listed explicitly — CSP does not cross-match schemes, so
+    // `https://*.insforge.app` alone does not cover the realtime WebSocket
+    // (wss://8i4ga35v.us-east.insforge.app/socket.io/...) used by the
+    // inventory ledger live updates. The HTTPS rules still cover the API
+    // tunnel /api/insforge/* on the same origin.
+    `connect-src 'self' https://*.insforge.app https://*.insforge.dev https://*.vercel.app https://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com wss://*.insforge.app`,
     `worker-src 'self' blob:`,
     `manifest-src 'self'`,
     `object-src 'none'`,
@@ -189,9 +194,10 @@ export const config = {
     "/login",
     "/register",
     // Capture everything else EXCEPT framework assets + service worker +
-    // manifest + icons. These static files don't need a CSP nonce and
-    // excluding them keeps the matcher cheap.
-    "/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|icons|manifest\\.webmanifest).*)",
+    // manifest + icons + the Insforge proxy tunnel. The tunnel only carries
+    // API traffic that doesn't need a CSP nonce and shouldn't be wrapped
+    // in one (the upstream Insforge response is JSON, not HTML).
+    "/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|icons|manifest\\.webmanifest|api/insforge).*)",
   ],
 };
 

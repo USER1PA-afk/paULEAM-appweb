@@ -7,6 +7,16 @@ const ALLOWED_ORIGIN =
   process.env.NEXT_PUBLIC_APP_URL ?? "https://pauleam.vercel.app";
 
 /**
+ * Insforge API base — read at build time. The browser client points at the
+ * same-origin proxy (/api/insforge/* → this URL) so the browser never makes
+ * a cross-origin request to Insforge. The server client (createServerClient)
+ * still uses this URL directly because Node has no CORS restrictions and
+ * can hit the Insforge edge with the admin API key.
+ */
+const INSFORGE_UPSTREAM =
+  process.env.NEXT_PUBLIC_INSFORGE_URL ?? "https://8i4ga35v.us-east.insforge.app";
+
+/**
  * Security headers that DO NOT need a per-request nonce (Content-Security-
  * Policy is set dynamically in proxy.ts because the nonce changes every
  * request — see proxy.ts for the live CSP and the per-request generator).
@@ -15,6 +25,31 @@ const ALLOWED_ORIGIN =
  * cheap.
  */
 const nextConfig: NextConfig = {
+  /**
+   * Cross-origin proxy: every browser call to /api/insforge/* is tunneled
+   * server-side to Insforge. The browser sees same-origin, so no CORS
+   * preflight is required and the Cloudflare 502s that intermittently
+   * stripped Access-Control-Allow-Origin on the Insforge edge stop
+   * breaking client DB queries.
+   *
+   * Server-side code (route handlers, server components) still hits
+   * Insforge directly via createServerClient() — it doesn't need the
+   * proxy because Node has no same-origin policy.
+   *
+   * Realtime (Socket.IO WebSocket) does NOT route through this proxy —
+   * Next.js rewrites cannot tunnel WS upgrades. The one hook that uses
+   * realtime (useRealtimeStock) builds its own SDK client with the real
+   * upstream URL. See shared/lib/insforge/client.ts → getRealtimeInsforge.
+   */
+  async rewrites() {
+    return [
+      {
+        source: "/api/insforge/:path*",
+        destination: `${INSFORGE_UPSTREAM}/:path*`,
+      },
+    ];
+  },
+
   images: {
     // Image optimizer tries AVIF first (smaller, modern), then WebP
     // (universal). Browsers that accept neither get the original.

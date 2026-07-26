@@ -1,6 +1,5 @@
 "use client";
 
-import { getInsforge } from "@shared/lib/insforge/client";
 import { signAndStoreJwt } from "@shared/lib/auth/jwt-integrity";
 
 /**
@@ -9,6 +8,13 @@ import { signAndStoreJwt } from "@shared/lib/auth/jwt-integrity";
  * Mirrors the role-based redirect in LoginForm (features/auth/components):
  *   sales_kiosk → /pos · admin|operario → /admin/dashboard · resto → /shop/catalog
  *
+ * Uses GET /api/auth/me (server-side cookie validation) instead of the Insforge
+ * SDK. The browser SDK path made a cross-origin PostgREST call
+ * (profiles?select=role&id=eq.<uuid>) that was hitting CORS errors on some
+ * networks even though the server sends the right headers — a transitive
+ * network/proxy was stripping them. /api/auth/me runs the same query
+ * server-side and is therefore CORS-free.
+ *
  * Uses window.location.replace() (not router.push) so the browser sends a fresh
  * request carrying the pauleam-session httpOnly cookie the proxy depends on, and
  * so the OAuth callback page is dropped from history.
@@ -16,16 +22,12 @@ import { signAndStoreJwt } from "@shared/lib/auth/jwt-integrity";
 export async function redirectByRole(): Promise<void> {
   let role = "cliente"; // fallback seguro
   try {
-    const insforge = getInsforge();
-    const { data: userData } = await insforge.auth.getCurrentUser();
-    const userId = userData?.user?.id;
-    if (userId) {
-      const { data: profile } = await insforge.database
-        .from("profiles")
-        .select("role")
-        .eq("id", userId)
-        .single();
-      role = (profile as { role: string } | null)?.role ?? "cliente";
+    const res = await fetch("/api/auth/me");
+    if (res.ok) {
+      const body = (await res.json()) as {
+        user?: { role?: string } | null;
+      } | null;
+      role = body?.user?.role ?? "cliente";
     }
   } catch {
     // Si falla la consulta del rol, usamos 'cliente' (el layout protege /admin).

@@ -142,6 +142,15 @@ export async function POST(req: NextRequest) {
     };
     res.cookies.set("pauleam-session", token, cookieOpts);
     res.cookies.set("pauleam-role", role, cookieOpts);
+    // JS-readable marker mirroring pauleam-session. See /api/auth/set-cookie
+    // for why auth-recovery-boot needs this.
+    res.cookies.set("pauleam-session-marker", "1", {
+      httpOnly: false,
+      secure:   process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path:     "/",
+      maxAge:   60 * 60 * 24 * 7,
+    });
 
     // Clear the email-verified cookie — it's single-use
     res.cookies.set("pauleam-email-verified", "", {

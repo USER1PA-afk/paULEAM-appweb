@@ -21,6 +21,27 @@ import { useEffect } from "react";
  *   non-httpOnly cookie that looks like an SDK token, then hard-reload.
  *   The reload lands on /login (no session, no SDK) and the loop stops.
  *
+ *   LOOP-BREAKER (recurring 401s after reload):
+ *     After the first reload, getCurrentUser() on the new page will AGAIN
+ *     call refreshSession() (the SDK does this when localStorage is empty
+ *     but an httpOnly refresh cookie still exists on the Insforge side).
+ *     If the refresh cookie is genuinely stale, the response is another
+ *     401, recovery fires again, reloads, and loops forever. The previous
+ *     RECOVERY_FLAG in sessionStorage did not survive because the recovery
+ *     itself calls sessionStorage.clear(). Fix:
+ *
+ *       1. Set a SECOND, persistent flag in a non-httpOnly cookie BEFORE
+ *          any clearing. Cookies survive sessionStorage.clear().
+ *       2. Call /api/auth/logout (clears our pauleam-* httpOnly cookies
+ *          so the proxy stops seeing the user as logged in).
+ *       3. Call getInsforge().auth.signOut() (best-effort, clears the
+ *          Insforge SDK's own httpOnly refresh cookie on the Insforge
+ *          domain — JS cannot clear it directly because it's on a
+ *          different origin).
+ *     On the next page load, if the cookie flag is set, the patcher
+ *     short-circuits with a fake 401 instead of nuking + reloading.
+ *     The user just sees the login form.
+ *
  * PROBLEM 2 — 400 noise from stock_summary view:
  *   The stock_summary view is hand-curated (CREATE VIEW ... SELECT ...).
  *   New product columns require a manual migration. While the migration is
@@ -36,8 +57,9 @@ import { useEffect } from "react";
  *     ONLY in dev/prod runs of THIS app. Other 4xx responses (500, 401,
  *     403, 404, network errors) all pass through to the original console.
  */
-const RECOVERY_FLAG     = "pauleam_auth_recovery_v1";
-const SUPPRESS_FLAG     = "pauleam_console_filter_v1";
+const RECOVERY_FLAG      = "pauleam_auth_recovery_v1";
+const RECOVERY_FLAG_PERSISTENT = "pauleam_auth_recovery_done";
+const SUPPRESS_FLAG      = "pauleam_console_filter_v1";
 const SDK_TOKEN_PATTERNS = [
   /^insforge\./i,
   /^sb-.*-auth-token$/i, // Supabase-style SDK key (insforge inherits it)
@@ -49,6 +71,23 @@ const SDK_TOKEN_PATTERNS = [
 // "stock_summary" + "400" is specific enough that a real failure on a
 // different table or with a different status code will not be filtered.
 const EXPECTED_400 = /stock_summary[\s\S]{0,400}400/;
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  for (const part of document.cookie.split(";")) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith(`${name}=`)) {
+      return decodeURIComponent(trimmed.slice(name.length + 1));
+    }
+  }
+  return null;
+}
+
+function setCookie(name: string, value: string, sameSite: "Lax" | "Strict" | "None" = "Lax", maxAgeSec = 86400): void {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSec}; SameSite=${sameSite}${secure}`;
+}
 
 export function AuthRecoveryBoot() {
   useEffect(() => {
@@ -91,13 +130,40 @@ export function AuthRecoveryBoot() {
       if (!isRefresh) return response;
 
       if (response.status === 401 || response.status === 403) {
-        if (sessionStorage.getItem(RECOVERY_FLAG) === "1") {
+        // Fresh-login guard: if the JS-readable session marker is set, the
+        // user has a valid session (set by /api/auth/set-cookie). The refresh
+        // 401 is then a side effect of the /api/insforge proxy: the Insforge
+        // SDK's httpOnly refresh cookie is set on the upstream origin
+        // (insforge.app) and is not forwarded to localhost:3000, so the
+        // same-origin refresh request arrives at Insforge without it. DO NOT
+        // NUKE — the session is valid, the refresh is just unreachable.
+        // Short-circuit with a fake 401 so the SDK gives up and the page
+        // renders normally. (pauleam-session itself is httpOnly and invisible
+        // to document.cookie — that's why the marker exists.)
+        if (getCookie("pauleam-session-marker")) {
+          return new Response(
+            JSON.stringify({ error: "refresh_skipped_proxy_artifact" }),
+            { status: 401, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        // Persistent loop-breaker: if recovery already fired on a previous
+        // page load (and the cookie is still set), short-circuit so the
+        // page can recover naturally instead of reload-looping. Without
+        // this, the next page load's getCurrentUser() would also call
+        // refreshSession(), get another 401, and re-trigger recovery.
+        if (getCookie(RECOVERY_FLAG_PERSISTENT) === "1") {
           return new Response(JSON.stringify({ error: "session_recovered" }), {
             status: 401,
             headers: { "Content-Type": "application/json" },
           });
         }
         sessionStorage.setItem(RECOVERY_FLAG, "1");
+        // Set the persistent flag BEFORE the clears below — cookies survive
+        // our sessionStorage.clear() and localStorage.clear() and are
+        // readable on the next page load. 24h TTL covers the user session
+        // (they will log in again, at which point the flag is no longer
+        // needed; the server-side cookies are the source of truth anyway).
+        setCookie(RECOVERY_FLAG_PERSISTENT, "1", "Lax", 86400);
 
         console.warn(
           "[auth-recovery] Stale refresh token detected (HTTP " +
@@ -106,6 +172,30 @@ export function AuthRecoveryBoot() {
         );
 
         try {
+          // 1) Tell the Insforge SDK to sign out. This makes a
+          //    POST /api/auth/logout to Insforge and clears the SDK's
+          //    server-side httpOnly refresh cookie on the Insforge domain.
+          //    Without this, the next page load's refreshSession() will
+          //    hit Insforge again with the same stale cookie → 401 → loop.
+          //    Best-effort: a missing SDK or network blip must not block
+          //    the recovery reload.
+          try {
+            const { getInsforge } = await import("@shared/lib/insforge/client");
+            await getInsforge().auth.signOut().catch(() => {});
+          } catch {
+            /* SDK not initialized on this code path */
+          }
+
+          // 2) Clear our own httpOnly cookies (pauleam-session, pauleam-role,
+          //    pauleam-jwt-hmac). Without this, the proxy keeps redirecting
+          //    /login to /shop/catalog and the loop continues.
+          try {
+            await fetch("/api/auth/logout", { method: "POST" });
+          } catch {
+            /* network blip — we still reload and the user can re-login */
+          }
+
+          // 3) Nuke local client-side state.
           const themeSnapshot = localStorage.getItem("theme");
           localStorage.clear();
           sessionStorage.clear();

@@ -14,7 +14,6 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const { signIn, loading, error } = useAuth();
   const [redirecting, setRedirecting] = useState(false);
-  const insforge = getInsforge();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,40 +22,29 @@ export function LoginForm() {
 
     setRedirecting(true);
 
-    // Obtener el rol del usuario recién autenticado
-    try {
-      const { data: userData } = await insforge.auth.getCurrentUser();
-      const userId = userData?.user?.id;
+    // signIn() returns the role that /api/auth/set-cookie already resolved
+    // server-side from Insforge. Using it here avoids a second cross-origin
+    // browser fetch to PostgREST (profiles?select=role&id=eq.<uuid>), which
+    // was failing CORS on some networks even though the server sends the
+    // headers — a transitive network/proxy was stripping them on 4xx
+    // responses. See AGENTS.md → "Known Pitfalls & Fixes".
+    const role =
+      (result.data as { role?: string } | null)?.role ?? "cliente";
 
-      let role = "cliente"; // fallback seguro
-      if (userId) {
-        const { data: profile } = await insforge.database
-          .from("profiles")
-          .select("role")
-          .eq("id", userId)
-          .single();
-        role = (profile as { role: string } | null)?.role ?? "cliente";
-      }
+    // Yield to the browser's cookie-commit microtask queue before navigating.
+    // Mobile browsers (Chrome Android) may not flush Set-Cookie to the
+    // cookie jar synchronously — a 100ms gap prevents the race condition
+    // where the proxy fires before the httpOnly session cookie is readable.
+    await new Promise((r) => setTimeout(r, 100));
 
-      // Yield to the browser's cookie-commit microtask queue before navigating.
-      // Mobile browsers (Chrome Android) may not flush Set-Cookie to the
-      // cookie jar synchronously — a 100ms gap prevents the race condition
-      // where the proxy fires before the httpOnly session cookie is readable.
-      await new Promise((r) => setTimeout(r, 100));
-
-      // Hard navigation so the browser sends a fresh request carrying
-      // the pauleam-session httpOnly cookie the proxy depends on.
-      if (role === "sales_kiosk") {
-        window.location.href = "/pos";
-      } else if (role === "admin" || role === "operario") {
-        window.location.href = "/admin/dashboard";
-      } else {
-        window.location.href = "/shop/catalog";
-      }
-    } catch {
-      // Si falla la consulta del rol, enviamos a dashboard (el layout se encarga de proteger)
-      await new Promise((r) => setTimeout(r, 100));
+    // Hard navigation so the browser sends a fresh request carrying
+    // the pauleam-session httpOnly cookie the proxy depends on.
+    if (role === "sales_kiosk") {
+      window.location.href = "/pos";
+    } else if (role === "admin" || role === "operario") {
       window.location.href = "/admin/dashboard";
+    } else {
+      window.location.href = "/shop/catalog";
     }
   }
 

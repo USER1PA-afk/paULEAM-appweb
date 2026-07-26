@@ -48,5 +48,8 @@ export async function POST() {
   response.cookies.set("pauleam-session", "", cookieClear);
   response.cookies.set("pauleam-role", "", cookieClear);
   response.cookies.set("pauleam-jwt-hmac", "", hmacCookieClear);
+  // Mirror the JS-readable session marker set in /api/auth/set-cookie so
+  // auth-recovery-boot doesn't see a stale "user is logged in" signal.
+  response.cookies.set("pauleam-session-marker", "", hmacCookieClear);
   return response;
 }

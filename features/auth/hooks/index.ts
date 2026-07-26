@@ -233,22 +233,32 @@ export function useAuth() {
           if (!cookieRes?.ok) {
             throw new Error("No se pudo establecer la sesión. Intenta de nuevo.");
           }
+          // Read role from the set-cookie response (server already resolved it
+          // via Insforge). Avoids a second cross-origin browser fetch to
+          // PostgREST — that path was hitting CORS errors on some networks.
+          const cookieBody = await cookieRes.json().catch(() => null);
+          const role =
+            (cookieBody as { role?: string } | null)?.role ?? "cliente";
+          // Clear the recovery-boot's persistent loop-breaker flag now that
+          // the user has a fresh session. If the flag stayed set, a future
+          // real stale-session error would short-circuit the recovery and
+          // the user would be stuck — see auth-recovery-boot.tsx.
+          document.cookie = `pauleam_auth_recovery_done=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
           // Sign the JWT envelope for tamper-evidence in localStorage. If the
           // HMAC cookie didn't arrive (e.g. browser rejected Set-Cookie), we
           // silently skip — the SDK still works, we just don't get integrity
           // verification on this session.
           await signAndStoreJwt(token);
+          setState({
+            user: data?.user as unknown as AuthUser ?? null,
+            loading: false,
+            error: null,
+          });
+          logEvent("LOGIN", "auth_session", null, `Inicio de sesión: ${email}`);
+          return { data: { ...(data ?? {}), role }, error: null };
         } else {
           throw new Error("Token de sesión no disponible. Intenta de nuevo.");
         }
-
-        setState({
-          user: data?.user as unknown as AuthUser ?? null,
-          loading: false,
-          error: null,
-        });
-        logEvent("LOGIN", "auth_session", null, `Inicio de sesión: ${email}`);
-        return { data, error: null };
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : "Error de autenticación";
@@ -352,6 +362,12 @@ export function useAuth() {
         }
         try { localStorage.clear(); } catch { /* ignore */ }
         try { sessionStorage.clear(); } catch { /* ignore */ }
+        // Clear the recovery-boot's persistent loop-breaker flag too so a
+        // future stale-session error can actually trigger recovery. See
+        // auth-recovery-boot.tsx → RECOVERY_FLAG_PERSISTENT.
+        try {
+          document.cookie = `pauleam_auth_recovery_done=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+        } catch { /* ignore */ }
         if (themeSnapshot) localStorage.setItem("theme", themeSnapshot);
         for (const [key, value] of Object.entries(cartSnapshots)) {
           try { localStorage.setItem(key, value); } catch { /* ignore */ }
