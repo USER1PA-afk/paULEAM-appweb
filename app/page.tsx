@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { ThemeToggle } from "@shared/components/theme-toggle";
 import { HomeAuthNav } from "@features/auth/components/home-auth-nav";
 import { HomeMobileNav } from "@features/auth/components/home-mobile-nav";
@@ -96,14 +95,17 @@ export default function HomePage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
 
           <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/logo-pauleam.png"
-              alt="Logo PAuleam"
-              width={40}
-              height={40}
-              style={{ width: 40, height: 40 }}
-              className="shrink-0 object-contain dark:invert"
-            />
+            <picture>
+              <source srcSet="/logo-pauleam.webp" type="image/webp" />
+              <img
+                src="/logo-pauleam.png"
+                alt="Logo PAuleam"
+                width={40}
+                height={40}
+                style={{ width: 40, height: 40 }}
+                className="shrink-0 object-contain dark:invert"
+              />
+            </picture>
             <span className="text-sm font-extrabold tracking-tight text-foreground uppercase">
               PAuleam
             </span>
@@ -156,15 +158,20 @@ export default function HomePage() {
           <div className="relative z-10 mx-auto max-w-6xl px-6 py-16 lg:py-24">
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-4">
               <div className="lg:hidden mb-6">
-                <Image
-                  data-hero-panchito
-                  src="/PANCHITOS_logo_page-0001.png"
-                  alt="Logo Panchitos"
-                  width={300}
-                  height={300}
-                  className="mx-auto object-contain"
-                  priority
-                />
+                <picture>
+                  <source srcSet="/PANCHITOS_logo_page-0001.webp" type="image/webp" />
+                  <img
+                    data-hero-panchito
+                    src="/PANCHITOS_logo_page-0001.png"
+                    alt="Logo Panchitos"
+                    width={300}
+                    height={300}
+                    className="mx-auto object-contain"
+                    fetchPriority="high"
+                    loading="eager"
+                    decoding="sync"
+                  />
+                </picture>
               </div>
 
               <div className="max-w-2xl space-y-6">
@@ -205,15 +212,20 @@ export default function HomePage() {
               </div>
 
               <div className="hidden lg:flex lg:flex-1 lg:justify-end">
-                <Image
-                  data-hero-panchito
-                  src="/PANCHITOS_logo_page-0001.png"
-                  alt="Logo Panchitos"
-                  width={640}
-                  height={640}
-                  className="object-contain"
-                  priority
-                />
+                <picture>
+                  <source srcSet="/PANCHITOS_logo_page-0001.webp" type="image/webp" />
+                  <img
+                    data-hero-panchito
+                    src="/PANCHITOS_logo_page-0001.png"
+                    alt="Logo Panchitos"
+                    width={640}
+                    height={640}
+                    className="object-contain"
+                    fetchPriority="high"
+                    loading="eager"
+                    decoding="sync"
+                  />
+                </picture>
               </div>
             </div>
           </div>

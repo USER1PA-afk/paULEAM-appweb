@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 
 /**
@@ -47,14 +46,21 @@ export function LandingHeaderLogo() {
         hidden ? "w-0 opacity-0" : "w-[109px] opacity-100"
       }`}
     >
-      <Image
-        src="/PANCHITOS_logo_page-0001.png"
-        alt="Logo Panchitos"
-        width={109}
-        height={36}
-        style={{ width: 109, height: 36 }}
-        className="shrink-0 object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
-      />
+      <picture>
+        <source srcSet="/PANCHITOS_logo_page-0001.webp" type="image/webp" />
+        {/* Raw <img> on purpose: the file is already a pre-optimized .webp
+            (see scripts/generate-static-webp.mjs), so we skip next/image
+            entirely. Wrapping next/image in <picture> also breaks SSR
+            hydration because the optimizer emits attributes the client
+            tree doesn't reproduce. */}
+        <img
+          src="/PANCHITOS_logo_page-0001.png"
+          alt="Logo Panchitos"
+          width={109}
+          height={36}
+          className="shrink-0 object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
+        />
+      </picture>
     </span>
   );
 }

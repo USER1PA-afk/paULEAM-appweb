@@ -151,10 +151,20 @@ export function ProductCarousel() {
                 {/* Image */}
                 <div className="relative flex-1 bg-muted overflow-hidden">
                   {product.image_url ? (
+                    // Raw <img> on purpose: the carousel is the LCP element,
+                    // and the file is already a native .webp in the bucket
+                    // (see app/api/storage/upload-image). Skipping the
+                    // Next/Image optimizer here saves a JS hop and an
+                    // HTTP round-trip on the hero slide.
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={product.image_url}
                       alt={product.name}
+                      width={800}
+                      height={600}
+                      loading={isActive ? "eager" : "lazy"}
+                      decoding={isActive ? "sync" : "async"}
+                      fetchPriority={isActive ? "high" : "auto"}
                       className="h-full w-full object-cover"
                     />
                   ) : (

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@insforge/sdk";
+import sharp from "sharp";
 
 /**
  * Server-side proxy for product image uploads.
@@ -15,6 +16,15 @@ import { createClient } from "@insforge/sdk";
  *   By proxying through our own API route, the upload runs server-side
  *   using the admin API key, bypassing all client-side restrictions.
  *
+ * IMAGE PIPELINE (WebP conversion):
+ *   Operators may upload JPEG / PNG / GIF / WebP / AVIF originals.
+ *   Every uploaded image is normalized to WebP (quality 82) and capped at
+ *   1920px on the long edge. The original is discarded — the .webp variant
+ *   is the only thing stored in the bucket and the only URL written to the
+ *   DB. This keeps storage small, lets the landing carousel ship a real
+ *   .webp file (no optimizer hop on the hero LCP), and avoids relying on
+ *   Insforge CDN transforms which the platform does not provide.
+ *
  * AUTH:
  *   The route reads the pauleam-session httpOnly cookie to verify the
  *   caller is an authenticated admin/operario. The actual storage write
@@ -27,6 +37,16 @@ import { createClient } from "@insforge/sdk";
  *
  *   Returns: { path: string, publicUrl: string }
  */
+
+const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_DIMENSION = 1920;
+const WEBP_QUALITY = 82;
+const ALLOWED_MIME = [
+  "image/jpeg", "image/png", "image/webp",
+  "image/gif", "image/avif",
+];
+
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,11 +80,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file type
-    const ALLOWED_MIME = [
-      "image/jpeg", "image/png", "image/webp",
-      "image/gif", "image/avif",
-    ];
     if (file.type && !ALLOWED_MIME.includes(file.type)) {
       return NextResponse.json(
         { error: "Formato no permitido. Usa JPG, PNG, WEBP, GIF o AVIF." },
@@ -72,8 +87,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (10 MB)
-    const MAX_BYTES = 10 * 1024 * 1024;
     if (file.size > MAX_BYTES) {
       return NextResponse.json(
         { error: "La imagen supera el límite de 10 MB." },
@@ -81,7 +94,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── 3. Upload via server client ─────────────────────────────────────
+    // ── 3. Convert to WebP server-side ─────────────────────────────────
+    // sharp normalizes everything (animated GIF → animated WebP, EXIF
+    // orientation auto-corrected via .rotate(), metadata stripped) and
+    // downscales anything larger than 1920px on the long edge.
+    const inputBuffer = Buffer.from(await file.arrayBuffer());
+    let webpBuffer: Buffer;
+    try {
+      webpBuffer = await sharp(inputBuffer, { failOn: "none" })
+        .rotate()
+        .resize({
+          width: MAX_DIMENSION,
+          height: MAX_DIMENSION,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .webp({
+          quality: WEBP_QUALITY,
+          effort: 4,
+        })
+        .toBuffer();
+    } catch (convErr) {
+      console.error("[upload-image] sharp conversion failed:", convErr);
+      return NextResponse.json(
+        { error: "No se pudo procesar la imagen. Verifica que sea un archivo válido." },
+        { status: 400 }
+      );
+    }
+
+    // ── 4. Upload via server client ─────────────────────────────────────
     const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL;
     const apiKey = process.env.INSFORGE_API_KEY;
 
@@ -95,12 +136,16 @@ export async function POST(request: NextRequest) {
 
     const serverClient = createClient({ baseUrl, anonKey: apiKey });
 
-    const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase();
-    const path = `products/${productId}/${Date.now()}.${ext}`;
+    const path = `products/${productId}/${Date.now()}.webp`;
+
+    // Build a Blob from the WebP buffer — the Insforge SDK upload() expects
+    // a Blob/File/ArrayBuffer-like input. Tagging the MIME as image/webp
+    // makes the storage layer serve the right Content-Type downstream.
+    const webpBlob = new Blob([new Uint8Array(webpBuffer)], { type: "image/webp" });
 
     const { error: uploadError } = await serverClient.storage
       .from("product-images")
-      .upload(path, file);
+      .upload(path, webpBlob);
 
     if (uploadError) {
       console.error("[upload-image] Storage upload error:", uploadError);

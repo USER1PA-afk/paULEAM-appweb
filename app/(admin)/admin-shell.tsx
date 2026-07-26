@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -296,25 +295,31 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           }}
           className="flex items-center gap-2 min-w-0"
         >
-          <Image
-            src="/logo-pauleam.png"
-            alt="Logo PAuleam"
-            width={34}
-            height={34}
-            style={{ width: 34, height: 34 }}
-            className="shrink-0 object-contain dark:invert"
-          />
+          <picture>
+            <source srcSet="/logo-pauleam.webp" type="image/webp" />
+            <img
+              src="/logo-pauleam.png"
+              alt="Logo PAuleam"
+              width={34}
+              height={34}
+              style={{ width: 34, height: 34 }}
+              className="shrink-0 object-contain dark:invert"
+            />
+          </picture>
           <span className="hidden sm:block text-[13px] font-extrabold uppercase tracking-tight text-foreground">
             PAuleam
           </span>
-          <Image
-            src="/PANCHITOS_logo_page-0001.png"
-            alt="Logo Panchitos"
-            width={97}
-            height={32}
-            style={{ width: 97, height: 32 }}
-            className="shrink-0 object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
-          />
+          <picture>
+            <source srcSet="/PANCHITOS_logo_page-0001.webp" type="image/webp" />
+            <img
+              src="/PANCHITOS_logo_page-0001.png"
+              alt="Logo Panchitos"
+              width={97}
+              height={32}
+              style={{ width: 97, height: 32 }}
+              className="shrink-0 object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
+            />
+          </picture>
         </Link>
 
         <div className="flex-1" />

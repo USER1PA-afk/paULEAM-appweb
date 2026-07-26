@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth, useRole } from "@features/auth/hooks";
 import { useEffect } from "react";
@@ -52,14 +51,17 @@ export function PosShell({ children }: { children: React.ReactNode }) {
         <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-linear-to-r from-brand-700 via-brand-500 to-brand-700 opacity-60" />
 
         <Link href="/pos" className="flex items-center gap-3" aria-label="POS Inicio">
-          <Image
-            src="/logo-pauleam.png"
-            alt="Logo PAuleam"
-            width={34}
-            height={34}
-            style={{ width: 34, height: 34 }}
-            className="object-contain dark:invert"
-          />
+          <picture>
+            <source srcSet="/logo-pauleam.webp" type="image/webp" />
+            <img
+              src="/logo-pauleam.png"
+              alt="Logo PAuleam"
+              width={34}
+              height={34}
+              style={{ width: 34, height: 34 }}
+              className="object-contain dark:invert"
+            />
+          </picture>
           <div className="flex flex-col leading-tight">
             <span className="text-[11px] font-black uppercase tracking-[0.2em] text-neutral-900 dark:text-white">
               PAuleam
@@ -68,14 +70,17 @@ export function PosShell({ children }: { children: React.ReactNode }) {
               Punto de Venta
             </span>
           </div>
-          <Image
-            src="/PANCHITOS_logo_page-0001.png"
-            alt="Logo Panchitos"
-            width={97}
-            height={32}
-            style={{ width: 97, height: 32 }}
-            className="object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
-          />
+          <picture>
+            <source srcSet="/PANCHITOS_logo_page-0001.webp" type="image/webp" />
+            <img
+              src="/PANCHITOS_logo_page-0001.png"
+              alt="Logo Panchitos"
+              width={97}
+              height={32}
+              style={{ width: 97, height: 32 }}
+              className="object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
+            />
+          </picture>
         </Link>
 
         <div className="flex items-center gap-2">

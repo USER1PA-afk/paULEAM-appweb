@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth, useRole } from "@features/auth/hooks";
 import { useCart } from "@features/checkout/hooks";
@@ -31,25 +30,31 @@ export default function ShopLayout({
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <Image
-              src="/logo-pauleam.png"
-              alt="Logo PAuleam"
-              width={36}
-              height={36}
-              style={{ width: 36, height: 36 }}
-              className="shrink-0 object-contain dark:invert"
-            />
+            <picture>
+              <source srcSet="/logo-pauleam.webp" type="image/webp" />
+              <img
+                src="/logo-pauleam.png"
+                alt="Logo PAuleam"
+                width={36}
+                height={36}
+                style={{ width: 36, height: 36 }}
+                className="shrink-0 object-contain dark:invert"
+              />
+            </picture>
             <span className="text-base font-bold tracking-tight text-foreground">
               PAuleam
             </span>
-            <Image
-              src="/PANCHITOS_logo_page-0001.png"
-              alt="Logo Panchitos"
-              width={97}
-              height={32}
-              style={{ width: 97, height: 32 }}
-              className="shrink-0 object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
-            />
+            <picture>
+              <source srcSet="/PANCHITOS_logo_page-0001.webp" type="image/webp" />
+              <img
+                src="/PANCHITOS_logo_page-0001.png"
+                alt="Logo Panchitos"
+                width={97}
+                height={32}
+                style={{ width: 97, height: 32 }}
+                className="shrink-0 object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
+              />
+            </picture>
           </Link>
 
           {/* ── Desktop nav (≥ sm) ── */}

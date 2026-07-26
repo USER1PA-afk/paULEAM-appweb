@@ -123,7 +123,25 @@ Row Level Security (RLS) on all tables based on Insforge Auth JWT (roles: `clien
 - **Multi-image:** Separate `product_images` table (storage_path, alt_text, position, is_primary).
 - **Single-image shortcut:** `products.image_url` stores the primary image URL for quick display.
 - **Admin UI:** Image upload only appears when `type === "PRODUCTO_TERMINADO"` — never for raw materials or other types.
-- **Storage:** `product-images` bucket (public). Paths: `products/{product_id}/{timestamp}.{ext}`.
+- **Storage:** `product-images` bucket (public). Paths: `products/{product_id}/{timestamp}.webp` (see Image Pipeline below).
+- **WebP-only convention:** Operators can upload jpeg/png/gif/webp/avif originals; the server converts everything to `.webp` at the upload choke-point so storage is uniform and the landing carousel ships a real `.webp` file (no optimizer hop on the LCP). The original is discarded.
+
+### Image Pipeline (server-side WebP conversion)
+
+- **Upload choke-point:** `app/api/storage/upload-image/route.ts` — every admin/operario upload flows through it. After auth + size/MIME validation, the buffer is piped through `sharp()`:
+  - `.rotate()` — auto-correct EXIF orientation
+  - `.resize({ width: 1920, height: 1920, fit: "inside", withoutEnlargement: true })` — cap long edge at 1920px
+  - `.webp({ quality: 82, effort: 4 })` — quality 82 is the sweet spot for product photography
+  - metadata stripped
+- **Storage path is normalized to `.webp`** — `products/{productId}/{Date.now()}.webp`. `products.image_url` and `product_images.storage_path` are updated to the new URL/path by the existing `useProductImages` hook.
+- **Migration of existing images:** `scripts/migrate-images-to-webp.mjs` — dry-run by default, `--apply` to execute, `--limit N` and `--product <uuid>` for scoped runs. Walks every `product_images` row, downloads, converts, re-uploads, updates rows (including `products.image_url` for primary images), deletes the original.
+- **Next.js Image Optimizer** (`next.config.ts`):
+  - `images.formats: ['image/avif', 'image/webp']` — tries AVIF first (smaller, modern), then WebP, then original
+  - `images.minimumCacheTTL: 60*60*24*30` (30 days)
+  - `images.remotePatterns` includes `cdn.insforge.dev` (the actual CDN host the storage API 301s to) in addition to `*.insforge.app`
+  - `headers()` adds `Cache-Control: public, max-age=31536000, immutable` to `/_next/image` and `/_next/static/*`
+- **Landing carousel** (`features/store-products/components/product-carousel.tsx`) uses a raw `<img>` against the bucket URL — already a real `.webp`, no optimizer hop. Carries explicit `width`/`height` + `loading="eager"` + `fetchpriority="high"` on the active slide.
+- **Static assets in `public/`** (`logo-pauleam.webp`, `PANCHITOS_logo_page-0001.webp`) are served via `<picture><source type="image/webp">` with `.png` fallback. Regenerate with `node scripts/generate-static-webp.mjs`.
 
 ## 6. Pickup Code (E-Commerce)
 

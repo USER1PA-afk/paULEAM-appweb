@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 
 /**
  * Las páginas de autenticación (login, registro, recuperación, etc.) no deben
@@ -36,27 +35,33 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 self-start">
-            <Image
-              src="/logo-pauleam.png"
-              alt="Logo PAuleam"
-              width={44}
-              height={44}
-              className="shrink-0 object-contain drop-shadow-md"
-            />
+            <picture>
+              <source srcSet="/logo-pauleam.webp" type="image/webp" />
+              <img
+                src="/logo-pauleam.png"
+                alt="Logo PAuleam"
+                width={44}
+                height={44}
+                className="shrink-0 object-contain drop-shadow-md"
+              />
+            </picture>
             <div className="flex flex-col leading-tight">
               <span className="text-base font-extrabold text-white uppercase tracking-tight">
                 PAuleam
               </span>
             </div>
             {/* Resplandor blanco sutil para destacar el logo sobre el panel rojo */}
-            <Image
-              src="/PANCHITOS_logo_page-0001.png"
-              alt="Logo Panchitos"
-              width={121}
-              height={40}
-              style={{ width: 121, height: 40 }}
-              className="shrink-0 object-contain drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
-            />
+            <picture>
+              <source srcSet="/PANCHITOS_logo_page-0001.webp" type="image/webp" />
+              <img
+                src="/PANCHITOS_logo_page-0001.png"
+                alt="Logo Panchitos"
+                width={121}
+                height={40}
+                style={{ width: 121, height: 40 }}
+                className="shrink-0 object-contain drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
+              />
+            </picture>
           </Link>
 
           {/* Main copy — centered vertically */}
@@ -130,20 +135,26 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             Regresar al inicio
           </Link>
           <div className="flex items-center gap-2.5">
-            <Image
-              src="/logo-pauleam.png"
-              alt="Logo PAuleam"
-              width={32}
-              height={32}
-              className="shrink-0 object-contain dark:invert"
-            />
-            <Image
-              src="/PANCHITOS_logo_page-0001.png"
-              alt="Logo Panchitos"
-              width={40}
-              height={40}
-              className="shrink-0 object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
-            />
+            <picture>
+              <source srcSet="/logo-pauleam.webp" type="image/webp" />
+              <img
+                src="/logo-pauleam.png"
+                alt="Logo PAuleam"
+                width={32}
+                height={32}
+                className="shrink-0 object-contain dark:invert"
+              />
+            </picture>
+            <picture>
+              <source srcSet="/PANCHITOS_logo_page-0001.webp" type="image/webp" />
+              <img
+                src="/PANCHITOS_logo_page-0001.png"
+                alt="Logo Panchitos"
+                width={40}
+                height={40}
+                className="shrink-0 object-contain dark:drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
+              />
+            </picture>
             <div className="flex flex-col leading-tight">
               <span className="text-sm font-extrabold uppercase tracking-tight text-foreground">PAuleam</span>
             </div>
